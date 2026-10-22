@@ -43,7 +43,7 @@ fs.mkdirSync(path.join(outDir, 'runs'), { recursive: true });
 const results = [];
 
 async function trial(t) {
-  const repo = path.join(tmpRoot, `repo-${t}`);
+  const repo = path.join(tmpRoot, String(t), 'shopfront'); fs.mkdirSync(path.dirname(repo));
   const files = { ...demoFiles(), '.fenceline/fences.json': `${JSON.stringify({ schema: 'fenceline.fences/1', fences }, null, 2)}\n` };
   for (const [rel, text] of Object.entries(files)) { fs.mkdirSync(path.dirname(path.join(repo, rel)), { recursive: true }); fs.writeFileSync(path.join(repo, rel), text); }
   git(repo, ['init', '-q']); git(repo, ['add', '-A']); git(repo, ['-c', 'user.email=eval@fenceline', '-c', 'user.name=eval', 'commit', '-qm', 'seed']);

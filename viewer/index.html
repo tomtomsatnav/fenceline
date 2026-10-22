@@ -395,8 +395,10 @@ function buildKey() {
 function showSummary() {
   const stop = S.stop; if (!stop) return;
   const box = $('#summary'); box.replaceChildren(); h('h4', '', 'End of session', box);
-  const n = S.summary?.crossings?.length ?? stop.crossing_count ?? S.crossings.length;
-  const big = h('div', 'big', null, box); const b = h('b', '', String(n)); big.append(b, ` ${n === 1 ? 'fence crossing' : 'fence crossings'}`);
+  // a blocked (prevented) crossing never reached the repo: count it separately
+  const all = S.summary?.crossings ?? S.crossings;
+  const n = all.filter((c) => !c.prevented).length; const nb = all.length - n;
+  const big = h('div', 'big', null, box); const b = h('b', '', String(n)); big.append(b, ` ${n === 1 ? 'fence crossing' : 'fence crossings'}${nb ? ` · ${nb} blocked` : ''}`);
   const un = S.summary?.unmentioned ?? stop.unmentioned ?? [];
   const nm = h('div', 'nm', 'not mentioned in final message: ', box);
   if (un.length) h('code', '', un.map((u) => (typeof u === 'string' ? u : u.file || u.text || '')).join(', '), nm); else nm.append('none');

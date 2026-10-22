@@ -2,7 +2,7 @@
   "schema": "fenceline.session/1",
   "session_id": "3a6bd5bb-3f46-4596-ae9f-71304264fd2e",
   "repo": "<repo>",
-  "repo_name": "repo-2",
+  "repo_name": "shopfront",
   "cwd": "<repo>",
   "started_at": "2026-10-22T13:21:14.564Z",
   "head": "47a145e8e268edfc8f0e588f13b25f9a4045a5c3",
