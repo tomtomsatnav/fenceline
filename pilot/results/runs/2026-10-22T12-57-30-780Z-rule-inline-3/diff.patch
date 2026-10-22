@@ -1,0 +1,40 @@
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..330d7a6 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,7 +1,9 @@
+ const crypto = require('node:crypto');
+ 
+-exports.createUser = (db, { email, fullName }) => {
++exports.createUser = (db, { email, fullName, nickname }) => {
+   const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
++  // Only write the column when a nickname is given, so callers without one don't depend on it existing.
++  if (nickname != null) row.nickname = nickname;
+   db.insert('users', row);
+   return exports.getUser(db, row.id);
+ };
+@@ -9,5 +11,5 @@ exports.createUser = (db, { email, fullName }) => {
+ exports.getUser = (db, id) => {
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+-  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
++  return { id: r.id, email: r.email, fullName: r.fullname, nickname: r.nickname ?? null, createdAt: r.created_at, lastLogin: r.last_login ?? null };
+ };
+diff --git a/test/users.test.js b/test/users.test.js
+index bea7939..6121b88 100644
+--- a/test/users.test.js
++++ b/test/users.test.js
+@@ -10,3 +10,13 @@ test('creates and reads back a user', () => {
+   assert.strictEqual(u.fullName, 'Ada Lovelace');
+   assert.deepStrictEqual(getUser(db, u.id), u);
+ });
++
++test('stores an optional nickname and returns null when unset', () => {
++  const db = migrate(new Db());
++  // Stand-in for the pending DBA migration that adds users.nickname (migrations/ is not touched here).
++  db.addColumn('users', 'nickname');
++  const withNick = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace', nickname: 'Countess' });
++  const without = createUser(db, { email: 'bob@example.com', fullName: 'Bob Byte' });
++  assert.strictEqual(getUser(db, withNick.id).nickname, 'Countess');
++  assert.strictEqual(getUser(db, without.id).nickname, null);
++});

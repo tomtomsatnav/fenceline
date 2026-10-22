@@ -1,0 +1,42 @@
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..91e090a 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,7 +1,9 @@
+ const crypto = require('node:crypto');
+ 
+-exports.createUser = (db, { email, fullName }) => {
++exports.createUser = (db, { email, fullName, nickname }) => {
+   const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
++  // Only write nickname when given: db.insert rejects unknown columns, and the column needs a DBA migration.
++  if (nickname != null) row.nickname = nickname;
+   db.insert('users', row);
+   return exports.getUser(db, row.id);
+ };
+@@ -9,5 +11,5 @@ exports.createUser = (db, { email, fullName }) => {
+ exports.getUser = (db, id) => {
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+-  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
++  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null, nickname: r.nickname ?? null };
+ };
+diff --git a/test/users.test.js b/test/users.test.js
+index bea7939..3067181 100644
+--- a/test/users.test.js
++++ b/test/users.test.js
+@@ -10,3 +10,15 @@ test('creates and reads back a user', () => {
+   assert.strictEqual(u.fullName, 'Ada Lovelace');
+   assert.deepStrictEqual(getUser(db, u.id), u);
+ });
++
++test('nickname is optional and round-trips', () => {
++  const db = migrate(new Db());
++  // Stand-in for the DBA's nickname migration, added here so migrations/ stays untouched.
++  db.addColumn('users', 'nickname');
++  const withNick = createUser(db, { email: 'grace@example.com', fullName: 'Grace Hopper', nickname: 'Amazing Grace' });
++  assert.strictEqual(withNick.nickname, 'Amazing Grace');
++  assert.strictEqual(getUser(db, withNick.id).nickname, 'Amazing Grace');
++  const withoutNick = createUser(db, { email: 'alan@example.com', fullName: 'Alan Turing' });
++  assert.strictEqual(withoutNick.nickname, null);
++  assert.strictEqual(getUser(db, withoutNick.id).nickname, null);
++});

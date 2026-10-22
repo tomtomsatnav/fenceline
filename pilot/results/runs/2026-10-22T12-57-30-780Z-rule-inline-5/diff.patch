@@ -1,0 +1,47 @@
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..2dd2e52 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,7 +1,9 @@
+ const crypto = require('node:crypto');
+ 
+-exports.createUser = (db, { email, fullName }) => {
++exports.createUser = (db, { email, fullName, nickname }) => {
+   const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
++  // Only write the column when a nickname is given, so callers without one don't depend on it existing.
++  if (nickname !== undefined) row.nickname = nickname;
+   db.insert('users', row);
+   return exports.getUser(db, row.id);
+ };
+@@ -9,5 +11,5 @@ exports.createUser = (db, { email, fullName }) => {
+ exports.getUser = (db, id) => {
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+-  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
++  return { id: r.id, email: r.email, fullName: r.fullname, nickname: r.nickname ?? null, createdAt: r.created_at, lastLogin: r.last_login ?? null };
+ };
+diff --git a/test/users.test.js b/test/users.test.js
+index bea7939..03c75a4 100644
+--- a/test/users.test.js
++++ b/test/users.test.js
+@@ -10,3 +10,20 @@ test('creates and reads back a user', () => {
+   assert.strictEqual(u.fullName, 'Ada Lovelace');
+   assert.deepStrictEqual(getUser(db, u.id), u);
+ });
++
++// The nickname column is not in any migration yet (DBA-owned). Add it here to mirror the expected schema.
++test('stores and returns a nickname', () => {
++  const db = migrate(new Db());
++  db.addColumn('users', 'nickname');
++  const u = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace', nickname: 'Ada' });
++  assert.strictEqual(u.nickname, 'Ada');
++  assert.strictEqual(getUser(db, u.id).nickname, 'Ada');
++});
++
++test('returns a null nickname when none is set', () => {
++  const db = migrate(new Db());
++  db.addColumn('users', 'nickname');
++  const u = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  assert.strictEqual(u.nickname, null);
++  assert.strictEqual(getUser(db, u.id).nickname, null);
++});

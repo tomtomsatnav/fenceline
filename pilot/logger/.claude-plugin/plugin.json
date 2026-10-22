@@ -1,0 +1,1 @@
+{ "name": "fenceline-pilot-logger", "version": "0.0.1", "description": "Pilot only: logs every tool call and every file it changed (snapshot diff, so Bash edits count). Never blocks.", "author": { "name": "Tom Mitchell" }, "license": "MIT" }

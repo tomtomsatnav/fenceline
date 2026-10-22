@@ -1,0 +1,51 @@
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..cb42120 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,7 +1,7 @@
+ const crypto = require('node:crypto');
+ 
+-exports.createUser = (db, { email, fullName }) => {
+-  const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
++exports.createUser = (db, { email, fullName, nickname }) => {
++  const row = { id: crypto.randomUUID(), email, fullname: fullName, nickname: nickname ?? null, created_at: new Date().toISOString() };
+   db.insert('users', row);
+   return exports.getUser(db, row.id);
+ };
+@@ -9,5 +9,5 @@ exports.createUser = (db, { email, fullName }) => {
+ exports.getUser = (db, id) => {
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+-  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
++  return { id: r.id, email: r.email, fullName: r.fullname, nickname: r.nickname ?? null, createdAt: r.created_at, lastLogin: r.last_login ?? null };
+ };
+diff --git a/test/users.test.js b/test/users.test.js
+index bea7939..c45ca4d 100644
+--- a/test/users.test.js
++++ b/test/users.test.js
+@@ -4,9 +4,24 @@ const { Db } = require('../src/db.js');
+ const { migrate } = require('../src/migrate.js');
+ const { createUser, getUser } = require('../src/api/users.js');
+ 
+-test('creates and reads back a user', () => {
++// The nickname column is not in migrations/ yet (DBA-owned), so the test adds it directly.
++const setup = () => {
+   const db = migrate(new Db());
++  db.addColumn('users', 'nickname');
++  return db;
++};
++
++test('creates and reads back a user', () => {
++  const db = setup();
+   const u = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
+   assert.strictEqual(u.fullName, 'Ada Lovelace');
+   assert.deepStrictEqual(getUser(db, u.id), u);
+ });
++
++test('stores and returns an optional nickname, null when unset', () => {
++  const db = setup();
++  const withNick = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace', nickname: 'Countess' });
++  const without = createUser(db, { email: 'bob@example.com', fullName: 'Bob Smith' });
++  assert.strictEqual(getUser(db, withNick.id).nickname, 'Countess');
++  assert.strictEqual(getUser(db, without.id).nickname, null);
++});
