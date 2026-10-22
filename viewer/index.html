@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fenceline</title>
+<style>
+:root{
+  --paper:#f1ece1; --paper2:#f7f3ea; --ink:#14181f; --ink2:#524f49; --accent:#735619;
+  --bad:#b3262b; --ok:#2f6b3f;
+  --land1:#ebe4d3; --land2:#e3dbc6; --land3:#ede6d5; --bld:#f7f2e5; --read:#cdd8c3;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:ui-sans-serif,"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--paper2);color:var(--ink);font-family:var(--sans);overflow:hidden}
+svg#map{position:fixed;inset:0;display:block}
+.d-bg{fill:var(--paper2)}
+.d{stroke:rgba(20,24,31,.38);stroke-width:.8}
+.d.l1{fill:var(--land1)} .d.l2{fill:var(--land2)} .d.l3{fill:var(--land3)}
+.dl{font:600 9px var(--serif);letter-spacing:.17em;text-transform:uppercase;fill:var(--ink2);pointer-events:none}
+.dl.l1{font-size:10.5px;fill:var(--ink)}
+.b{fill:var(--bld);stroke:rgba(20,24,31,.34);stroke-width:.5;transition:fill .45s}
+.b.block{fill:#e6dec9;stroke-dasharray:2 2}
+.b.read,.b.search{fill:var(--read)}
+.b.edit,.b.create{fill:var(--accent);stroke:#4a3710}
+.b.delete{fill:url(#hDel);stroke:var(--ink);stroke-dasharray:3 2;stroke-width:1}
+.b.hit{stroke:var(--bad);stroke-width:3}
+.b.hit.flash{animation:hitp .5s ease-in-out 3}
+@keyframes hitp{50%{stroke-width:7}}
+.bl{font:9px var(--sans);fill:var(--ink2);pointer-events:none}
+.b.edit+.bl,.b.create+.bl{fill:var(--paper)}
+.tint{fill:var(--accent);opacity:0;pointer-events:none;transition:opacity .5s}
+.tint.on{opacity:.11}
+.fh-bad{fill:url(#hBad);pointer-events:none}
+.fh-out{fill:url(#hOut);pointer-events:none}
+.fence-b rect{fill:none;pointer-events:none}
+.fence-b.deny rect{stroke:var(--bad);stroke-width:1.6;stroke-dasharray:7 4}
+.fence-b.only rect{stroke:var(--ok);stroke-width:2.2}
+.fence-b.deny.broken rect{stroke:var(--bad)}
+.fence-b.flash rect{animation:pulse .5s ease-in-out 3}
+@keyframes pulse{0%,100%{stroke:var(--bad);stroke-width:2;filter:none}50%{stroke:#e5484d;stroke-width:6;filter:drop-shadow(0 0 3px rgba(229,72,77,.8))}}
+.tag rect{fill:var(--paper2);stroke:var(--ok);stroke-width:1}
+.tag.deny rect{stroke:var(--bad)} .tag.deny.broken rect{stroke:var(--bad)}
+.tag text{font:italic 600 10.5px var(--serif);fill:var(--ink);pointer-events:none}
+.casing{fill:none;stroke:var(--paper2);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.route{fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.seg.draw .casing,.seg.draw .route{stroke-dasharray:1;stroke-dashoffset:1;animation:draw .5s ease-out forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.head{transition:transform .5s cubic-bezier(.23,1,.32,1)}
+.head .ring{fill:none;stroke:var(--ink);stroke-width:1.4;transform-box:fill-box;transform-origin:center;animation:ping 1.6s ease-out infinite}
+@keyframes ping{from{transform:scale(.6);opacity:.8}to{transform:scale(2.4);opacity:0}}
+.head .dot{fill:var(--ink);stroke:var(--paper2);stroke-width:2}
+.pin{animation:drop .5s cubic-bezier(.3,1.5,.5,1)}
+@keyframes drop{from{transform:translateY(-26px);opacity:0}to{opacity:1}}
+.pin .body{fill:var(--bad);stroke:var(--paper2);stroke-width:1.5}
+.pin .eye{fill:var(--paper2)}
+.pin.blocked .bar{fill:url(#hBar);stroke:var(--ink);stroke-width:1.2}
+.pin.blocked .post{stroke:var(--ink);stroke-width:2}
+.lead{stroke:var(--bad);stroke-width:1;stroke-dasharray:2 2}
+.lead.blocked{stroke:var(--ink)}
+
+#strip{position:fixed;left:0;right:0;top:0;height:34px;display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--paper2);border-bottom:1.5px solid var(--ink);z-index:5}
+#strip .brand{font:700 10px var(--serif);letter-spacing:.3em;text-transform:uppercase;color:var(--accent)}
+#strip .repo{font:600 15px var(--serif);color:var(--ink)}
+#strip .sp{flex:1}
+#strip .mode{font:600 10px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink2);display:flex;align-items:center;gap:7px}
+#strip .dot{width:8px;height:8px;border-radius:50%;background:var(--bad);animation:blink 1.4s infinite}
+#strip .dot.off{animation:none;background:var(--ink2)}
+@keyframes blink{50%{opacity:.25}}
+#clock{font:600 14px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);min-width:64px;text-align:right}
+.box{position:fixed;background:var(--paper2);border:1.5px solid var(--ink);box-shadow:3px 3px 0 rgba(20,24,31,.16);padding:7px 10px 8px;z-index:4;font:11px/1.35 var(--sans);color:var(--ink)}
+.box h4{margin:0 0 5px;font:700 9.5px var(--serif);letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);border-bottom:1px solid rgba(20,24,31,.4);padding-bottom:3px}
+#key{right:12px;bottom:12px;max-width:290px}
+#key .grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px}
+#key .it{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:10.5px}
+#key svg{flex:none}
+#key .rules{margin-top:6px;border-top:1px solid rgba(20,24,31,.25);padding-top:5px;font:italic 10.5px/1.35 var(--serif)}
+#key .rules div{display:flex;gap:6px;align-items:baseline}
+#summary{left:12px;bottom:12px;max-width:340px;animation:rise .5s ease-out}
+@keyframes rise{from{transform:translateY(10px);opacity:0}}
+#summary .big{font:600 15px var(--serif)} #summary .big b{color:var(--bad)}
+#summary .nm{margin-top:3px;color:var(--ink2);font-size:11px} #summary .nm code{font:11px var(--mono);color:var(--ink)}
+.callout{position:fixed;z-index:3;max-width:320px;background:var(--paper2);border:1.5px solid var(--bad);padding:5px 9px 6px;box-shadow:2px 2px 0 rgba(179,38,43,.25);animation:rise .35s ease-out;pointer-events:none}
+.callout .l1{font:700 12.5px/1.25 var(--serif);color:var(--bad)}
+.callout .l1 span{color:var(--ink);font-weight:600}
+.callout .l2{font:10.5px/1.3 var(--mono);color:var(--ink2);margin-top:2px;overflow-wrap:anywhere}
+.callout.blocked{border-color:var(--ink);border-left:7px solid transparent;border-image:repeating-linear-gradient(135deg,var(--bad) 0 4px,var(--paper2) 4px 8px) 1;border-width:1.5px 1.5px 1.5px 7px;box-shadow:2px 2px 0 rgba(20,24,31,.2)}
+#picker{position:fixed;inset:0;overflow:auto;padding:40px 7vw;background:var(--paper)}
+#picker h1{font:700 12px var(--serif);letter-spacing:.38em;text-transform:uppercase;color:var(--accent);margin:0 0 4px}
+#picker h2{font:600 28px var(--serif);margin:0 0 22px}
+#picker h3{font:700 10px var(--serif);letter-spacing:.26em;text-transform:uppercase;color:var(--ink2);border-bottom:1px solid var(--ink);padding-bottom:4px;margin:26px 0 8px}
+#picker a{display:flex;gap:14px;padding:6px 0;color:var(--ink);text-decoration:none;border-bottom:1px dotted rgba(20,24,31,.3)}
+#picker a:hover{background:rgba(115,86,25,.08)}
+#picker a b{font:600 15px var(--serif);min-width:180px} #picker a span{font:11px var(--mono);color:var(--ink2)}
+#picker p{color:var(--ink2);font:italic 13px var(--serif)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-state="loading">
+<svg id="map" xmlns="http://www.w3.org/2000/svg"></svg>
+<div id="strip" hidden><span class="brand">Fenceline</span><span class="repo" id="repo"></span><span class="sp"></span><span class="mode" id="mode"></span><span id="clock">0:00</span></div>
+<aside class="box" id="key" hidden></aside>
+<aside class="box" id="summary" hidden></aside>
+<div id="callouts"></div>
+<main id="picker" hidden></main>
+<script type="module">
+import { layout } from '/layout.mjs';
+import { matchAny } from '/glob.mjs';
+
+const NS = 'http://www.w3.org/2000/svg';
+const STRIP = 34;
+const Q = new URLSearchParams(location.search);
+const $ = (s) => document.querySelector(s);
+const svg = $('#map');
+const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const h = (tag, cls, text, parent) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+const num = (k, d) => { const v = Number(Q.get(k)); return Number.isFinite(v) && Q.get(k) !== null && v > 0 ? v : d; };
+
+function fmtElapsed(ms) {
+  const s = Math.max(0, ms) / 1000;
+  if (s < 60) return `${Math.round(s)} s`;
+  if (s < 3600) return `${Math.round(s / 60)} min`;
+  const m = Math.round(s / 60); return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
+}
+const fmtClock = (ms) => { const s = Math.floor(Math.max(0, ms) / 1000); const hh = Math.floor(s / 3600); const mm = Math.floor((s % 3600) / 60); const ss = String(s % 60).padStart(2, '0'); return hh ? `${hh}:${String(mm).padStart(2, '0')}:${ss}` : `${mm}:${ss}`; };
+const safeMatch = (globs, p) => { try { return matchAny(globs, p); } catch { return false; } };
+
+// ---------- state ----------
+const S = { meta: null, files: new Map(), fileOp: new Map(), dirOp: new Map(), trail: [], crossings: [], broken: new Set(), stop: null, summary: null, mode: '', speed: 1 };
+const RANK = { search: 1, read: 1, edit: 2, create: 2, delete: 3 };
+let L = null; let W = 0; let H = 0;
+let bIndex = new Map(); let dIndex = new Map(); let fenceEls = new Map(); let layers = {}; let headEl = null; let dirFiles = new Map();
+
+function addFile(p, size = 0) { if (!S.files.has(p)) { S.files.set(p, { path: p, size }); return true; } return false; }
+
+// ---------- scene ----------
+function buildScene() {
+  W = Math.max(320, window.innerWidth); H = Math.max(240, window.innerHeight);
+  L = layout([...S.files.values()], { width: W, height: H, top: STRIP, margin: 10 });
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H);
+  svg.replaceChildren();
+  bIndex = new Map(); dIndex = new Map(); fenceEls = new Map(); dirFiles = new Map();
+  const defs = el('defs', {}, svg);
+  const pat = (id, size, line, attrs) => { const p = el('pattern', { id, width: size, height: size, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs); el('line', { x1: 0, y1: 0, x2: 0, y2: size, ...line }, p); return p; };
+  pat('hBad', 6, { stroke: '#b3262b', 'stroke-width': 1.4, opacity: 0.38 });
+  pat('hOut', 8, { stroke: '#b3262b', 'stroke-width': 1, opacity: 0.16 });
+  pat('hDel', 4, { stroke: '#14181f', 'stroke-width': 1.2, opacity: 0.6 });
+  const bar = el('pattern', { id: 'hBar', width: 8, height: 8, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs);
+  el('rect', { width: 8, height: 8, fill: '#f7f3ea' }, bar); el('rect', { width: 4, height: 8, fill: '#b3262b' }, bar);
+  layers = {}; for (const n of ['land', 'bld', 'tint', 'fence', 'trail', 'pin']) layers[n] = el('g', { class: 'L-' + n }, svg);
+  el('rect', { class: 'd-bg', x: 0, y: 0, width: W, height: H }, layers.land);
+
+  for (const p of S.files.keys()) { const parts = p.split('/'); for (let i = 1; i < parts.length; i++) { const k = parts.slice(0, i).join('/'); let a = dirFiles.get(k); if (!a) dirFiles.set(k, a = []); a.push(p); } }
+
+  for (const d of L.districts) {
+    const rect = el('rect', { class: `d l${((d.depth - 1) % 3) + 1}`, x: d.x + 0.5, y: d.y + 0.5, width: Math.max(0, d.w - 1), height: Math.max(0, d.h - 1) }, layers.land);
+    if (d.depth === 0) rect.setAttribute('class', 'd-bg');
+    const tint = el('rect', { class: 'tint', x: d.x, y: d.y, width: d.w, height: d.h }, layers.tint);
+    dIndex.set(d.path, { d, tint });
+    if (d.label) {
+      const fs = d.depth === 1 ? 10.5 : 9; const per = fs * 0.62 + fs * 0.17;
+      let t = d.name.toUpperCase(); const max = Math.floor((d.label.w - 6) / per);
+      if (t.length > max) t = max > 2 ? t.slice(0, max - 1) + '…' : '';
+      if (t) { const tx = el('text', { class: `dl l${Math.min(d.depth, 2)}`, x: d.label.x + 3, y: d.label.y + d.label.h - 3 }, layers.land); tx.textContent = t; }
+    }
+  }
+  for (const b of L.buildings) {
+    const r = el('rect', { class: 'b' + (b.members ? ' block' : ''), x: b.x + 1, y: b.y + 1, width: Math.max(0, b.w - 2), height: Math.max(0, b.h - 2), 'data-path': b.path }, layers.bld);
+    const ent = { b, r, cx: b.x + b.w / 2, cy: b.y + b.h / 2 };
+    bIndex.set(b.path, ent); if (b.members) for (const m of b.members) bIndex.set(m, ent);
+    const fs = Math.max(6.5, Math.min(9.5, b.h * 0.45)); const n = b.name.length;
+    if (b.h > 12 && b.w > n * fs * 0.52 + 6) { const t = el('text', { class: 'bl', x: b.x + 4, y: b.y + b.h - 4, 'font-size': fs }, layers.bld); t.textContent = b.name; }
+    else if (b.h > 12 && b.w > 34) { const max = Math.floor((b.w - 6) / (fs * 0.52)); const t = el('text', { class: 'bl', x: b.x + 4, y: b.y + b.h - 4, 'font-size': fs }, layers.bld); t.textContent = b.name.slice(0, max - 1) + '…'; }
+  }
+  drawFences();
+  headEl = el('g', { class: 'head', style: 'display:none' }, layers.trail);
+  el('circle', { class: 'ring', r: 6 }, headEl); el('circle', { class: 'dot', r: 4.5 }, headEl);
+}
+
+function zoneSet(f) {
+  const set = new Set();
+  for (const p of S.files.keys()) if (safeMatch(f.paths, p) && !safeMatch(f.except || [], p)) set.add(p);
+  return set;
+}
+function zoneRects(set) {
+  const chosen = [];
+  for (const d of [...L.districts].filter((x) => x.depth > 0).sort((a, b) => a.depth - b.depth)) {
+    if (chosen.some((c) => d.path.startsWith(c.path + '/'))) continue;
+    const fs = dirFiles.get(d.path);
+    if (fs && fs.length && fs.every((p) => set.has(p))) chosen.push(d);
+  }
+  const rects = chosen.map((d) => ({ x: d.x + 1.5, y: d.y + 1.5, w: d.w - 3, h: d.h - 3 }));
+  for (const b of L.buildings) {
+    if (chosen.some((c) => b.dir === c.path || b.dir.startsWith(c.path + '/'))) continue;
+    if (b.members ? b.members.every((m) => set.has(m)) : set.has(b.path)) rects.push({ x: b.x + 0.5, y: b.y + 0.5, w: b.w - 1, h: b.h - 1 });
+  }
+  return rects;
+}
+function drawFences() {
+  for (const f of S.meta?.fences || []) {
+    const set = zoneSet(f);
+    const inside = (b) => (b.members ? b.members.every((m) => set.has(m)) : set.has(b.path));
+    for (const b of L.buildings) {
+      if (f.kind === 'deny' ? inside(b) : !inside(b)) el('rect', { class: f.kind === 'deny' ? 'fh-bad' : 'fh-out', x: b.x + 1, y: b.y + 1, width: Math.max(0, b.w - 2), height: Math.max(0, b.h - 2) }, layers.fence);
+    }
+    const rects = set.size ? zoneRects(set) : [];
+    if (!rects.length) continue;
+    const g = el('g', { class: `fence-b ${f.kind}`, 'data-fence': f.id }, layers.fence);
+    for (const r of rects) el('rect', { x: r.x, y: r.y, width: Math.max(0, r.w), height: Math.max(0, r.h) }, g);
+    // map-style label straddling the top edge of the first zone
+    const r0 = rects.slice().sort((a, b) => a.y - b.y || a.x - b.x)[0];
+    const tag = el('g', { class: `tag ${f.kind}`, 'data-fence': f.id }, layers.fence);
+    const bg = el('rect', { height: 17, rx: 1 }, tag);
+    const glyph = f.mode === 'block' ? el('rect', { width: 12, height: 6, fill: 'url(#hBar)', stroke: '#14181f', 'stroke-width': 0.9, y: 5.5 }, tag) : null;
+    const tx = el('text', { y: 12.5 }, tag); tx.textContent = f.kind === 'only' ? `scope: ${f.text}` : f.text;
+    const gw = glyph ? 17 : 0; const tw = tx.getComputedTextLength() + 12 + gw;
+    bg.setAttribute('width', tw);
+    const x = Math.max(r0.x + 3, Math.min(r0.x + r0.w - tw - 5, W - tw - 6)); const y = Math.max(STRIP + 3, r0.y - 8.5);
+    tag.setAttribute('transform', `translate(${x},${y})`); tx.setAttribute('x', 6 + gw); if (glyph) glyph.setAttribute('x', 5);
+    fenceEls.set(f.id, { g, tag, kind: f.kind });
+  }
+}
+
+// ---------- state painting ----------
+function distKey(path) { let k = path; while (k && !dIndex.has(k)) k = k.includes('/') ? k.slice(0, k.lastIndexOf('/')) : ''; return k; }
+function setFileOp(p, op) {
+  const cur = S.fileOp.get(p);
+  if (cur && RANK[cur] > (RANK[op] || 0) && op !== 'delete') return;
+  S.fileOp.set(p, op); paintFile(p);
+}
+function paintFile(p) {
+  const e = bIndex.get(p); if (!e) return;
+  if (e.b.members) { const ops = e.b.members.map((m) => S.fileOp.get(m)).filter(Boolean); const best = ops.sort((a, b) => (RANK[b] || 0) - (RANK[a] || 0))[0]; e.r.setAttribute('class', 'b block' + (best ? ' ' + best : '')); return; }
+  const hit = e.r.classList.contains('hit');
+  e.r.setAttribute('class', 'b ' + (S.fileOp.get(p) || '') + (hit ? ' hit' : ''));
+}
+function paintDir(k) { const e = dIndex.get(distKey(k)); if (e) e.tint.classList.add('on'); }
+function pointFor(key, isDir) {
+  if (!isDir) { const e = bIndex.get(key); if (e) return [e.cx, e.cy]; }
+  const d = dIndex.get(distKey(key)); if (d) { const { x, y, w, h } = d.d; return [x + w / 2, y + h / 2 + (d.d.label ? 6 : 0)]; }
+  return [W / 2, H / 2];
+}
+function addTrail(key, isDir, animate) {
+  const prev = S.trail[S.trail.length - 1];
+  S.trail.push({ key, isDir });
+  const [x, y] = pointFor(key, isDir);
+  if (prev) { const [px, py] = pointFor(prev.key, prev.isDir); if (Math.hypot(x - px, y - py) > 0.5) drawSeg(px, py, x, y, animate); }
+  moveHead(x, y);
+}
+function drawSeg(px, py, x, y, animate) {
+  const g = el('g', { class: 'seg' + (animate ? ' draw' : '') }, layers.trail);
+  const d = `M${px},${py} L${x},${y}`;
+  el('path', { class: 'casing', d, pathLength: 1 }, g); el('path', { class: 'route', d, pathLength: 1 }, g);
+  layers.trail.appendChild(headEl);
+}
+function moveHead(x, y) { headEl.style.display = ''; headEl.style.transform = `translate(${x}px,${y}px)`; }
+
+function flash(id) {
+  const f = fenceEls.get(id); if (!f) return;
+  f.g.classList.remove('flash'); void f.g.getBoundingClientRect(); f.g.classList.add('flash'); if (f.kind === 'deny') { f.g.classList.add('broken'); f.tag.classList.add('broken'); }
+}
+
+// ---------- callouts ----------
+const placed = [];
+const overlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+function obstacles() { return ['#strip', '#key', '#summary'].map((s) => $(s)).filter((e) => e && !e.hidden).map((e) => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; }); }
+function placeCallout(c, animate) {
+  const cdiv = h('div', `callout${c.prevented ? ' blocked' : ''}`); cdiv.dataset.fence = c.fence; cdiv.dataset.file = c.file;
+  const l1 = h('div', 'l1', null, cdiv);
+  l1.append(c.prevented ? 'Blocked: ' : 'Rule broken: ');
+  h('span', '', `${c.text} · ${fmtElapsed(c.elapsed_ms)} in`, l1);
+  h('div', 'l2', `${c.op} ${c.file} · ${c.tool || ''}`.trim(), cdiv);
+  if (!animate) cdiv.style.animation = 'none';
+  cdiv.style.left = '0px'; cdiv.style.top = '0px'; $('#callouts').appendChild(cdiv);
+  const w = cdiv.offsetWidth; const hh = cdiv.offsetHeight;
+  const [cx, cy] = pointFor(c.file, false);
+  const obs = obstacles(); const all = () => [...obs, ...placed];
+  let pick = null;
+  const xs = [cx - 24, cx + 14, cx - w + 24, cx - w - 14];
+  outer: for (let step = 0; step < 8; step++) {
+    const up = -(hh + 20 + step * (hh + 6)); const dn = 20 + step * (hh + 6);
+    for (const dy of [up, dn]) for (const x0 of xs) {
+      const r = { x: Math.max(6, Math.min(W - w - 6, x0)), y: cy + dy, w, h: hh };
+      if (r.y < STRIP + 4 || r.y + hh > H - 4) continue;
+      if (all().some((o) => overlap(r, { x: o.x - 3, y: o.y - 3, w: o.w + 6, h: o.h + 6 }))) continue;
+      pick = r; break outer;
+    }
+  }
+  if (!pick) pick = { x: Math.max(6, Math.min(W - w - 6, cx - 24)), y: Math.max(STRIP + 4, Math.min(H - hh - 4, cy - hh - 20)), w, h: hh };
+  cdiv.style.left = pick.x + 'px'; cdiv.style.top = pick.y + 'px'; placed.push(pick);
+  // leader from the pin to the nearest point of the callout
+  const nx = Math.max(pick.x, Math.min(cx, pick.x + w)); const ny = Math.max(pick.y, Math.min(cy - 8, pick.y + hh));
+  el('line', { class: 'lead' + (c.prevented ? ' blocked' : ''), x1: cx, y1: cy - 8, x2: nx, y2: ny }, layers.pin);
+  layers.pin.appendChild(layers.pin.querySelector(`.pin[data-id="${c.id}"]`));
+}
+function drawPin(c, animate) {
+  const [cx, cy] = pointFor(c.file, false);
+  const g = el('g', { class: 'pin' + (c.prevented ? ' blocked' : ''), 'data-id': c.id, transform: `translate(${cx},${cy})` }, layers.pin);
+  const inner = el('g', { style: animate ? '' : 'animation:none' }, g);
+  if (c.prevented) { el('line', { class: 'post', x1: -7, y1: -2, x2: -7, y2: -12 }, inner); el('line', { class: 'post', x1: 7, y1: -2, x2: 7, y2: -12 }, inner); el('rect', { class: 'bar', x: -10, y: -13, width: 20, height: 6 }, inner); }
+  else { el('path', { class: 'body', d: 'M0,0 C-5,-8 -8,-12 -8,-16 a8,8 0 1 1 16,0 C8,-12 5,-8 0,0z' }, inner); el('circle', { class: 'eye', cx: 0, cy: -16, r: 2.8 }, inner); }
+  g.firstChild.style.animation = animate ? '' : 'none';
+}
+let crossSeq = 0;
+function addCrossing(raw, ev, animate) {
+  const c = { id: ++crossSeq, fence: raw.fence, text: raw.text, mode: raw.mode, file: raw.file, op: raw.op, prevented: !!raw.prevented, tool: ev.tool, elapsed_ms: raw.elapsed_ms ?? ev.elapsed_ms ?? 0 };
+  S.crossings.push(c); S.broken.add(c.fence);
+  drawPin(c, animate); placeCallout(c, animate);
+  const e = bIndex.get(c.file); if (e) { e.r.classList.add('hit'); if (animate) { e.r.classList.remove('flash'); void e.r.getBoundingClientRect(); e.r.classList.add('flash'); } }
+  if (animate) flash(c.fence); else { const f = fenceEls.get(c.fence); if (f && f.kind === 'deny') { f.g.classList.add('broken'); f.tag.classList.add('broken'); } }
+}
+
+// ---------- events ----------
+function applyEvent(ev, animate, relayoutOk = true) {
+  if (ev.kind === 'stop') { S.stop = ev; setClock(ev.elapsed_ms); showSummary(); return; }
+  if (ev.kind === 'session' || ev.kind === 'warning') return;
+  if (ev.elapsed_ms != null) setClock(ev.elapsed_ms);
+  let added = false;
+  for (const t of ev.touches || []) if (!t.dir && addFile(t.file, 0)) added = true;
+  if (added && relayoutOk && L) { rebuild(); animate = false; }
+  const prevented = new Set((ev.crossings || []).filter((c) => c.prevented).map((c) => c.file));
+  const touches = orderTouches(ev.touches || []);
+  for (const t of touches) {
+    if (t.dir) paintDir(t.file), S.dirOp.set(t.file, t.op);
+    else if (!prevented.has(t.file)) setFileOp(t.file, t.op);
+    addTrail(t.file, !!t.dir, animate);
+  }
+  for (const c of ev.crossings || []) addCrossing(c, ev, animate);
+}
+// order one event's touches as a route: nearest neighbour from where the trail currently is
+function orderTouches(ts) {
+  const rest = ts.slice(); const out = [];
+  const last = S.trail[S.trail.length - 1];
+  let cur = last ? pointFor(last.key, last.isDir) : null;
+  if (!cur && rest.length) { const f = rest.shift(); out.push(f); cur = pointFor(f.file, !!f.dir); }
+  while (rest.length) {
+    let bi = 0; let bd = Infinity;
+    rest.forEach((t, i) => { const [x, y] = pointFor(t.file, !!t.dir); const d = Math.hypot(x - cur[0], y - cur[1]); if (d < bd) { bd = d; bi = i; } });
+    const t = rest.splice(bi, 1)[0]; out.push(t); cur = pointFor(t.file, !!t.dir);
+  }
+  return out;
+}
+function resetState() {
+  S.fileOp.clear(); S.dirOp.clear(); S.trail = []; S.crossings = []; S.broken.clear(); S.stop = null; S.summary = null; placed.length = 0; crossSeq = 0;
+  $('#callouts').replaceChildren(); $('#summary').hidden = true; setClock(0);
+}
+// redraw everything for the current size / file set from state (no animation)
+function rebuild() {
+  const saved = { fileOp: new Map(S.fileOp), dirOp: new Map(S.dirOp), trail: S.trail, crossings: S.crossings };
+  S.fileOp = new Map(); S.dirOp = new Map(); S.trail = []; S.crossings = []; placed.length = 0; crossSeq = 0; $('#callouts').replaceChildren();
+  buildScene();
+  for (const [p, op] of saved.fileOp) setFileOp(p, op);
+  for (const k of saved.dirOp.keys()) { paintDir(k); S.dirOp.set(k, saved.dirOp.get(k)); }
+  for (const t of saved.trail) addTrail(t.key, t.isDir, false);
+  const old = saved.crossings; S.broken.clear();
+  for (const c of old) addCrossing({ ...c }, { tool: c.tool }, false);
+  if (S.stop) showSummary();
+}
+
+// ---------- chrome ----------
+function setClock(ms) { $('#clock').textContent = fmtClock(ms); }
+function setMode(html, live) {
+  const m = $('#mode'); m.replaceChildren();
+  if (live !== undefined) { const d = h('i', 'dot' + (live ? '' : ' off')); m.appendChild(d); }
+  m.append(html);
+}
+function swatch(kind) {
+  const s = el('svg', { width: 20, height: 12, viewBox: '0 0 20 12' });
+  const r = (a) => el('rect', { x: 1, y: 1, width: 18, height: 10, stroke: '#14181f', 'stroke-opacity': 0.5, 'stroke-width': 0.8, fill: '#f7f2e5', ...a }, s);
+  if (kind === 'read') r({ fill: '#cdd8c3' });
+  else if (kind === 'search') { r({ fill: '#ebe4d3' }); el('rect', { x: 1, y: 1, width: 18, height: 10, fill: '#735619', opacity: 0.18 }, s); }
+  else if (kind === 'edit') r({ fill: '#735619', stroke: '#4a3710' });
+  else if (kind === 'delete') { const p = el('pattern', { id: 'kDel', width: 4, height: 4, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, s); el('line', { x1: 0, y1: 0, x2: 0, y2: 4, stroke: '#14181f', 'stroke-width': 1.1, opacity: 0.6 }, p); r({ fill: 'url(#kDel)', 'stroke-dasharray': '3 2', 'stroke-opacity': 1 }); }
+  else if (kind === 'path') { el('path', { d: 'M1,9 L8,3 L14,8 L19,2', fill: 'none', stroke: '#14181f', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, s); }
+  else if (kind === 'deny') { r({ fill: 'none', stroke: '#b3262b', 'stroke-width': 1.5, 'stroke-dasharray': '4 3', 'stroke-opacity': 1 }); }
+  else if (kind === 'only') { r({ fill: 'none', stroke: '#2f6b3f', 'stroke-width': 2, 'stroke-opacity': 1 }); }
+  else if (kind === 'block') { const p = el('pattern', { id: 'kBar', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, s); el('rect', { width: 6, height: 6, fill: '#f7f3ea' }, p); el('rect', { width: 3, height: 6, fill: '#b3262b' }, p); el('rect', { x: 3, y: 3, width: 14, height: 6, fill: 'url(#kBar)', stroke: '#14181f', 'stroke-width': 1 }, s); }
+  return s;
+}
+function buildKey() {
+  const k = $('#key'); k.replaceChildren(); h('h4', '', 'Key', k);
+  const grid = h('div', 'grid', null, k);
+  for (const [kind, label] of [['read', 'read'], ['search', 'searched'], ['edit', 'edited / created'], ['delete', 'deleted'], ['path', "agent's path"], ['deny', 'off-limits'], ['only', 'allowed area'], ['block', 'blocked']]) {
+    const it = h('div', 'it', null, grid); it.appendChild(swatch(kind)); h('span', '', label, it);
+  }
+  if (S.meta?.fences?.length) {
+    const r = h('div', 'rules', null, k);
+    for (const f of S.meta.fences) { const d = h('div', '', null, r); h('span', '', f.kind === 'only' ? '▣' : '⊘', d); h('span', '', f.text + (f.mode === 'block' ? ' (blocks)' : ''), d); }
+  }
+  k.hidden = false;
+}
+function showSummary() {
+  const stop = S.stop; if (!stop) return;
+  const box = $('#summary'); box.replaceChildren(); h('h4', '', 'End of session', box);
+  const n = S.summary?.crossings?.length ?? stop.crossing_count ?? S.crossings.length;
+  const big = h('div', 'big', null, box); const b = h('b', '', String(n)); big.append(b, ` ${n === 1 ? 'fence crossing' : 'fence crossings'}`);
+  const un = S.summary?.unmentioned ?? stop.unmentioned ?? [];
+  const nm = h('div', 'nm', 'not mentioned in final message: ', box);
+  if (un.length) h('code', '', un.map((u) => (typeof u === 'string' ? u : u.file || u.text || '')).join(', '), nm); else nm.append('none');
+  box.hidden = false;
+}
+
+// ---------- modes ----------
+async function getJson(url) { const r = await fetch(url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.json(); }
+function initData(meta, events) {
+  S.meta = meta; S.files = new Map();
+  for (const f of meta.files || []) addFile(f.path, f.size);
+  for (const ev of events) for (const t of ev.touches || []) if (!t.dir) addFile(t.file, 0);
+  $('#repo').textContent = meta.repo_name || 'repo'; document.title = `Fenceline · ${meta.repo_name || ''}`.trim();
+  $('#strip').hidden = false; buildKey(); buildScene();
+}
+let resizeT = 0;
+const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (L) rebuild(); }, 120); };
+
+async function replay(name) {
+  const data = await getJson('/api/recording/' + encodeURIComponent(name));
+  const evs = data.events.filter((e) => e.kind !== 'session' || true);
+  const speed = num('speed', 8); const hold = Number(Q.get('hold')) || 4000; const loop = Q.get('loop') === '1';
+  initData(data.meta, evs); S.summary = data.summary;
+  setMode(`Replay ×${speed} · recorded session`, undefined);
+  let idx = 0; let vt = 0; let last = 0; let running = false; let raf = 0;
+  const reset = () => { resetState(); rebuild(); idx = 0; vt = 0; };
+  const finish = () => { running = false; document.body.dataset.state = 'done'; if (loop) setTimeout(() => { reset(); start(); }, hold); };
+  const frame = (ts) => {
+    if (!running) return;
+    vt += (ts - last) * speed; last = ts;
+    while (idx < evs.length && (evs[idx].elapsed_ms ?? 0) <= vt) applyEvent(evs[idx++], true);
+    if (idx < evs.length) { setClock(Math.min(vt, evs[evs.length - 1].elapsed_ms ?? vt)); raf = requestAnimationFrame(frame); } else finish();
+  };
+  const start = () => { running = true; document.body.dataset.state = 'playing'; last = performance.now(); raf = requestAnimationFrame(frame); };
+  document.body.addEventListener('click', () => { if (running) { running = false; cancelAnimationFrame(raf); document.body.dataset.state = 'paused'; } else if (idx >= evs.length) { reset(); start(); } else start(); });
+  if (Q.get('autoplay') === '1') start(); else { document.body.dataset.state = 'ready'; $('#mode').append(' · click to play'); }
+}
+
+async function live(id) {
+  const q = []; let ready = false; let lastI = -1;
+  const es = new EventSource('/api/stream/' + encodeURIComponent(id));
+  const apply = (ev) => { if (ev.i <= lastI) return; lastI = ev.i; applyEvent(ev, true); if (ev.kind === 'stop') endLive(); };
+  es.addEventListener('ev', (e) => { const ev = JSON.parse(e.data); if (ready) apply(ev); else q.push(ev); });
+  es.addEventListener('summary', (e) => { S.summary = JSON.parse(e.data); showSummary(); });
+  const data = await getJson('/api/session/' + encodeURIComponent(id));
+  initData(data.meta, data.events); S.summary = data.summary;
+  for (const ev of data.events) { lastI = Math.max(lastI, ev.i); applyEvent(ev, false, false); }
+  const t0 = Date.parse(data.meta.started_at);
+  const stopped = () => !!S.stop;
+  const endLive = () => { setMode('Ended', false); };
+  if (stopped()) endLive(); else { setMode('Live', true); const iv = setInterval(() => { if (stopped()) clearInterval(iv); else setClock(Date.now() - t0); }, 1000); }
+  ready = true; q.forEach(apply);
+  document.body.dataset.state = 'live';
+}
+
+async function picker() {
+  const p = $('#picker'); p.hidden = false;
+  h('h1', '', 'Fenceline', p); h('h2', '', 'Choose a map', p);
+  const section = (title, items, href) => {
+    h('h3', '', title, p);
+    if (!items.length) { h('p', '', 'Nothing here yet.', p); return; }
+    for (const i of items) { const a = h('a', '', null, p); a.href = href(i); h('b', '', i.repo_name || i.name || i.id, a); h('span', '', `${i.name || i.id}${i.started_at ? ' · ' + i.started_at.replace('T', ' ').slice(0, 19) : ''}`, a); }
+  };
+  const [ss, rs] = await Promise.all([getJson('/api/sessions').catch(() => []), getJson('/api/recordings').catch(() => [])]);
+  section('Live and past sessions', ss, (i) => `?session=${encodeURIComponent(i.id)}`);
+  section('Recorded sessions (replay)', rs, (i) => `?recording=${encodeURIComponent(i.name)}&autoplay=1`);
+  document.body.dataset.state = 'picker';
+}
+
+window.addEventListener('resize', onResize);
+(async () => {
+  try {
+    if (Q.get('recording')) await replay(Q.get('recording'));
+    else if (Q.get('session')) await live(Q.get('session'));
+    else await picker();
+  } catch (e) { document.body.dataset.state = 'error'; const m = h('main'); m.id = 'picker'; h('h2', '', 'Could not load', m); h('p', '', String(e.message || e), m); document.body.appendChild(m); console.error(e); }
+})();
+</script>
+</body>
+</html>
