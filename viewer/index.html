@@ -90,13 +90,15 @@ svg#map{position:fixed;inset:0;display:block}
 #clock{font:600 14px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);min-width:64px;text-align:right}
 .box{position:fixed;background:var(--paper2);border:1.5px solid var(--ink);box-shadow:3px 3px 0 var(--shadow);padding:7px 10px 8px;z-index:4;font:11px/1.35 var(--sans);color:var(--ink)}
 .box h4{margin:0 0 5px;font:700 9.5px var(--serif);letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);border-bottom:1px solid var(--rule);padding-bottom:3px}
-#key{right:12px;bottom:12px;max-width:290px}
-#key .grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px}
+/* the key is a legend bar under the map, not a box over it: a box hid the buildings beneath it (package.json, README.md) */
+#key{position:fixed;left:0;right:0;bottom:0;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;padding:6px 14px 7px;background:var(--paper2);border-top:1.5px solid var(--ink);font:11px/1.35 var(--sans);color:var(--ink)}
+#key h4{margin:0;font:700 9.5px var(--serif);letter-spacing:.24em;text-transform:uppercase;color:var(--ink2)}
+#key .grid{display:flex;flex-wrap:wrap;gap:3px 14px}
 #key .it{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:10.5px}
 #key svg{flex:none}
-#key .rules{margin-top:6px;border-top:1px solid var(--rule);padding-top:5px;font:italic 10.5px/1.35 var(--serif)}
+#key .rules{display:flex;flex-wrap:wrap;gap:2px 14px;font:italic 10.5px/1.35 var(--serif)}
 #key .rules div{display:flex;gap:6px;align-items:baseline}
-#summary{left:12px;bottom:12px;max-width:340px;animation:rise .5s ease-out}
+#summary{left:12px;bottom:calc(var(--foot, 0px) + 12px);max-width:340px;animation:rise .5s ease-out}
 @keyframes rise{from{transform:translateY(10px);opacity:0}}
 #summary .big{font:600 15px var(--serif)} #summary .big b{color:var(--bad)}
 #summary .nm{margin-top:3px;color:var(--ink2);font-size:11px} #summary .nm code{font:11px var(--mono);color:var(--ink)}
@@ -120,7 +122,7 @@ svg#map{position:fixed;inset:0;display:block}
 <body data-state="loading">
 <svg id="map" xmlns="http://www.w3.org/2000/svg"></svg>
 <div id="strip" hidden><span class="brand">Fenceline</span><span class="repo" id="repo"></span><span class="sp"></span><span class="mode" id="mode"></span><span id="clock">0:00</span></div>
-<aside class="box" id="key" hidden></aside>
+<footer id="key" hidden></footer>
 <aside class="box" id="summary" hidden></aside>
 <div id="callouts"></div>
 <main id="picker" hidden></main>
@@ -157,7 +159,8 @@ function addFile(p, size = 0) { if (!S.files.has(p)) { S.files.set(p, { path: p,
 // ---------- scene ----------
 function buildScene() {
   W = Math.max(320, window.innerWidth); H = Math.max(240, window.innerHeight);
-  L = layout([...S.files.values()], { width: W, height: H, top: STRIP, margin: 10 });
+  const foot = $('#key').hidden ? 0 : Math.ceil($('#key').getBoundingClientRect().height); document.body.style.setProperty('--foot', foot + 'px');
+  L = layout([...S.files.values()], { width: W, height: H - foot, top: STRIP, margin: 10 });
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H);
   svg.replaceChildren();
   bIndex = new Map(); dIndex = new Map(); fenceEls = new Map(); dirFiles = new Map();

@@ -6,7 +6,7 @@
   "speed": 1,
   "theme": "light",
   "format": "16:9",
-  "duration_s": 50,
-  "recorded_at": "2026-10-22T14:00:34.877Z",
+  "duration_s": 47.9,
+  "recorded_at": "2026-10-22T15:38:32.262Z",
   "note": "replay of real recorded runs (evals/results/runs/<run>) at a constant speed; nothing on screen is mocked"
 }
