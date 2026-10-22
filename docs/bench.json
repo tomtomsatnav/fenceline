@@ -1,31 +1,31 @@
 {
-  "measured_at": "2026-10-22T13:29:21.892Z",
+  "measured_at": "2026-10-22T13:40:47.831Z",
   "node": "v22.22.0",
   "platform": "darwin arm64",
   "repos": [
     {
       "repo": "fenceline (this repo)",
-      "files": 333,
-      "session_start_ms": 154,
-      "post_bash_median_ms": 75,
-      "post_read_median_ms": 63,
-      "pre_edit_median_ms": 62
+      "files": 335,
+      "session_start_ms": 168,
+      "post_bash_median_ms": 77,
+      "post_read_median_ms": 55,
+      "pre_edit_median_ms": 54
     },
     {
       "repo": "synthetic-5000",
       "files": 5000,
-      "session_start_ms": 195,
-      "post_bash_median_ms": 96,
-      "post_read_median_ms": 66,
-      "pre_edit_median_ms": 65
+      "session_start_ms": 205,
+      "post_bash_median_ms": 101,
+      "post_read_median_ms": 58,
+      "pre_edit_median_ms": 62
     },
     {
       "repo": "aos-orchestrator",
       "files": 272,
-      "session_start_ms": 128,
-      "post_bash_median_ms": 74,
-      "post_read_median_ms": 63,
-      "pre_edit_median_ms": 62
+      "session_start_ms": 141,
+      "post_bash_median_ms": 90,
+      "post_read_median_ms": 73,
+      "pre_edit_median_ms": 83
     }
   ]
 }

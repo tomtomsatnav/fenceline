@@ -73,8 +73,8 @@ Those runs used small repos and sessions of about a minute, so they can't speak 
   - `except` carves files out.
   - The agent can't edit `.fenceline/fences.json` with its edit tools, or loosen fences through the CLI. Any other change
     to the fences (including `fenceline accept` after you say yes) is listed in the Stop summary.
-- Hook latency ([docs/bench.json](docs/bench.json), `node scripts/bench-hook.mjs`, median of 10 calls on one Mac): 75 ms
-  per Bash call on this 333-file repo and 96 ms on a 5,000-file repo. Most of that is Node startup.
+- Hook latency ([docs/bench.json](docs/bench.json), `node scripts/bench-hook.mjs`, median of 10 calls on one Mac): 77 ms
+  per Bash call on this 335-file repo and 101 ms on a 5,000-file repo. Most of that is Node startup.
 - Tests (`npm test`, zero dependencies):
   - glob and fence unit tests, the compiler with a fake LLM, and the Bash write-target parser;
   - the real hook process against a temp git repo, covering reads vs writes, gitignored build output, renames, `sed -i`
