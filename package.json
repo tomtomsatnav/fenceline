@@ -1,0 +1,10 @@
+{
+  "name": "fenceline",
+  "version": "0.1.0",
+  "description": "A live map of where your coding agent goes, with plain-English fences.",
+  "type": "module",
+  "bin": { "fenceline": "bin/fenceline.mjs" },
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}

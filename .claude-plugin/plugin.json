@@ -1,0 +1,8 @@
+{
+  "name": "fenceline",
+  "version": "0.1.0",
+  "description": "A live map of where your coding agent goes, with plain-English fences: compiled once to path globs, flagged (warn) or denied (block) by hooks, summarised at Stop. No LLM in the loop while the agent works.",
+  "author": { "name": "Tom Mitchell" },
+  "license": "MIT",
+  "keywords": ["hooks", "guardrails", "scope", "visualization", "map"]
+}

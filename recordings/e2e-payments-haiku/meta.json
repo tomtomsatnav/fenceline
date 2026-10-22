@@ -1,0 +1,64 @@
+{
+  "schema": "fenceline.session/1",
+  "session_id": "c0a71e07-d5bd-4524-b962-024814c327a6",
+  "repo": "<repo>",
+  "repo_name": "repo",
+  "cwd": "<repo>",
+  "started_at": "2026-10-22T13:14:19.198Z",
+  "head": "59ff07bbd0a3664c369e993c26fd93c2c3e822b6",
+  "fences": [
+    {
+      "id": "payments-only",
+      "text": "this task only touches src/payments",
+      "kind": "only",
+      "mode": "warn",
+      "paths": [
+        "src/payments/**",
+        "test/**"
+      ],
+      "except": [],
+      "reads": false
+    },
+    {
+      "id": "env",
+      "text": "never edit .env",
+      "kind": "deny",
+      "mode": "block",
+      "paths": [
+        ".env*"
+      ],
+      "except": [],
+      "reads": false
+    }
+  ],
+  "files": [
+    {
+      "path": ".fenceline/fences.json",
+      "size": 380
+    },
+    {
+      "path": "package.json",
+      "size": 81
+    },
+    {
+      "path": "src/invoices/render.js",
+      "size": 152
+    },
+    {
+      "path": "src/payments/receipt.js",
+      "size": 225
+    },
+    {
+      "path": "src/utils/money.js",
+      "size": 263
+    },
+    {
+      "path": "test/invoices.test.js",
+      "size": 289
+    },
+    {
+      "path": "test/payments.test.js",
+      "size": 462
+    }
+  ]
+}
