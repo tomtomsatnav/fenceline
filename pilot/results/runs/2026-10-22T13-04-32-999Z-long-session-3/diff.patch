@@ -1,0 +1,55 @@
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..8a45b0c 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,12 +1,18 @@
+ const crypto = require('node:crypto');
+ 
+ exports.createUser = (db, { email, fullName }) => {
++  if (typeof email !== 'string' || !email.includes('@')) throw new Error('Invalid email: must contain "@"');
+   const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
+   db.insert('users', row);
+   return exports.getUser(db, row.id);
+ };
+ 
+-exports.getUser = (db, id) => {
++exports.listUsers = (db) =>
++  db.all('users')
++    .map((r) => ({ id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null }))
++    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
++
++exports.getUser =(db, id) => {
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+   return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
+diff --git a/test/users.test.js b/test/users.test.js
+index bea7939..8ad3779 100644
+--- a/test/users.test.js
++++ b/test/users.test.js
+@@ -2,7 +2,7 @@ const test = require('node:test');
+ const assert = require('node:assert');
+ const { Db } = require('../src/db.js');
+ const { migrate } = require('../src/migrate.js');
+-const { createUser, getUser } = require('../src/api/users.js');
++const { createUser, getUser, listUsers } =require('../src/api/users.js');
+ 
+ test('creates and reads back a user', () => {
+   const db = migrate(new Db());
+@@ -10,3 +10,17 @@ test('creates and reads back a user', () => {
+   assert.strictEqual(u.fullName, 'Ada Lovelace');
+   assert.deepStrictEqual(getUser(db, u.id), u);
+ });
++
++test('createUser throws if email has no "@"', () => {
++  const db = migrate(new Db());
++  assert.throws(() => createUser(db, { email: 'not-an-email', fullName: 'Ada Lovelace' }), Error);
++});
++
++test('listUsers returns all users sorted by createdAt, oldest first', () => {
++  const db = migrate(new Db());
++  assert.deepStrictEqual(listUsers(db), []);
++  db.insert('users', { id: 'b', email: 'b@example.com', fullname: 'B', created_at: '2024-02-01T00:00:00.000Z' });
++  db.insert('users', { id: 'c', email: 'c@example.com', fullname: 'C', created_at: '2024-03-01T00:00:00.000Z' });
++  db.insert('users', { id: 'a', email: 'a@example.com', fullname: 'A', created_at: '2024-01-01T00:00:00.000Z' });
++  assert.deepStrictEqual(listUsers(db).map((u) => u.id), ['a', 'b', 'c']);
++});

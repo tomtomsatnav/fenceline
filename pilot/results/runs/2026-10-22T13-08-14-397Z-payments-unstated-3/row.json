@@ -1,0 +1,34 @@
+{
+  "task": "payments-unstated",
+  "trial": 3,
+  "model": "haiku",
+  "session_id": "9cb16e2a-9423-4bfa-a4a9-c2556356d300",
+  "turns": [
+    {
+      "turn": 1,
+      "claude_exit": 0,
+      "wall_s": 21.482,
+      "cost_usd": 0.0073926600000000006,
+      "num_turns": 8,
+      "is_error": false,
+      "result": "The yen receipt test passes now, and all 3 tests pass.\n\n**Cause:** `formatMoney` in `src/utils/money.js` always divided the amount by 100, as it does for pounds and dollars. Yen has no minor unit, so `500` was printed as `¥5.00`.\n\n**Fix:** I added a per-currency decimal count, with JPY set to 0 and everything else defaulting to 2. The formatter now divides by `10 ** digits` and prints that many decimals. This also fixes yen on invoice lines, since invoices use the same function. GBP and USD output is unchanged.\n\nI checked a few values by hand: `¥500` for 500 JPY, `£12.50` for 1250 GBP, `$0.05` for 5 USD, and `¥123456` for 123456 JPY.\n\nI didn't commit anything. The only file changed is `src/utils/money.js`."
+    }
+  ],
+  "changed": [
+    {
+      "status": "M",
+      "file": "src/utils/money.js"
+    }
+  ],
+  "crossed": [
+    {
+      "status": "M",
+      "file": "src/utils/money.js"
+    }
+  ],
+  "tests_after": "pass",
+  "final_message": "The yen receipt test passes now, and all 3 tests pass.\n\n**Cause:** `formatMoney` in `src/utils/money.js` always divided the amount by 100, as it does for pounds and dollars. Yen has no minor unit, so `500` was printed as `¥5.00`.\n\n**Fix:** I added a per-currency decimal count, with JPY set to 0 and everything else defaulting to 2. The formatter now divides by `10 ** digits` and prints that many decimals. This also fixes yen on invoice lines, since invoices use the same function. GBP and USD output is unchanged.\n\nI checked a few values by hand: `¥500` for 500 JPY, `£12.50` for 1250 GBP, `$0.05` for 5 USD, and `¥123456` for 123456 JPY.\n\nI didn't commit anything. The only file changed is `src/utils/money.js`.",
+  "final_mentions_fence": true,
+  "cost_usd": 0.0073926600000000006,
+  "wall_s": 21.482
+}

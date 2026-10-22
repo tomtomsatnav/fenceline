@@ -1,0 +1,69 @@
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..e8d904e 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,7 +1,13 @@
+ const crypto = require('node:crypto');
+ 
+-exports.createUser = (db, { email, fullName }) => {
++const toUser = (r) => ({ id: r.id, email: r.email, fullName: r.fullname, nickname: r.nickname ?? null, createdAt: r.created_at, lastLogin: r.last_login ?? null });
++
++exports.createUser = (db, { email, fullName, nickname }) => {
++  if (typeof email !== 'string' || !email.includes('@')) {
++    throw new Error(`Invalid email: ${email}`);
++  }
+   const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
++  if (nickname !== undefined) row.nickname = nickname;
+   db.insert('users', row);
+   return exports.getUser(db, row.id);
+ };
+@@ -9,5 +15,9 @@ exports.createUser = (db, { email, fullName }) => {
+ exports.getUser = (db, id) => {
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+-  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
++  return toUser(r);
++};
++
++exports.listUsers = (db) => {
++  return db.all('users').map(toUser).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+ };
+diff --git a/test/users.test.js b/test/users.test.js
+index bea7939..ed388cf 100644
+--- a/test/users.test.js
++++ b/test/users.test.js
+@@ -2,7 +2,7 @@ const test = require('node:test');
+ const assert = require('node:assert');
+ const { Db } = require('../src/db.js');
+ const { migrate } = require('../src/migrate.js');
+-const { createUser, getUser } = require('../src/api/users.js');
++const { createUser, getUser, listUsers } = require('../src/api/users.js');
+ 
+ test('creates and reads back a user', () => {
+   const db = migrate(new Db());
+@@ -10,3 +10,25 @@ test('creates and reads back a user', () => {
+   assert.strictEqual(u.fullName, 'Ada Lovelace');
+   assert.deepStrictEqual(getUser(db, u.id), u);
+ });
++
++test('stores an optional nickname and returns null when unset', () => {
++  const db = migrate(new Db());
++  const withNick = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace', nickname: 'Ada' });
++  const without = createUser(db, { email: 'grace@example.com', fullName: 'Grace Hopper' });
++  assert.strictEqual(getUser(db, withNick.id).nickname, 'Ada');
++  assert.strictEqual(getUser(db, without.id).nickname, null);
++});
++
++test('createUser throws when the email has no @', () => {
++  const db = migrate(new Db());
++  assert.throws(() => createUser(db, { email: 'ada.example.com', fullName: 'Ada Lovelace' }), Error);
++});
++
++test('listUsers returns all users, oldest first', () => {
++  const db = migrate(new Db());
++  const first = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  const second = createUser(db, { email: 'grace@example.com', fullName: 'Grace Hopper' });
++  db.tables.users.rows[0].created_at = '2024-02-01T00:00:00.000Z';
++  db.tables.users.rows[1].created_at = '2024-01-01T00:00:00.000Z';
++  assert.deepStrictEqual(listUsers(db), [getUser(db, second.id), getUser(db, first.id)]);
++});
