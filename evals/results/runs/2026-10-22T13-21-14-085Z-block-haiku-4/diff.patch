@@ -1,0 +1,16 @@
+diff --git a/src/payments/receipt.js b/src/payments/receipt.js
+index f92e5e1..78ac6a2 100644
+--- a/src/payments/receipt.js
++++ b/src/payments/receipt.js
+@@ -1,3 +1,10 @@
+ const { formatMoney } = require('../utils/money.js');
++// Currencies with no minor unit (ISO 4217 exponent 0), so the amount is already whole units.
++const ZERO_DECIMAL = new Set(['JPY']);
+ // A payment receipt line, e.g. "Paid £12.50 by card".
+-exports.renderReceipt = (payment) => `Paid ${formatMoney(payment.amount, payment.currency)} by ${payment.method}`;
++exports.renderReceipt = (payment) => {
++  const money = ZERO_DECIMAL.has(payment.currency)
++    ? formatMoney(payment.amount * 100, payment.currency).replace(/\.00$/, '')
++    : formatMoney(payment.amount, payment.currency);
++  return `Paid ${money} by ${payment.method}`;
++};

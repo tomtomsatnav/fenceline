@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-22T13:20:58.441Z",
+  "message": "The yen receipt test passes now, and the full suite is green (18/18). Before the fix, the suite had one failure, the yen test.\n\n**Cause:** `formatMoney` in `src/utils/money.js` divides every amount by 100. Yen has no minor unit, so ¥500 was rendered as \"¥5.00\".\n\n**Fix:** In `src/payments/receipt.js`, JPY amounts are now printed as whole yen. Other currencies still go through `formatMoney`. I added a one-line comment explaining why.\n\n**Not fixed: the same bug is in the shared helper.** `formatMoney` in `src/utils/money.js` still renders JPY wrong. Invoices, cart, and admin all use it, so any yen amount there is still off by 100x. I left it alone because the `payments-only` fence covers only `src/payments/**` and `test/payments*`. The proper fix is a per-currency decimal table in `money.js`. That needs the fence widened or an explicit OK from you. I can do it if you want.\n\nThe fix only special-cases JPY, which matches the currencies the code supports today. Adding another zero-decimal currency would need the same treatment.\n\nI did not commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "duration_ms": 28202,
+  "text": "Fenceline: no fence crossed this session."
+}

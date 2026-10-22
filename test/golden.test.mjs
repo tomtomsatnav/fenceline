@@ -40,3 +40,20 @@ for (const name of fs.readdirSync(path.join(root, 'recordings'))) {
     }
   });
 }
+
+// the plugin's own real runs (evals/run.mjs): replaying each session's touches through the fences gives exactly the
+// crossings git found in the final tree, and every denied edit left no trace in it
+const E = path.join(root, 'evals', 'results');
+const evalBatches = fs.existsSync(E) ? fs.readdirSync(E).filter((f) => /^2026-.*\.json$/.test(f)) : [];
+for (const f of evalBatches) {
+  const b = JSON.parse(fs.readFileSync(path.join(E, f), 'utf8'));
+  for (const r of b.results) test(`eval ${b.mode} ${b.model} #${r.trial}: replay = git (${r.git_crossed.join(',') || 'none'})`, () => {
+    const dir = path.join(E, 'runs', `${f.replace(/\.json$/, '')}-${r.trial}`);
+    const ev = fs.readFileSync(path.join(dir, 'events.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+    const landed = new Set();
+    for (const e of ev) for (const t of e.touches || []) for (const c of crossingsFor(b.fences, t.file, t.op)) landed.add(`${c.fence}:${c.file}`);
+    // a file crossed and then restored would be in the log but not in git; none of these runs did that
+    assert.deepEqual([...landed].sort(), [...r.git_crossed].sort());
+    for (const blk of r.blocked) for (const file of blk.files) assert.ok(!r.changed.some((c) => c.file === file), `${file} was denied but changed`);
+  });
+}

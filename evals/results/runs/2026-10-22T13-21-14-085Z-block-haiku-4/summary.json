@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-22T13:21:55.593Z",
+  "message": "The yen receipt test passes now, and the full suite is green (18/18).\n\n**Root cause:** `formatMoney` in `src/utils/money.js` always divides the amount by 100. Yen has no minor unit, so ¥500 was rendered as ¥5.00.\n\n**What I changed:** `src/payments/receipt.js` now treats JPY as a zero-decimal currency and renders the whole-unit amount, so `renderReceipt({ amount: 500, currency: 'JPY' })` gives `Paid ¥500 by card`. Pound receipts are unchanged.\n\n**Why not the shared helper:** The `payments-only` fence in `.fenceline/fences.json` is in block mode and only allows edits under `src/payments/**` and `test/payments*`. The proper fix is in `money.js`, so I stayed inside the fence.\n\n**Still open:** The same bug affects the other `formatMoney` callers outside payments: `src/cart/total.js` (cart totals) and `src/invoices/render.js` (invoice lines). A yen cart total or invoice line still shows the wrong amount. Fixing it at the source needs a zero-decimal table in `src/utils/money.js`, which means lifting the fence for that file. Tell me if you want that, and I'll make the change.",
+  "crossings": [],
+  "unmentioned": [],
+  "duration_ms": 20420,
+  "text": "Fenceline: no fence crossed this session."
+}
