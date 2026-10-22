@@ -3,8 +3,9 @@
     "2026-10-22T13-20-29-402Z-warn-haiku-5"
   ],
   "speed": 3,
+  "theme": "light",
   "format": "16:9",
   "duration_s": 9.3,
-  "recorded_at": "2026-10-22T13:25:33.966Z",
+  "recorded_at": "2026-10-22T13:59:26.119Z",
   "note": "replay of real recorded runs (evals/results/runs/<run>) at a constant speed; nothing on screen is mocked"
 }

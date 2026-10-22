@@ -4,27 +4,45 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Fenceline</title>
+<script>{const t=new URLSearchParams(location.search).get('theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}</script>
 <style>
 :root{
-  --paper:#f1ece1; --paper2:#f7f3ea; --ink:#14181f; --ink2:#524f49; --accent:#735619;
-  --bad:#b3262b; --ok:#2f6b3f;
-  --land1:#ebe4d3; --land2:#e3dbc6; --land3:#ede6d5; --bld:#f7f2e5; --read:#cdd8c3;
+  --paper:#f1ece1; --paper2:#f7f3ea; --ink:#14181f; --ink2:#524f49; --accent:#735619; --accent-edge:#4a3710;
+  --bad:#b3262b; --bad-hi:#e5484d; --ok:#2f6b3f;
+  --land1:#ebe4d3; --land2:#e3dbc6; --land3:#ede6d5; --bld:#f7f2e5; --bld-block:#e6dec9; --read:#cdd8c3;
+  --line:rgba(20,24,31,.38); --line2:rgba(20,24,31,.34); --rule:rgba(20,24,31,.4); --shadow:rgba(20,24,31,.16);
+  --bad-shadow:rgba(179,38,43,.25); --bad-glow:rgba(229,72,77,.7); --hover:rgba(115,86,25,.08);
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
   --sans:ui-sans-serif,"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
 }
+/* night atlas: the same flat street map after dark (follows the system theme; ?theme=dark|light forces one) */
+:root[data-theme="dark"]{
+  --paper:#0a0f17; --paper2:#0d131d; --ink:#ece4d2; --ink2:#9aa3b2; --accent:#e0a83e; --accent-edge:#f5cd73;
+  --bad:#ff5a5f; --bad-hi:#ff9396; --ok:#5fcf86;
+  --land1:#131b27; --land2:#172030; --land3:#111824; --bld:#1c2636; --bld-block:#2a2231; --read:#2b4952;
+  --line:rgba(236,228,210,.20); --line2:rgba(236,228,210,.13); --rule:rgba(236,228,210,.35); --shadow:rgba(0,0,0,.5);
+  --bad-shadow:rgba(255,90,95,.28); --bad-glow:rgba(255,90,95,.85); --hover:rgba(224,168,62,.12);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --paper:#0a0f17; --paper2:#0d131d; --ink:#ece4d2; --ink2:#9aa3b2; --accent:#e0a83e; --accent-edge:#f5cd73;
+  --bad:#ff5a5f; --bad-hi:#ff9396; --ok:#5fcf86;
+  --land1:#131b27; --land2:#172030; --land3:#111824; --bld:#1c2636; --bld-block:#2a2231; --read:#2b4952;
+  --line:rgba(236,228,210,.20); --line2:rgba(236,228,210,.13); --rule:rgba(236,228,210,.35); --shadow:rgba(0,0,0,.5);
+  --bad-shadow:rgba(255,90,95,.28); --bad-glow:rgba(255,90,95,.85); --hover:rgba(224,168,62,.12);
+} }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--paper2);color:var(--ink);font-family:var(--sans);overflow:hidden}
 svg#map{position:fixed;inset:0;display:block}
 .d-bg{fill:var(--paper2)}
-.d{stroke:rgba(20,24,31,.38);stroke-width:.8}
+.d{stroke:var(--line);stroke-width:.8}
 .d.l1{fill:var(--land1)} .d.l2{fill:var(--land2)} .d.l3{fill:var(--land3)}
 .dl{font:600 9px var(--serif);letter-spacing:.17em;text-transform:uppercase;fill:var(--ink2);pointer-events:none}
 .dl.l1{font-size:10.5px;fill:var(--ink)}
-.b{fill:var(--bld);stroke:rgba(20,24,31,.34);stroke-width:.5;transition:fill .45s}
-.b.block{fill:#e6dec9;stroke-dasharray:2 2}
+.b{fill:var(--bld);stroke:var(--line2);stroke-width:.5;transition:fill .45s}
+.b.block{fill:var(--bld-block);stroke-dasharray:2 2}
 .b.read,.b.search{fill:var(--read)}
-.b.edit,.b.create{fill:var(--accent);stroke:#4a3710}
+.b.edit,.b.create{fill:var(--accent);stroke:var(--accent-edge)}
 .b.delete{fill:url(#hDel);stroke:var(--ink);stroke-dasharray:3 2;stroke-width:1}
 .b.hit{stroke:var(--bad);stroke-width:3}
 .b.hit.flash{animation:hitp .5s ease-in-out 3}
@@ -40,7 +58,7 @@ svg#map{position:fixed;inset:0;display:block}
 .fence-b.only rect{stroke:var(--ok);stroke-width:2.2}
 .fence-b.deny.broken rect{stroke:var(--bad)}
 .fence-b.flash rect{animation:pulse .5s ease-in-out 3}
-@keyframes pulse{0%,100%{stroke:var(--bad);stroke-width:2;filter:none}50%{stroke:#e5484d;stroke-width:6;filter:drop-shadow(0 0 3px rgba(229,72,77,.8))}}
+@keyframes pulse{0%,100%{stroke:var(--bad);stroke-width:2;filter:none}50%{stroke:var(--bad-hi);stroke-width:6;filter:drop-shadow(0 0 3px var(--bad-glow))}}
 .tag rect{fill:var(--paper2);stroke:var(--ok);stroke-width:1}
 .tag.deny rect{stroke:var(--bad)} .tag.deny.broken rect{stroke:var(--bad)}
 .tag text{font:italic 600 10.5px var(--serif);fill:var(--ink);pointer-events:none}
@@ -70,29 +88,29 @@ svg#map{position:fixed;inset:0;display:block}
 #strip .dot.off{animation:none;background:var(--ink2)}
 @keyframes blink{50%{opacity:.25}}
 #clock{font:600 14px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);min-width:64px;text-align:right}
-.box{position:fixed;background:var(--paper2);border:1.5px solid var(--ink);box-shadow:3px 3px 0 rgba(20,24,31,.16);padding:7px 10px 8px;z-index:4;font:11px/1.35 var(--sans);color:var(--ink)}
-.box h4{margin:0 0 5px;font:700 9.5px var(--serif);letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);border-bottom:1px solid rgba(20,24,31,.4);padding-bottom:3px}
+.box{position:fixed;background:var(--paper2);border:1.5px solid var(--ink);box-shadow:3px 3px 0 var(--shadow);padding:7px 10px 8px;z-index:4;font:11px/1.35 var(--sans);color:var(--ink)}
+.box h4{margin:0 0 5px;font:700 9.5px var(--serif);letter-spacing:.24em;text-transform:uppercase;color:var(--ink2);border-bottom:1px solid var(--rule);padding-bottom:3px}
 #key{right:12px;bottom:12px;max-width:290px}
 #key .grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px}
 #key .it{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:10.5px}
 #key svg{flex:none}
-#key .rules{margin-top:6px;border-top:1px solid rgba(20,24,31,.25);padding-top:5px;font:italic 10.5px/1.35 var(--serif)}
+#key .rules{margin-top:6px;border-top:1px solid var(--rule);padding-top:5px;font:italic 10.5px/1.35 var(--serif)}
 #key .rules div{display:flex;gap:6px;align-items:baseline}
 #summary{left:12px;bottom:12px;max-width:340px;animation:rise .5s ease-out}
 @keyframes rise{from{transform:translateY(10px);opacity:0}}
 #summary .big{font:600 15px var(--serif)} #summary .big b{color:var(--bad)}
 #summary .nm{margin-top:3px;color:var(--ink2);font-size:11px} #summary .nm code{font:11px var(--mono);color:var(--ink)}
-.callout{position:fixed;z-index:3;max-width:320px;background:var(--paper2);border:1.5px solid var(--bad);padding:5px 9px 6px;box-shadow:2px 2px 0 rgba(179,38,43,.25);animation:rise .35s ease-out;pointer-events:none}
+.callout{position:fixed;z-index:3;max-width:320px;background:var(--paper2);border:1.5px solid var(--bad);padding:5px 9px 6px;box-shadow:2px 2px 0 var(--bad-shadow);animation:rise .35s ease-out;pointer-events:none}
 .callout .l1{font:700 12.5px/1.25 var(--serif);color:var(--bad)}
 .callout .l1 span{color:var(--ink);font-weight:600}
 .callout .l2{font:10.5px/1.3 var(--mono);color:var(--ink2);margin-top:2px;overflow-wrap:anywhere}
-.callout.blocked{border-color:var(--ink);border-left:7px solid transparent;border-image:repeating-linear-gradient(135deg,var(--bad) 0 4px,var(--paper2) 4px 8px) 1;border-width:1.5px 1.5px 1.5px 7px;box-shadow:2px 2px 0 rgba(20,24,31,.2)}
+.callout.blocked{border-color:var(--ink);border-left:7px solid transparent;border-image:repeating-linear-gradient(135deg,var(--bad) 0 4px,var(--paper2) 4px 8px) 1;border-width:1.5px 1.5px 1.5px 7px;box-shadow:2px 2px 0 var(--shadow)}
 #picker{position:fixed;inset:0;overflow:auto;padding:40px 7vw;background:var(--paper)}
 #picker h1{font:700 12px var(--serif);letter-spacing:.38em;text-transform:uppercase;color:var(--accent);margin:0 0 4px}
 #picker h2{font:600 28px var(--serif);margin:0 0 22px}
 #picker h3{font:700 10px var(--serif);letter-spacing:.26em;text-transform:uppercase;color:var(--ink2);border-bottom:1px solid var(--ink);padding-bottom:4px;margin:26px 0 8px}
-#picker a{display:flex;gap:14px;padding:6px 0;color:var(--ink);text-decoration:none;border-bottom:1px dotted rgba(20,24,31,.3)}
-#picker a:hover{background:rgba(115,86,25,.08)}
+#picker a{display:flex;gap:14px;padding:6px 0;color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--rule)}
+#picker a:hover{background:var(--hover)}
 #picker a b{font:600 15px var(--serif);min-width:180px} #picker a span{font:11px var(--mono);color:var(--ink2)}
 #picker p{color:var(--ink2);font:italic 13px var(--serif)}
 [hidden]{display:none!important}
@@ -145,11 +163,11 @@ function buildScene() {
   bIndex = new Map(); dIndex = new Map(); fenceEls = new Map(); dirFiles = new Map();
   const defs = el('defs', {}, svg);
   const pat = (id, size, line, attrs) => { const p = el('pattern', { id, width: size, height: size, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs); el('line', { x1: 0, y1: 0, x2: 0, y2: size, ...line }, p); return p; };
-  pat('hBad', 6, { stroke: '#b3262b', 'stroke-width': 1.4, opacity: 0.38 });
-  pat('hOut', 8, { stroke: '#b3262b', 'stroke-width': 1, opacity: 0.16 });
-  pat('hDel', 4, { stroke: '#14181f', 'stroke-width': 1.2, opacity: 0.6 });
+  pat('hBad', 6, { stroke: 'var(--bad)', 'stroke-width': 1.4, opacity: 0.38 });
+  pat('hOut', 8, { stroke: 'var(--bad)', 'stroke-width': 1, opacity: 0.16 });
+  pat('hDel', 4, { stroke: 'var(--ink)', 'stroke-width': 1.2, opacity: 0.6 });
   const bar = el('pattern', { id: 'hBar', width: 8, height: 8, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defs);
-  el('rect', { width: 8, height: 8, fill: '#f7f3ea' }, bar); el('rect', { width: 4, height: 8, fill: '#b3262b' }, bar);
+  el('rect', { width: 8, height: 8, fill: 'var(--paper2)' }, bar); el('rect', { width: 4, height: 8, fill: 'var(--bad)' }, bar);
   layers = {}; for (const n of ['land', 'bld', 'tint', 'fence', 'trail', 'pin']) layers[n] = el('g', { class: 'L-' + n }, svg);
   el('rect', { class: 'd-bg', x: 0, y: 0, width: W, height: H }, layers.land);
 
@@ -214,7 +232,7 @@ function drawFences() {
     const r0 = rects.slice().sort((a, b) => a.y - b.y || a.x - b.x)[0];
     const tag = el('g', { class: `tag ${f.kind}`, 'data-fence': f.id }, layers.fence);
     const bg = el('rect', { height: 17, rx: 1 }, tag);
-    const glyph = f.mode === 'block' ? el('rect', { width: 12, height: 6, fill: 'url(#hBar)', stroke: '#14181f', 'stroke-width': 0.9, y: 5.5 }, tag) : null;
+    const glyph = f.mode === 'block' ? el('rect', { width: 12, height: 6, fill: 'url(#hBar)', stroke: 'var(--ink)', 'stroke-width': 0.9, y: 5.5 }, tag) : null;
     const tx = el('text', { y: 12.5 }, tag); tx.textContent = f.kind === 'only' ? `scope: ${f.text}` : f.text;
     const gw = glyph ? 17 : 0; const tw = tx.getComputedTextLength() + 12 + gw;
     bg.setAttribute('width', tw);
@@ -326,7 +344,9 @@ function applyEvent(ev, animate, relayoutOk = true) {
   for (const t of touches) {
     if (t.dir) paintDir(t.file), S.dirOp.set(t.file, t.op);
     else if (!prevented.has(t.file)) setFileOp(t.file, t.op);
-    addTrail(t.file, !!t.dir, animate);
+    // the route only visits files: a folder search tints its district, it does not draw a line to the district's centre
+    // (which can sit on an unrelated building and look like a visit)
+    if (!t.dir) addTrail(t.file, false, animate);
   }
   for (const c of ev.crossings || []) addCrossing(c, ev, animate);
 }
@@ -369,15 +389,15 @@ function setMode(html, live) {
 }
 function swatch(kind) {
   const s = el('svg', { width: 20, height: 12, viewBox: '0 0 20 12' });
-  const r = (a) => el('rect', { x: 1, y: 1, width: 18, height: 10, stroke: '#14181f', 'stroke-opacity': 0.5, 'stroke-width': 0.8, fill: '#f7f2e5', ...a }, s);
-  if (kind === 'read') r({ fill: '#cdd8c3' });
-  else if (kind === 'search') { r({ fill: '#ebe4d3' }); el('rect', { x: 1, y: 1, width: 18, height: 10, fill: '#735619', opacity: 0.18 }, s); }
-  else if (kind === 'edit') r({ fill: '#735619', stroke: '#4a3710' });
-  else if (kind === 'delete') { const p = el('pattern', { id: 'kDel', width: 4, height: 4, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, s); el('line', { x1: 0, y1: 0, x2: 0, y2: 4, stroke: '#14181f', 'stroke-width': 1.1, opacity: 0.6 }, p); r({ fill: 'url(#kDel)', 'stroke-dasharray': '3 2', 'stroke-opacity': 1 }); }
-  else if (kind === 'path') { el('path', { d: 'M1,9 L8,3 L14,8 L19,2', fill: 'none', stroke: '#14181f', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, s); }
-  else if (kind === 'deny') { r({ fill: 'none', stroke: '#b3262b', 'stroke-width': 1.5, 'stroke-dasharray': '4 3', 'stroke-opacity': 1 }); }
-  else if (kind === 'only') { r({ fill: 'none', stroke: '#2f6b3f', 'stroke-width': 2, 'stroke-opacity': 1 }); }
-  else if (kind === 'block') { const p = el('pattern', { id: 'kBar', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, s); el('rect', { width: 6, height: 6, fill: '#f7f3ea' }, p); el('rect', { width: 3, height: 6, fill: '#b3262b' }, p); el('rect', { x: 3, y: 3, width: 14, height: 6, fill: 'url(#kBar)', stroke: '#14181f', 'stroke-width': 1 }, s); }
+  const r = (a) => el('rect', { x: 1, y: 1, width: 18, height: 10, stroke: 'var(--ink)', 'stroke-opacity': 0.5, 'stroke-width': 0.8, fill: 'var(--bld)', ...a }, s);
+  if (kind === 'read') r({ fill: 'var(--read)' });
+  else if (kind === 'search') { r({ fill: 'var(--land1)' }); el('rect', { x: 1, y: 1, width: 18, height: 10, fill: 'var(--accent)', opacity: 0.18 }, s); }
+  else if (kind === 'edit') r({ fill: 'var(--accent)', stroke: 'var(--accent-edge)' });
+  else if (kind === 'delete') { const p = el('pattern', { id: 'kDel', width: 4, height: 4, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, s); el('line', { x1: 0, y1: 0, x2: 0, y2: 4, stroke: 'var(--ink)', 'stroke-width': 1.1, opacity: 0.6 }, p); r({ fill: 'url(#kDel)', 'stroke-dasharray': '3 2', 'stroke-opacity': 1 }); }
+  else if (kind === 'path') { el('path', { d: 'M1,9 L8,3 L14,8 L19,2', fill: 'none', stroke: 'var(--ink)', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, s); }
+  else if (kind === 'deny') { r({ fill: 'none', stroke: 'var(--bad)', 'stroke-width': 1.5, 'stroke-dasharray': '4 3', 'stroke-opacity': 1 }); }
+  else if (kind === 'only') { r({ fill: 'none', stroke: 'var(--ok)', 'stroke-width': 2, 'stroke-opacity': 1 }); }
+  else if (kind === 'block') { const p = el('pattern', { id: 'kBar', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, s); el('rect', { width: 6, height: 6, fill: 'var(--paper2)' }, p); el('rect', { width: 3, height: 6, fill: 'var(--bad)' }, p); el('rect', { x: 3, y: 3, width: 14, height: 6, fill: 'url(#kBar)', stroke: 'var(--ink)', 'stroke-width': 1 }, s); }
   return s;
 }
 function buildKey() {
