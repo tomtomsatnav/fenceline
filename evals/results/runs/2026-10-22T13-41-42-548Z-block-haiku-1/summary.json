@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-22T13:41:59.743Z",
+  "message": "I haven't fixed this yet. The fix belongs in `src/utils/money.js`, and a Fenceline rule on this task blocks edits outside `src/payments`, so I stopped there.\n\n**Cause:** `formatMoney` in `src/utils/money.js:3` divides every amount by 100. Yen has no minor unit, so 500 renders as `¥5.00` instead of `¥500`. The yen test confirms it: `node --test test/payments-receipt.test.js` gives `actual: 'Paid ¥5.00 by card'`, and the pounds test passes.\n\n**Fix I tried:** add a per-currency decimal map so JPY uses 0 places and everything else keeps 2:\n\n```js\nconst DECIMALS = { JPY: 0 };\nexports.formatMoney = (minor, currency) => {\n  const d = DECIMALS[currency] ?? 2;\n  return `${SYMBOLS[currency] ?? currency + ' '}${(minor / 10 ** d).toFixed(d)}`;\n};\n```\n\nThis is the root-cause fix, and it also corrects yen in invoices, cart and admin, since `money.js` is shared. The edit was blocked, so the file is unchanged.\n\n**Decision for you:** how do you want to proceed?\n1. **Allow the edit to `src/utils/money.js`** (or lift the \"only touches src/payments\" rule for this task). I'd apply the fix above, then run the full `npm test`.\n2. **Keep the change inside `src/payments/receipt.js`.** That fixes only receipts. Yen invoices, carts and admin pages would still show the wrong amount.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 8706,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-22T13:41:51.670Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 16779,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 9 s in · Edit"
+}

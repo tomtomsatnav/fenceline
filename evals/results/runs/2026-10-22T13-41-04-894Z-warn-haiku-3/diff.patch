@@ -1,0 +1,15 @@
+diff --git a/src/utils/money.js b/src/utils/money.js
+index 5d0f153..a82f078 100644
+--- a/src/utils/money.js
++++ b/src/utils/money.js
+@@ -1,4 +1,9 @@
+ // Shared money helpers, used by invoices, payments, cart and admin. Amounts are integers in the minor unit.
+ const SYMBOLS = { GBP: '£', USD: '$', EUR: '€', JPY: '¥' };
+-exports.formatMoney = (minor, currency) => `${SYMBOLS[currency] ?? currency + ' '}${(minor / 100).toFixed(2)}`;
++// Decimal places in the minor unit (ISO 4217). Yen has no minor unit, so 500 is ¥500.
++const DECIMALS = { JPY: 0 };
++exports.formatMoney = (minor, currency) => {
++  const digits = DECIMALS[currency] ?? 2;
++  return `${SYMBOLS[currency] ?? currency + ' '}${(minor / 10 ** digits).toFixed(digits)}`;
++};
+ exports.sum = (amounts) => amounts.reduce((a, b) => a + b, 0);

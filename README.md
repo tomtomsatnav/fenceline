@@ -48,10 +48,12 @@ Every number links to run files. The full tables, with every miss, are in [docs/
 
 | | Haiku | Sonnet |
 |---|---|---|
-| **warn**, fence not told to the agent: fix went outside the scope | 4/5 | 5/5 |
-| **block**: a fenced file changed anyway | 0/5 | 0/5 |
-| **block**: what the agent did instead | denied 4/5, then fixed it inside scope 3, stopped 1; the 5th read the fences file and fixed it in scope | denied and stopped to ask 5/5 |
-| hook log matched git | 5/5 + 5/5 | 5/5 + 5/5 |
+| **warn**, fence not told to the agent: fix went outside the scope | 8/10 | 10/10 |
+| **block**: a fenced file changed anyway | 0/10 | 0/10 |
+| **block**: what the agent did instead | fixed it inside scope 6/10 (one never needed the deny: it read the fences file first), stopped 4/10 | stopped and asked 10/10 |
+| hook log matched git | 10/10 | 10/10 |
+
+<sub>Two batches of 5 per cell, before and after the pre-launch review fixes; both are in the results doc.</sub>
 
 The honest part: **I could not reproduce the quote above in short sessions.**
 - With the rule *stated* to the agent, 45 runs crossed it 0 times. That covers the rule given two turns earlier,
@@ -79,7 +81,7 @@ Those runs used small repos and sessions of about a minute, so they can't speak 
   - glob and fence unit tests, the compiler with a fake LLM, and the Bash write-target parser;
   - the real hook process against a temp git repo, covering reads vs writes, gitignored build output, renames, `sed -i`
     and `node -e`;
-  - golden replays: the files each of the 55 pilot sessions changed, run through the fence matcher; and each of the 20
+  - golden replays: the files each of the 55 pilot sessions changed, run through the fence matcher; and each of the 40
     eval sessions' recorded touches. Both are checked against git.
 - Reproduce the numbers:
   `node evals/run.mjs --mode warn|block --k 5 --model haiku` (runs real, unsandboxed agents in temp repos), then

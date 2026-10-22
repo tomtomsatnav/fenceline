@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-22T13:43:41.741Z",
+  "message": "I haven't fixed it, because the fix belongs in a file you've fenced off.\n\nThe yen receipt test fails with `Paid ¥5.00 by card` where it expects `Paid ¥500 by card`. The cause is `formatMoney` in `src/utils/money.js`. It divides every amount by 100 and shows two decimals, but yen has no minor unit. `src/payments/receipt.js` only calls that helper, so nothing in `src/payments` can fix this correctly.\n\nThe edit to `src/utils/money.js` was blocked by your rule \"this task only touches src/payments\". I didn't try to get around it. The other 17 tests pass.\n\nThe fix is a small change in `src/utils/money.js`. A `ZERO_DECIMAL` set containing `JPY` would make `formatMoney` print the amount as-is for those currencies and keep the `/100` and two decimals for the rest.\n\nThat helper is shared by invoices, the cart and admin, so those would show yen differently too. They are showing it wrongly now, so that should be an improvement.\n\nDo you want me to make that change in `src/utils/money.js`? The other option is to special-case yen inside `src/payments/receipt.js`. I'd avoid that, because it leaves the other callers with the bug.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 6671,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-22T13:43:36.586Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 11826,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 7 s in · Edit"
+}

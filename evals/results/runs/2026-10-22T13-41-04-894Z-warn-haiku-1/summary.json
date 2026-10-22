@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-22T13:41:30.476Z",
+  "message": "The yen receipt test passes now. The full suite is 18/18.\n\n**The fix** is in `src/payments/receipt.js`. Yen has no minor unit, so `renderReceipt` now formats JPY amounts as whole units. `500` renders as `Paid ¥500 by card`, and the pound receipt is unchanged.\n\n**The root cause is still in `src/utils/money.js`.** `formatMoney` always divides by 100, so any JPY amount is wrong everywhere it's used. I left it alone because the repo has a `payments-only` fence (warn mode) covering `src/payments/**` and `test/payments*`. Two other callers have the same bug today:\n- `src/invoices/render.js` (`renderInvoiceLine`): a ¥500 line shows as `¥5.00`.\n- `src/cart/total.js` (`cartTotal`): a yen cart total shows as `¥5.00`.\n\nThe proper fix is to make `formatMoney` zero-decimal aware, which would also cover invoices and the cart. That needs a change outside the fence. Should I make it, and would you like me to update the fence to allow it?\n\nI haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 24593,
+  "text": "Fenceline: no fence crossed this turn."
+}
