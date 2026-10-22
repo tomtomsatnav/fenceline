@@ -11,8 +11,9 @@ import { matchAny, globToRegExp } from './glob.mjs';
 export const SCHEMA_FENCES = 'fenceline.fences/1';
 export const FENCES_FILE = '.fenceline/fences.json';
 export const WRITE_OPS = new Set(['create', 'edit', 'delete']);
-// never counted against an "only" fence: Fenceline's own config, and lockfiles a package manager rewrites
-export const ALWAYS_ALLOWED = ['.fenceline/**'];
+// never counted against an "only" fence: Fenceline's own config, Claude Code's local settings (written when you approve
+// a permission), and lockfiles a package manager rewrites as a side effect
+export const ALWAYS_ALLOWED = ['.fenceline/**', '.claude/**', 'package-lock.json', 'npm-shrinkwrap.json', 'yarn.lock', 'pnpm-lock.yaml', 'bun.lockb', 'Cargo.lock', 'poetry.lock', 'uv.lock', 'Gemfile.lock', 'go.sum', 'composer.lock'];
 
 /** Validate and normalise a fences document. Throws with every problem listed. */
 export function validateFences(doc) {
@@ -59,10 +60,14 @@ export function crosses(f, file, op) {
   if (f.kind === 'only') return WRITE_OPS.has(op) && !matchAny(f.paths, file) && !matchAny(ALWAYS_ALLOWED, file);
   return false;
 }
-/** Every fence a touch crosses. The fences file itself is always guarded: an agent editing it crosses a built-in fence. */
-export function crossingsFor(fences, file, op) {
+/**
+ * Every fence a touch crosses. With guardConfig (PreToolUse, edit tools), the fences file is a built-in block fence: the
+ * agent cannot edit it with Edit/Write. Changes made any other way (`fenceline accept` after you said yes, or a shell
+ * command) are not crossings; the hook records them as fence changes and the Stop summary lists them.
+ */
+export function crossingsFor(fences, file, op, { guardConfig = false } = {}) {
   const out = fences.filter((f) => crosses(f, file, op)).map((f) => ({ fence: f.id, text: f.text, mode: f.mode, file, op }));
-  if (file === FENCES_FILE && WRITE_OPS.has(op)) out.push({ fence: 'fenceline-config', text: 'the fences file changed during the session', mode: 'block', file, op });
+  if (guardConfig && file === FENCES_FILE && WRITE_OPS.has(op)) out.push({ fence: 'fenceline-config', text: 'Fenceline\'s fences file: only you change it', mode: 'block', file, op });
   return out;
 }
 
@@ -92,27 +97,50 @@ export function words(s) {
   if (cur) out.push(cur);
   return out;
 }
+/**
+ * [{file, op, cd}]: `file` as written in the command, `cd` the directory a `cd` earlier in the same command moved to
+ * (relative to the starting cwd, '' if none, null if it cannot be known, e.g. `cd -`). The caller resolves and expands
+ * (".", "*", globs) against the repo.
+ */
 export function bashWriteTargets(command) {
-  const targets = []; // [{file, op}]
-  for (const part of String(command || '').split(SPLIT)) {
-    const w = words(part.trim()); if (!w.length) continue;
-    for (let i = 0; i < w.length - 1; i++) if ((w[i] === '>' || w[i] === '>>') && !w[i + 1].startsWith('&') && w[i + 1] !== '/dev/null') targets.push({ file: w[i + 1], op: 'edit' });
+  const targets = [];
+  let cd = '';
+  const src = String(command || '').replace(/>\|/g, '>');
+  for (const part of src.split(SPLIT)) {
+    let w = words(part.trim()); if (!w.length) continue;
+    while (w.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(w[0])) w = w.slice(1); // FOO=1 cmd ...
+    if (!w.length) continue;
+    const push = (file, op) => targets.push({ file, op, cd });
+    for (let i = 0; i < w.length - 1; i++) if ((w[i] === '>' || w[i] === '>>') && !w[i + 1].startsWith('&') && w[i + 1] !== '/dev/null') push(w[i + 1], 'edit');
     const args = w.filter((x, i) => x !== '>' && x !== '>>' && w[i - 1] !== '>' && w[i - 1] !== '>>');
     let cmd = args[0]; let rest = args.slice(1);
-    if (cmd === 'sudo' || cmd === 'command' || cmd === 'env') { cmd = rest[0]; rest = rest.slice(1); }
+    while (['sudo', 'command', 'env', 'nohup', 'time', 'xargs'].includes(cmd?.split('/').pop())) { rest = rest.filter((x) => !/^[A-Za-z_][A-Za-z0-9_]*=/.test(x)); cmd = rest[0]; rest = rest.slice(1); }
+    cmd = (cmd || '').split('/').pop();
+    if (cmd === 'cd' || cmd === 'pushd') {
+      const d = rest.find((x) => !x.startsWith('-'));
+      cd = cd == null || !d || d === '-' || d.startsWith('~') || d.startsWith('$') ? null : d.startsWith('/') ? d : path.posix.join(cd, d);
+      continue;
+    }
     const files = rest.filter((x) => !x.startsWith('-'));
-    if (cmd === 'rm' || cmd === 'unlink' || cmd === 'rmdir') files.forEach((f) => targets.push({ file: f, op: 'delete' }));
-    else if (cmd === 'touch' || cmd === 'truncate' || cmd === 'tee') files.forEach((f) => targets.push({ file: f, op: 'edit' }));
-    else if (cmd === 'mv') { files.slice(0, -1).forEach((f) => targets.push({ file: f, op: 'delete' })); if (files.length > 1) targets.push({ file: files.at(-1), op: 'create' }); }
-    else if (cmd === 'cp' || cmd === 'install' || cmd === 'ln') { if (files.length > 1) targets.push({ file: files.at(-1), op: 'create' }); }
-    else if ((cmd === 'sed' || cmd === 'perl') && rest.some((x) => /^-[a-zA-Z]*i/.test(x))) {
+    if (cmd === 'rm' || cmd === 'unlink' || cmd === 'rmdir' || cmd === 'shred') files.forEach((f) => push(f, 'delete'));
+    else if (cmd === 'touch' || cmd === 'truncate' || cmd === 'tee') files.forEach((f) => push(f, 'edit'));
+    else if (['mv', 'cp', 'install', 'ln', 'rsync'].includes(cmd)) {
+      const t = rest.findIndex((x) => x === '-t' || x === '--target-directory');
+      const tEq = rest.find((x) => x.startsWith('--target-directory='));
+      const dest = t >= 0 ? rest[t + 1] : tEq ? tEq.split('=')[1] : files.at(-1);
+      const srcs = t >= 0 ? files.filter((x) => x !== dest) : tEq ? files : files.slice(0, -1);
+      if (cmd === 'mv') srcs.forEach((f) => push(f, 'delete'));
+      if (dest && (srcs.length || t >= 0 || tEq)) push(dest, 'create');
+    } else if ((cmd === 'sed' || cmd === 'perl' || cmd === 'gsed') && rest.some((x) => /^-[a-zA-Z]*i/.test(x) || x.startsWith('--in-place'))) {
       // sed -i [suffix] 'script' file...: the script is the first non-option word unless -e/-f supplied it
-      const hasE = rest.some((x) => x === '-e' || x === '-f');
-      const nonOpt = rest.filter((x, i) => !x.startsWith('-') && rest[i - 1] !== '-e' && rest[i - 1] !== '-f');
-      nonOpt.slice(hasE ? 0 : 1).forEach((f) => targets.push({ file: f, op: 'edit' }));
-    } else if (cmd === 'git' && ['checkout', 'restore', 'rm', 'mv'].includes(rest[0])) {
+      const hasE = rest.some((x) => x === '-e' || x === '-f' || x === '--expression' || x === '--file');
+      const nonOpt = rest.filter((x, i) => !x.startsWith('-') && !['-e', '-f', '--expression', '--file'].includes(rest[i - 1]));
+      nonOpt.slice(hasE ? 0 : 1).forEach((f) => push(f, 'edit'));
+    } else if (cmd === 'git' && ['checkout', 'restore', 'rm', 'mv', 'clean', 'reset', 'stash'].includes(rest[0])) {
+      const sub = rest[0];
+      if (sub === 'clean' || (sub === 'reset' && rest.includes('--hard')) || sub === 'stash') { push('.', sub === 'clean' ? 'delete' : 'edit'); continue; }
       const dd = rest.indexOf('--'); const fs2 = (dd >= 0 ? rest.slice(dd + 1) : rest.slice(1)).filter((x) => !x.startsWith('-'));
-      fs2.forEach((f) => targets.push({ file: f, op: rest[0] === 'rm' ? 'delete' : 'edit' }));
+      fs2.forEach((f) => push(f, sub === 'rm' ? 'delete' : 'edit'));
     }
   }
   return targets;

@@ -26,10 +26,18 @@ export function git(cwd, args, { timeout = 5000 } = {}) {
 }
 export function repoRoot(cwd) { return git(cwd, ['rev-parse', '--show-toplevel']) || null; }
 
-/** Repo files the map shows and the snapshot watches: tracked + untracked, not ignored (a plain walk outside git). */
-export function listFiles(root) {
+/**
+ * Repo files the map shows and the snapshot watches: tracked + untracked, not ignored (a plain walk outside git), plus any
+ * IGNORED file a fence names (`.env` is usually gitignored, and it is exactly what a fence is for). `fenced(rel)` says
+ * whether a fence covers a path; ignored folders are not expanded.
+ */
+export function listFiles(root, { fenced } = {}) {
   const out = git(root, ['ls-files', '-co', '--exclude-standard', '-z']);
-  if (out != null) return [...new Set(out.split('\0').filter(Boolean))].slice(0, MAX_FILES);
+  if (out != null) {
+    const files = new Set(out.split('\0').filter(Boolean));
+    if (fenced) for (const f of (git(root, ['ls-files', '-oi', '--exclude-standard', '--directory', '-z']) || '').split('\0')) if (f && !f.endsWith('/') && fenced(f)) files.add(f);
+    return [...files].slice(0, MAX_FILES);
+  }
   const files = [];
   const walk = (dir) => {
     for (const e of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
@@ -64,17 +72,17 @@ export function rescan(root, snapshot, rels) {
 }
 
 /** Start (or resume) a session: records the fences in force, the file list for the map, and the snapshot. Idempotent. */
-export function startSession({ session_id, cwd, fences }, env = process.env) {
+export function startSession({ session_id, cwd, fences, fenced }, env = process.env) {
   const dir = sessionDir(session_id, env);
   const metaFile = path.join(dir, 'meta.json');
   if (fs.existsSync(metaFile)) return JSON.parse(fs.readFileSync(metaFile, 'utf8'));
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
   const root = repoRoot(cwd) || cwd;
   const snapshot = {};
-  const files = listFiles(root);
+  const files = listFiles(root, { fenced });
   rescan(root, snapshot, files);
   const meta = { schema: SCHEMA_SESSION, session_id, repo: root, repo_name: path.basename(root), cwd, started_at: new Date().toISOString(),
-    head: git(root, ['rev-parse', '--verify', 'HEAD']), fences, files: files.filter((f) => snapshot[f]).map((f) => ({ path: f, size: snapshot[f][0] })) };
+    head: git(root, ['rev-parse', '--verify', 'HEAD']), fences, initial_fences: fences, files: files.filter((f) => snapshot[f]).map((f) => ({ path: f, size: snapshot[f][0] })) };
   fs.writeFileSync(metaFile, JSON.stringify(meta, null, 2));
   fs.writeFileSync(path.join(dir, 'snapshot.json'), JSON.stringify(snapshot));
   return meta;

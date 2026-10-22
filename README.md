@@ -50,7 +50,7 @@ Every number links to run files. The full tables, with every miss, are in [docs/
 |---|---|---|
 | **warn**, fence not told to the agent: fix went outside the scope | 4/5 | 5/5 |
 | **block**: a fenced file changed anyway | 0/5 | 0/5 |
-| **block**: what the agent did instead | fixed it inside scope 4/5, stopped 1/5 | stopped and asked 5/5 |
+| **block**: what the agent did instead | denied 4/5, then fixed it inside scope 3, stopped 1; the 5th read the fences file and fixed it in scope | denied and stopped to ask 5/5 |
 | hook log matched git | 5/5 + 5/5 | 5/5 + 5/5 |
 
 The honest part: **I could not reproduce the quote above in short sessions.**
@@ -70,14 +70,17 @@ Those runs used small repos and sessions of about a minute, so they can't speak 
 - Fences come in two kinds:
   - `deny`: a write inside the zone crosses it. With `reads: true`, a read does too.
   - `only`: a write outside the area crosses it.
-  - `except` carves files out. The fences file itself is always guarded.
+  - `except` carves files out.
+  - The agent can't edit `.fenceline/fences.json` with its edit tools, or loosen fences through the CLI. Any other change
+    to the fences (including `fenceline accept` after you say yes) is listed in the Stop summary.
 - Hook latency ([docs/bench.json](docs/bench.json), `node scripts/bench-hook.mjs`, median of 10 calls on one Mac): 75 ms
   per Bash call on this 333-file repo and 96 ms on a 5,000-file repo. Most of that is Node startup.
 - Tests (`npm test`, zero dependencies):
   - glob and fence unit tests, the compiler with a fake LLM, and the Bash write-target parser;
   - the real hook process against a temp git repo, covering reads vs writes, gitignored build output, renames, `sed -i`
     and `node -e`;
-  - golden replays of all 55 pilot sessions and 20 eval sessions, checked against git.
+  - golden replays: the files each of the 55 pilot sessions changed, run through the fence matcher; and each of the 20
+    eval sessions' recorded touches. Both are checked against git.
 - Reproduce the numbers:
   `node evals/run.mjs --mode warn|block --k 5 --model haiku` (runs real, unsandboxed agents in temp repos), then
   `node evals/build-results.mjs`.
@@ -89,6 +92,11 @@ Those runs used small repos and sessions of about a minute, so they can't speak 
   `cp`, `tee`, `touch`, `git checkout`/`restore`). A script, `node -e` or `python -c` is caught after the fact, not
   prevented.
 - Reads through Bash are inferred from the words in the command, so `npm test` marks `test/` as searched.
+- Changes made by background processes or non-Bash tools are attributed to the next Bash call. Gitignored folders are
+  not expanded (a gitignored file a deny fence names, like `.env`, is watched). Repos over 20,000 files are watched only
+  up to that cap.
+- Fenceline is a guardrail against mistakes, not a sandbox against a hostile agent: the agent can still edit
+  `.claude/settings*.json` or `~/.fenceline/`. The event log's hash chain shows edits, but it has no key.
 - The demo results come from one task on one demo repo. Treat them as a demonstration, not a benchmark.
 
 MIT. Built on the hook and snapshot approach from [dfaith](https://github.com/tomtomsatnav/dfaith).

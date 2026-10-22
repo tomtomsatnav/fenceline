@@ -19,7 +19,11 @@ test('only: inside the allowed area is fine', () => { assert.deepEqual(ids('src/
 test('only: outside it crosses', () => assert.deepEqual(ids('src/utils/money.js', 'edit'), ['payments-only']));
 test('only: reads anywhere are fine', () => assert.deepEqual(ids('src/utils/money.js', 'read'), []));
 test('only: Fenceline config is never counted against the area', () => assert.deepEqual(ids('.fenceline/notes.md', 'edit'), []));
-test('the fences file is always guarded', () => assert.ok(ids('.fenceline/fences.json', 'edit').includes('fenceline-config')));
+test('the fences file is a built-in block fence for edit tools only (other changes are listed at Stop, not crossings)', () => {
+  assert.ok(crossingsFor(fences, '.fenceline/fences.json', 'edit', { guardConfig: true }).some((c) => c.fence === 'fenceline-config'));
+  assert.ok(!ids('.fenceline/fences.json', 'edit').includes('fenceline-config'));
+});
+test('only: lockfiles and .claude/ local settings are side effects, not scope drift', () => { assert.deepEqual(ids('package-lock.json', 'edit'), []); assert.deepEqual(ids('.claude/settings.local.json', 'edit'), []); });
 test('preview counts zone files', () => assert.deepEqual(preview(fences, ['migrations/a.sql', 'src/payments/x.js', '.env', '.env.example']).map((p) => p.matched), [1, 1, 1]));
 
 test('validation lists every problem', () => {
@@ -39,4 +43,14 @@ test('bash: rm, mv, cp, touch, tee', () => {
   assert.deepEqual(t('echo x | tee -a .env'), ['edit:.env']);
 });
 test('bash: git checkout -- / restore', () => { assert.deepEqual(t('git checkout -- migrations/a.sql'), ['edit:migrations/a.sql']); assert.deepEqual(t('git restore src/x.js'), ['edit:src/x.js']); });
+const tc = (cmd) => bashWriteTargets(cmd).map((x) => `${x.op}:${x.cd ? `${x.cd}|` : ''}${x.file}`);
+test('bash: cd inside the command is tracked', () => { assert.deepEqual(tc("cd migrations && sed -i s/c/d/ 001.sql"), ['edit:migrations|001.sql']); assert.deepEqual(bashWriteTargets('cd - && rm x')[0].cd, null); });
+test('bash: VAR= prefixes, full command paths, --in-place, >|, cp -t', () => {
+  assert.deepEqual(t('FOO=1 sed -i s/a/b/ migrations/x'), ['edit:migrations/x']);
+  assert.deepEqual(t('/usr/bin/sed -i s/a/b/ migrations/x'), ['edit:migrations/x']);
+  assert.deepEqual(t('sed --in-place s/a/b/ migrations/x'), ['edit:migrations/x']);
+  assert.deepEqual(t('echo x >| migrations/x'), ['edit:migrations/x']);
+  assert.deepEqual(t('cp -t migrations f'), ['create:migrations']);
+});
+test('bash: whole-tree commands', () => { assert.deepEqual(t('git checkout .'), ['edit:.']); assert.deepEqual(t('git reset --hard'), ['edit:.']); assert.deepEqual(t('rm -rf ./*'), ['delete:./*']); });
 test('bash: read-only commands write nothing', () => assert.deepEqual(t('cat migrations/a.sql | grep users && ls -la src'), []));

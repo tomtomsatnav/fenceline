@@ -40,7 +40,7 @@ function show(fences, files) {
 }
 async function confirm(q) {
   if (flag('yes')) return true;
-  if (!process.stdin.isTTY) { console.log('\nNot saved: rerun with --yes to accept, or edit the globs and use `fenceline add`.'); return false; }
+  if (!process.stdin.isTTY) { console.log('\nNot saved yet. Show this to the user and ask; only if they say yes, run `fenceline accept`.'); return false; }
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const a = await rl.question(q); rl.close(); return /^y(es)?$/i.test(a.trim());
 }

@@ -116,3 +116,73 @@ test('fences set mid-session apply at once, and the change is recorded', () => {
   assert.equal(JSON.parse(s.hook(pre('Write', { file_path: path.join(s.repo, 'README.md') }))).hookSpecificOutput.permissionDecision, 'deny');
   assert.ok(s.events().some((e) => e.kind === 'fences' && e.fences.some((x) => x.id === 'readme')));
 });
+
+// ---- regressions from the pre-launch review
+test('review 1: a heredoc with { or [ in it does not crash the hook; the crossing is recorded', () => {
+  const s = setup();
+  fs.writeFileSync(path.join(s.repo, 'migrations/002.js'), 'export function up() {\n}\n');
+  s.hook(post('Bash', { command: "cat > migrations/002.js <<'EOF'\nexport function up() {\n}\nEOF\necho \"if [ -z x\"" }));
+  assert.deepEqual(s.last().crossings.map((c) => `${c.fence}:${c.op}`), ['migrations:create', 'payments-only:create']);
+});
+test('review 2: fences still apply when the agent cd\'s out of the repo', () => {
+  const s = setup();
+  const out = JSON.parse(execFileSync('node', [HOOK], { input: JSON.stringify({ session_id: s.sid, cwd: '/', ...pre('Edit', { file_path: path.join(s.repo, 'migrations/001.sql') }) }), env: { ...process.env, FENCELINE_HOME: s.home }, encoding: 'utf8' }));
+  assert.equal(out.hookSpecificOutput.permissionDecision, 'deny');
+});
+test('review 3: a busy session lock cannot turn a block into an allow', () => {
+  const s = setup();
+  fs.writeFileSync(path.join(s.home, 'sessions', s.sid, '.lock'), '1');
+  const out = JSON.parse(s.hook(pre('Edit', { file_path: path.join(s.repo, 'migrations/001.sql') })));
+  assert.equal(out.hookSpecificOutput.permissionDecision, 'deny');
+});
+test('review 4: Bash block-mode gaps are closed (cd, VAR=, whole-tree) and cd no longer causes a false block', () => {
+  const s = setup();
+  const deny = (cmd) => s.hook(pre('Bash', { command: cmd })) !== '';
+  assert.ok(deny('cd migrations && sed -i s/c/d/ 001.sql'));
+  assert.ok(deny('FOO=1 /usr/bin/sed --in-place s/a/b/ migrations/001.sql'));
+  assert.ok(deny('git checkout -- .'));
+  assert.ok(deny('rm -rf ./*'));
+  assert.ok(!deny('cd src/payments && sed -i s/x/z/ receipt.js'));
+});
+test('review 5+6: wrong case and symlinked paths resolve to the real file', () => {
+  const s = setup();
+  const link = `${s.repo}-link`; fs.symlinkSync(s.repo, link);
+  assert.ok(s.hook(pre('Edit', { file_path: path.join(link, 'migrations/001.sql') })) !== '', 'symlinked path');
+  const ci = fs.existsSync(path.join(s.repo, 'MIGRATIONS')); // case-insensitive disk (macOS default)
+  if (ci) assert.ok(s.hook(pre('Edit', { file_path: path.join(s.repo, 'Migrations/001.sql') })) !== '', 'wrong case');
+});
+test('review 7: a gitignored file a deny fence names (.env) is watched', () => {
+  const s = setup();
+  fs.writeFileSync(path.join(s.repo, '.gitignore'), 'dist/\n.env\n');
+  s.hook(post('Bash', { command: 'true' }));
+  fs.appendFileSync(path.join(s.repo, '.env'), 'B=2\n');
+  s.hook(post('Bash', { command: "python3 -c 'open(\".env\",\"a\").write(\"B=2\")'" }));
+  assert.ok(s.last().crossings.some((c) => c.fence === 'env' && c.op === 'edit'));
+});
+test('review 8: a block fence with reads: true denies the read', () => {
+  const s = setup();
+  const f = path.join(s.repo, '.fenceline/fences.json'); const doc = JSON.parse(fs.readFileSync(f, 'utf8'));
+  doc.fences.find((x) => x.id === 'env').mode = 'block'; fs.writeFileSync(f, JSON.stringify(doc));
+  assert.ok(s.hook(pre('Read', { file_path: path.join(s.repo, '.env') })) !== '');
+  assert.ok(s.hook(pre('Bash', { command: 'cat .env' })) !== '');
+  assert.equal(s.hook(pre('Read', { file_path: path.join(s.repo, 'src/utils/money.js') })), '');
+});
+test('review 9: the agent cannot loosen fences through the CLI; accept is a listed change, not a crossing', () => {
+  const s = setup();
+  assert.ok(s.hook(pre('Bash', { command: 'node /x/bin/fenceline.mjs mode migrations warn' })) !== '');
+  assert.ok(s.hook(pre('Bash', { command: 'node /x/bin/fenceline.mjs fence "anything" --yes' })) !== '');
+  assert.equal(s.hook(pre('Bash', { command: 'node /x/bin/fenceline.mjs accept' })), '');
+  const f = path.join(s.repo, '.fenceline/fences.json'); const doc = JSON.parse(fs.readFileSync(f, 'utf8'));
+  doc.fences = doc.fences.filter((x) => x.id !== 'env'); fs.writeFileSync(f, JSON.stringify(doc));
+  s.hook(post('Bash', { command: 'node /x/bin/fenceline.mjs accept' }));
+  assert.equal(s.last().crossings.length, 0);
+  const out = JSON.parse(s.hook({ hook_event_name: 'Stop', last_assistant_message: 'ok' }));
+  assert.match(out.systemMessage, /Fences changed this turn: removed "never read \.env"/);
+});
+test('review 11: Stop reports each turn once, and stays quiet when nothing happened', () => {
+  const s = setup();
+  fs.writeFileSync(path.join(s.repo, 'src/utils/money.js'), 'z\n'); s.hook(post('Bash', { command: 'x' }));
+  assert.match(JSON.parse(s.hook({ hook_event_name: 'Stop', last_assistant_message: '' })).systemMessage, /1 fence crossing this turn/);
+  s.hook(post('Read', { file_path: path.join(s.repo, 'src/utils/money.js') }));
+  assert.equal(s.hook({ hook_event_name: 'Stop', last_assistant_message: '' }), '');
+});

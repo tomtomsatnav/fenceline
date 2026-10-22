@@ -396,7 +396,7 @@ function showSummary() {
   const stop = S.stop; if (!stop) return;
   const box = $('#summary'); box.replaceChildren(); h('h4', '', 'End of session', box);
   // a blocked (prevented) crossing never reached the repo: count it separately
-  const all = S.summary?.crossings ?? S.crossings;
+  const all = S.crossings; // every crossing in the session's events (summary.json covers only the last turn)
   const n = all.filter((c) => !c.prevented).length; const nb = all.length - n;
   const big = h('div', 'big', null, box); const b = h('b', '', String(n)); big.append(b, ` ${n === 1 ? 'fence crossing' : 'fence crossings'}${nb ? ` · ${nb} blocked` : ''}`);
   const un = S.summary?.unmentioned ?? stop.unmentioned ?? [];
