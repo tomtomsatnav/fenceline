@@ -56,13 +56,13 @@ if (cmd === 'fence') {
   console.log(`Compiling ${sentences.length} rule${sentences.length > 1 ? 's' : ''} against ${files.length} files (one LLM call)…`);
   const { fences } = compileFences(sentences, files, { mode: flag('block') ? 'block' : 'warn', cwd: r });
   show(fences, files);
-  if (await confirm(`\nSave to ${FENCES_FILE}? [y/N] `)) { merge(r, fences); console.log(`Saved. Edit ${FENCES_FILE} to change any glob. New sessions use it.`); }
+  if (await confirm(`\nSave to ${FENCES_FILE}? [y/N] `)) { merge(r, fences); console.log(`Saved. Edit ${FENCES_FILE} to change any glob. Applies from the agent's next tool call.`); }
   else { fs.mkdirSync(path.join(r, '.fenceline'), { recursive: true }); fs.writeFileSync(path.join(r, PROPOSED), JSON.stringify({ fences }, null, 2)); console.log(`Proposal kept in ${PROPOSED}: \`fenceline accept\` saves exactly this (no second LLM call).`); }
 } else if (cmd === 'accept') {
   const r = root(); const file = path.join(r, PROPOSED);
   if (!fs.existsSync(file)) { console.error(`nothing to accept: run fenceline fence "<rule>" first`); process.exit(1); }
   const { fences } = JSON.parse(fs.readFileSync(file, 'utf8')); merge(r, fences); fs.rmSync(file);
-  show(loadFences(r).fences.filter((f) => fences.some((x) => x.id === f.id)), listFiles(r)); console.log(`\nSaved to ${FENCES_FILE}. New sessions use it.`);
+  show(loadFences(r).fences.filter((f) => fences.some((x) => x.id === f.id)), listFiles(r)); console.log(`\nSaved to ${FENCES_FILE}. Applies from the agent's next tool call.`);
 } else if (cmd === 'add') {
   const r = root(); const [id] = positional();
   const deny = multi('deny'); const only = multi('only');
