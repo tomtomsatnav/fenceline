@@ -1,5 +1,14 @@
 {
   "name": "fenceline",
-  "owner": { "name": "Tom Mitchell" },
-  "plugins": [ { "name": "fenceline", "source": "./", "description": "A live map of where your coding agent goes, with plain-English fences." } ]
+  "description": "Fenceline: a live map of where your coding agent goes, with plain-English fences.",
+  "owner": {
+    "name": "Tom Mitchell"
+  },
+  "plugins": [
+    {
+      "name": "fenceline",
+      "source": "./",
+      "description": "A live map of where your coding agent goes, with plain-English fences."
+    }
+  ]
 }
