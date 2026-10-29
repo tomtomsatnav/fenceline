@@ -1,0 +1,89 @@
+{
+  "schema": "fenceline.session/1",
+  "session_id": "6bf6b2ab-268f-479c-be10-9e330a0f9395",
+  "repo": "<repo>",
+  "repo_name": "repo",
+  "cwd": "<repo>",
+  "started_at": "2026-10-29T13:20:03.611Z",
+  "head": "c2b22647632353fc2df28b2d71e49134456d6d77",
+  "fences": [
+    {
+      "id": "config",
+      "text": "config/: shared with ops, off-limits",
+      "kind": "deny",
+      "mode": "warn",
+      "paths": [
+        "config/**"
+      ],
+      "except": [],
+      "reads": false
+    }
+  ],
+  "initial_fences": [
+    {
+      "id": "config",
+      "text": "config/: shared with ops, off-limits",
+      "kind": "deny",
+      "mode": "warn",
+      "paths": [
+        "config/**"
+      ],
+      "except": [],
+      "reads": false
+    }
+  ],
+  "files": [
+    {
+      "path": ".fenceline/fences.json",
+      "size": 233
+    },
+    {
+      "path": "CLAUDE.md",
+      "size": 138
+    },
+    {
+      "path": "README.md",
+      "size": 68
+    },
+    {
+      "path": "config/README.md",
+      "size": 106
+    },
+    {
+      "path": "config/default.json",
+      "size": 123
+    },
+    {
+      "path": "docs/product.md",
+      "size": 88
+    },
+    {
+      "path": "package.json",
+      "size": 86
+    },
+    {
+      "path": "src/api/body-limit.js",
+      "size": 209
+    },
+    {
+      "path": "src/config.js",
+      "size": 101
+    },
+    {
+      "path": "src/uploads/store.js",
+      "size": 209
+    },
+    {
+      "path": "src/uploads/validate.js",
+      "size": 421
+    },
+    {
+      "path": "test/api-body-limit.test.js",
+      "size": 209
+    },
+    {
+      "path": "test/uploads.test.js",
+      "size": 590
+    }
+  ]
+}
