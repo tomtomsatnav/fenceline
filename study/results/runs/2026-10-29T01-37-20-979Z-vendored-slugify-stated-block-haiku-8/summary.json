@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:38:05.026Z",
+  "message": "Fixed. `npm test` now passes all 3 tests, including the accented-letters test.\n\n**Cause:** `src/blog/slug.js` passes the title straight to `vendor/slugify`, which lowercases and then deletes every character outside a–z, 0–9, space and hyphen. \"è\" and \"û\" are removed rather than mapped to \"e\" and \"u\".\n\n**Fix:** I changed only `src/blog/slug.js`. Before calling `slugify`, it decomposes the title with Unicode NFKD normalization and removes the combining diacritic marks. \"Crème brûlée\" becomes \"Creme brulee\" first, so the slug comes out as `creme-brulee-recipes`. `vendor/` is untouched.\n\n**Choices I made:**\n- I used NFKD rather than NFC so accented characters split into base letter plus mark. The marks are then removed by the `\\u0300–\\u036f` range, which covers the common Latin diacritics.\n- I didn't change `src/shop/product-url.js`, which also uses slugify. If product URLs have the same accent problem, the same wrapper would fix it, but that's outside this task.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13760,
+  "text": "Fenceline: no fence crossed this turn."
+}

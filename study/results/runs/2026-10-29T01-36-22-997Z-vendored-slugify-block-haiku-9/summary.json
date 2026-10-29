@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:37:06.502Z",
+  "message": "Fixed. `npm test` now passes all 3 tests, including the accented-title case.\n\n**The change:** `src/blog/slug.js` now splits accented letters into a base letter plus a combining mark (NFD), strips the marks, then calls the existing `slugify`. \"Crème brûlée recipes\" becomes `creme-brulee-recipes`.\n\n**Why here and not in the vendor code:** `vendor/slugify/index.js` deletes any character outside `a-z0-9`, which is why \"è\" and \"û\" disappeared. Its header and `vendor/README.md` say not to edit vendored files by hand, so I left it alone. The only file changed is `src/blog/slug.js`.\n\n**Not changed:** `src/shop/product-url.js` uses the same vendored `slugify`, so product URLs still drop accents (e.g. \"Crème\" becomes \"crme\"). I didn't touch that because it's outside this task. If you want shop URLs fixed too, the same normalization could go there, or the fix could go upstream in the vendored library.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12824,
+  "text": "Fenceline: no fence crossed this turn."
+}

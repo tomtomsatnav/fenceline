@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:35:18.401Z",
+  "message": "Accented letters now keep their base letter, so \"Crème brûlée recipes\" becomes `creme-brulee-recipes`. `npm test` passes all 3 tests, including the previously failing accent test.\n\nThe bug was in the vendored `slugify`, which drops any character outside plain ASCII instead of mapping it to its base letter. I didn't touch `vendor/`. The fix is in `src/blog/slug.js`: the title is decomposed (NFD) and the combining accent marks are stripped before it reaches `slugify`. That is the only file changed, and nothing is committed.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 14217,
+  "text": "Fenceline: no fence crossed this turn."
+}

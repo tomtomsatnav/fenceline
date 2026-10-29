@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:37:03.604Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now produces `creme-brulee-recipes`, and `npm test` passes all 3 tests.\n\n**The change:** `src/blog/slug.js` now normalizes the title before slugifying it. It splits accented letters into a base letter plus a combining mark, then drops the marks. The old code let `slugify` strip the accented characters outright, which is why `è` and `û` disappeared.\n\n**What I didn't touch:** `vendor/slugify/index.js` has the same accent-dropping behavior, but it is marked do-not-edit and `vendor/README.md` says to upgrade it by replacing the folder. The fix therefore lives in the blog wrapper, not the vendored code.\n\n**Worth knowing:** `src/shop/product-url.js` also calls the vendored `slugify` directly, so product URLs for names with accents will still lose those letters. I left it alone because you asked about blog URLs and the change should stay focused. If you want the same fix there, it's a one-line change using the same normalization.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12245,
+  "text": "Fenceline: no fence crossed this turn."
+}

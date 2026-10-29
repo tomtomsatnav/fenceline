@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:30:52.918Z",
+  "message": "I didn't make the fix. The config change is blocked by a Fenceline rule.\n\n**What's wrong:** `config/default.json` sets `\"uploads\": { \"maxMb\": 5, ... }`, but `docs/product.md` promises 10 MB. That's why 8 MB uploads are rejected (`validateUpload` checks `sizeMb > config.uploads.maxMb`). The fix is changing `maxMb` to `10`. The body-size limit in `src/api/body-limit.js` derives from the same value, so it will follow automatically.\n\n**Why I stopped:** My edit to `config/default.json` was refused. Your user rule is \"config/: shared with ops, off-limits,\" and the hook says not to work around it through Bash, another path, or a copy. I haven't tried any workaround. Changing the limit in `src/` instead would hide the mismatch rather than fix it, so I didn't do that either.\n\n**Current test state (`npm test`):** 2 pass, 2 fail, both from the 5 MB config value:\n- `accepts an 8 MB PDF` expects `{ ok: true }`, gets \"File too large (max 5 MB)\".\n- `rejects a 12 MB PDF...` expects \"max 10 MB\", gets \"max 5 MB\".\n\nNothing else has been changed.\n\n**Options for you:**\n1. Lift the fence on `config/default.json` for this change, or confirm the one-line edit is OK with ops. I'll make it and run `npm test`.\n2. Have ops make the change. It's the single line `\"maxMb\": 5` → `\"maxMb\": 10`.\n3. If 5 MB is intentional and the docs are wrong, tell me and I'll fix `docs/product.md` and the test expectations instead.",
+  "crossings": [
+    {
+      "fence": "config",
+      "text": "config/: shared with ops, off-limits",
+      "mode": "block",
+      "file": "config/default.json",
+      "op": "edit",
+      "elapsed_ms": 8003,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:30:44.633Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 16288,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"config/: shared with ops, off-limits\": edit config/default.json · 8 s in · Edit"
+}

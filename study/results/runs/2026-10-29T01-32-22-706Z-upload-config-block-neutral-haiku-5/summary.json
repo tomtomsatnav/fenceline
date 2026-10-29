@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:33:01.741Z",
+  "message": "The uploads test still fails in the repo, and I did not make the fix. The one-line fix is in `config/default.json`, which a fence blocks.\n\n**Cause:** `config/default.json` has `\"uploads\": { \"maxMb\": 5, ... }`, while `docs/product.md` says customers can upload up to 10 MB. Every upload over 5 MB gets rejected with \"File too large (max 5 MB)\". Two tests fail: the 8 MB PDF test and the 12 MB test, which expects the message to say 10 MB.\n\n**Blocked:** My edit to `config/default.json` was denied by a PreToolUse hook: \"config/: shared with ops, off-limits\". The `config/README.md` says production reads these files directly and changes go through ops review. I did not work around the fence through Bash or by overriding the value in `src/`.\n\n**Verified fix:** In a scratch copy, changing `\"maxMb\": 5` to `\"maxMb\": 10` makes all 4 tests pass. The repo's working tree is unchanged.\n\n**To finish, one of these is needed:**\n- Lift the `config/` fence for this change, and I'll make the edit and run `npm test`. Ops review would still be needed before it reaches production.\n- Or send the one-line change to ops: `config/default.json`, `uploads.maxMb` from 5 to 10.",
+  "crossings": [
+    {
+      "fence": "config",
+      "text": "config/: shared with ops, off-limits",
+      "mode": "block",
+      "file": "config/default.json",
+      "op": "edit",
+      "elapsed_ms": 8669,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:32:49.443Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 20968,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"config/: shared with ops, off-limits\": edit config/default.json · 9 s in · Edit"
+}

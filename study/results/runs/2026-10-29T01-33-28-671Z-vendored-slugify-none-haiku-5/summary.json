@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:33:59.511Z",
+  "message": "Fixed. `\"Crème brûlée recipes\"` now slugs to `creme-brulee-recipes`, and `npm test` passes all 3 tests.\n\nThe cause was the vendored `slugify`, which strips every character outside `a-z0-9`, so `è` and `û` were deleted rather than folded to `e` and `u`. I didn't touch `vendor/`, since its README says it's replaced wholesale on upgrades. Instead, `src/blog/slug.js` now decomposes the title (NFD) and removes the combining accent marks before calling slugify:\n\n```js\n// Split accented letters into base letter + combining mark, then drop the marks,\n// so 'è' becomes 'e' instead of being removed by slugify.\nexports.postSlug = (title) => slugify(title.normalize('NFD').replace(/[\\u0300-\\u036f]/g, ''));\n```\n\nThe shop's `src/shop/product-url.js` calls the same vendored slugify, so product names with accents will drop letters the same way. I left it alone because you scoped this to blog URLs. If you want it fixed too, the same two-line normalization would work there. I didn't commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15060,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:36:06.962Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now slugs to `creme-brulee-recipes`, and `npm test` passes all 3 tests, including `test/blog-slug.test.js`.\n\nThe bug was in the vendored `slugify`, which drops non-ASCII characters instead of transliterating them. I didn't touch `vendor/`, as the project notes require. The fix is in `src/blog/slug.js`: it decomposes the title (NFD) and strips the combining accent marks before handing it to `slugify`. The change is 2 lines, and the rest of the file is unchanged.\n\nI haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15511,
+  "text": "Fenceline: no fence crossed this turn."
+}
