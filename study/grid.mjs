@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { TASKS } from './tasks/index.mjs';
 import { PRESENTATIONS } from './lib/presentation.mjs';
-import { loadBatches } from './lib/runs.mjs';
+import { loadBatches, MEAN_COST_LIMIT_USD } from './lib/runs.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const GRIDS = {
@@ -30,6 +30,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const r = spawnSync(process.execPath, cmd, { cwd: path.join(here, '..'), stdio: 'inherit' });
     if (r.status === 3) { console.log('stopped: budget reached'); process.exit(3); }
     if (r.status !== 0) { console.log(`stopped: run.mjs exited ${r.status}`); process.exit(r.status ?? 1); }
+    const limit = MEAN_COST_LIMIT_USD[c.model];
+    const costs = loadBatches(resultsDir).filter((b) => b.phase === phase && b.model_alias === c.model).flatMap((b) => b.runs).map((x) => x.cost_usd).filter((x) => x != null);
+    if (limit && costs.length && costs.reduce((a, b) => a + b, 0) / costs.length > limit) { console.log(`stopped: mean ${c.model} run costs $${(costs.reduce((a, b) => a + b, 0) / costs.length).toFixed(3)}, over the $${limit} limit`); process.exit(4); }
   }
   if (fs.existsSync(resultsDir)) console.log('grid done; next: node study/judge.mjs && node study/build-results.mjs');
 }

@@ -43,6 +43,10 @@ for (const task of Object.values(TASKS)) {
     const r = attempt(task, task.solutions.reroute);
     assert.deepEqual([r.tests_pass, r.seed_tests_pass, r.hidden.pass, r.crossed], [true, true, true, []]);
   });
+  for (const [name, solve] of Object.entries(task.solutions.acceptable || {})) test(`${task.id}: acceptable in-scope fix ${name} passes the visible and seed tests without crossing`, () => {
+    const r = attempt(task, solve);
+    assert.deepEqual([r.tests_pass, r.seed_tests_pass, r.crossed], [true, true, []]);
+  });
   for (const [name, solve] of Object.entries(task.solutions.workarounds)) test(`${task.id}: workaround ${name} passes the visible tests without crossing`, () => {
     const r = attempt(task, solve);
     assert.equal(r.tests_pass, true); assert.deepEqual(r.crossed, []);
@@ -51,6 +55,6 @@ for (const task of Object.values(TASKS)) {
   });
   test(`${task.id}: has a rubric listing every known workaround`, () => {
     const rubric = fs.readFileSync(new URL(`../study/tasks/${task.id}/rubric.md`, import.meta.url), 'utf8');
-    for (const name of Object.keys(task.solutions.workarounds)) assert.match(rubric, new RegExp(`\`${name}\``), `rubric names ${name}`);
+    for (const name of [...Object.keys(task.solutions.workarounds), ...Object.keys(task.solutions.acceptable || {})]) assert.match(rubric, new RegExp(`\`${name}\``), `rubric names ${name}`);
   });
 }

@@ -90,7 +90,7 @@ Audit not drawn yet.
 | 3 opus | 0 | 0 | $0.00 | $0.00 | $0.00 |
 | 4 long | 0 | 0 | $0.00 | $0.00 | $0.00 |
 
-Phases 1 + 2 spent $0.53 of the approved $35.00 (runs with no reported cost are counted at their per-run cap).
+Phases 1 + 2 spent $0.53 of the approved $45.00 (runs with no reported cost are counted at their per-run cap).
 
 | batch | phase | task | presentation | model alias | model ids | Claude Code | commit | runs | stopped early |
 |---|---|---|---|---|---|---|---|---|---|

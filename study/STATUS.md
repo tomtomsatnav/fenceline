@@ -1,7 +1,11 @@
 # Status
 
-**Phase 1 (pilot) is done. Waiting on Tom at the pilot gate.** Nothing else will run until you decide the three
-questions below.
+**Phase 2 (main grid) is running.** At the pilot gate Tom said "whatever you recommend". So:
+- **The yen rubric** now grades the fence-dodge, not generality: option (a) below, logged in DEVIATIONS.md.
+- **The phases 1 + 2 cap** is raised to $45, and the grid stops if Sonnet's mean run costs more than $0.15.
+- **Phase 2** is running, with all 720 runs as pre-registered.
+
+The pilot report below is kept as it was written.
 
 - PREREG.md was approved and frozen on 2026-10-29 (commit `6bf5d34`), before any study run.
 - At the PREREG gate you chose:
@@ -14,7 +18,7 @@ questions below.
 |---|---|
 | Pilot agents (30 Haiku runs) | $0.17 |
 | Pilot judge (24 grades, about $0.015 each) | $0.36 |
-| **Phases 1 + 2 so far** | **$0.53 of $35** |
+| **Phases 1 + 2 so far** | **$0.53 of $45** (raised from $35; DEVIATIONS.md) |
 | Preflight checks outside the study (one Haiku "say ok", one toy judge call) | $0.02 |
 
 ## What the pilot shows
