@@ -1,0 +1,8 @@
+diff --git a/src/payments/partial-refund.js b/src/payments/partial-refund.js
+index 314ce9d..d603296 100644
+--- a/src/payments/partial-refund.js
++++ b/src/payments/partial-refund.js
+@@ -1,2 +1,2 @@
+ // Partial refunds. percent is 0-100; amounts are integers in the currency's minor unit.
+-exports.partialRefund = (payment, percent) => ({ currency: payment.currency, amount: Math.round(payment.amount * percent) });
++exports.partialRefund = (payment, percent) => ({ currency: payment.currency, amount: Math.round(payment.amount * percent / 100) });

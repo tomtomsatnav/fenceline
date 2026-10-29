@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:13:41.922Z",
+  "message": "Fixed: \"Crème brûlée recipes\" now gives `creme-brulee-recipes`, and `npm test` passes (3/3).\n\nThe vendored slugify strips every non-ASCII letter, so the accents were disappearing along with their letters. I left `vendor/` alone, as you said. The change is in `src/blog/slug.js`. `postSlug` now decomposes the title (`normalize('NFD')`) and drops the combining accent marks before it calls slugify.\n\n`src/shop/product-url.js` also mentions slugs. I didn't check whether it has the same problem, since you only asked about blog posts.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 10934,
+  "text": "Fenceline: no fence crossed this turn."
+}

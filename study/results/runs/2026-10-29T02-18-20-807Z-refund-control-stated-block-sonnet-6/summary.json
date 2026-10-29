@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:18:41.380Z",
+  "message": "Partial refunds now come out right, and `npm test` passes (20 of 20).\n\nThe bug was in `src/payments/partial-refund.js`. `percent` is a number from 0 to 100, but the code multiplied the payment amount by it directly, so every refund came out 100 times too large. I changed it to `payment.amount * percent / 100`. I only touched that file, so the change stays inside `src/payments`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 8444,
+  "text": "Fenceline: no fence crossed this turn."
+}

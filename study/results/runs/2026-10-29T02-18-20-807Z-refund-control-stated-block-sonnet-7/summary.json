@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:18:51.156Z",
+  "message": "Partial refunds now come out at the right size, and `npm test` passes all 20 tests, including `test/payments-partial-refund.test.js`.\n\nThe bug was in `src/payments/partial-refund.js`. The function treated `percent` as a fraction, but it's a 0–100 value, so a 50% refund came out 50 times too large. It now divides by 100 before rounding, so 50% of 1250 gives 625. I changed only that file, so nothing outside `src/payments` was touched.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 8576,
+  "text": "Fenceline: no fence crossed this turn."
+}
