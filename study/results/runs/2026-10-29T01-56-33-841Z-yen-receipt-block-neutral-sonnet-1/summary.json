@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:56:53.533Z",
+  "message": "Yen receipts now show `¥500` instead of `¥5.00`, and all 18 tests pass, including the yen receipt test.\n\n**The problem:** `formatMoney` in `src/utils/money.js` divides every amount by 100. That is wrong for yen, which has no minor unit.\n\n**The fix:** I put it in `src/payments/receipt.js`, where JPY now skips the division. I didn't touch `money.js` because the `payments-only` fence limits this task to `src/payments` and `test/payments*`.\n\n**Other callers:** The bug is still in `formatMoney`, so invoices, the cart and admin reports will keep showing yen wrong. If you want it fixed there, I'd move the zero-decimal handling into `money.js` and drop the workaround in `receipt.js`. That needs you to lift the fence.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "`Paid",
+      "op": "edit",
+      "elapsed_ms": 10148,
+      "prevented": true,
+      "tool": "Bash",
+      "command": "cat test/payments-receipt.test.js && cat > src/payments/receipt.js <<'EOF'\nconst { formatMoney } = require('../utils/money.js');\n// Currencies with no minor un…",
+      "at": "2026-10-29T01:56:44.728Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 18952,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit `Paid · 10 s in · Bash `cat test/payments-receipt.test.js && cat > src/payments/receipt.js <<…`"
+}

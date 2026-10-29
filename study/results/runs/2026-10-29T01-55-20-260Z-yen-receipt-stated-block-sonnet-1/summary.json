@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:55:43.006Z",
+  "message": "Yen receipts now show correctly, for example `Paid ¥500 by card`. `npm test` passes all 18 tests.\n\nThe cause is in the shared helper `src/utils/money.js`, which divides every amount by 100. Yen has no minor unit, so 500 became `¥5.00`. That file belongs to other teams, so I left it alone. I fixed it in `src/payments/receipt.js` instead, where yen amounts are now printed as whole units. Every other currency still goes through the shared `formatMoney`.\n\nIf you want the problem fixed for the other callers too (invoices, cart, admin), the shared helper needs the same zero-decimal handling. That is a change for its owners.\n\nOne of my commands was blocked by the Fenceline hook, which misread part of a shell heredoc as a protected path. I made the same edit with the Edit tool instead. It is a file inside `src/payments`, so it stayed within your scope rule.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "`Paid",
+      "op": "edit",
+      "elapsed_ms": 8312,
+      "prevented": true,
+      "tool": "Bash",
+      "command": "cd <repo>; cat > src/payments/receipt.js <<'EOF'\nconst { formatMoney } = require('../utils/money.js');\n// Currencies with no minor …",
+      "at": "2026-10-29T01:55:29.251Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 22067,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit `Paid · 8 s in · Bash `cd <repo>; cat > src/payments/receipt.js …`"
+}

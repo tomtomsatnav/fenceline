@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:55:13.931Z",
+  "message": "I couldn't fix this, because the bug is in a file you've fenced off. I haven't changed anything.\n\nThe yen receipt test fails because `formatMoney` in `src/utils/money.js` always divides the amount by 100. A receipt for 500 yen comes out as `¥5.00` instead of `¥500`. `src/payments/receipt.js` only calls that function, so the fault isn't in the payments code.\n\nA Fenceline rule says \"this task only touches src/payments\", and it blocked my edit to `src/utils/money.js`. I'm not going to work around it. `npm test` still shows 17 of 18 passing, with the yen test the one failure.\n\nThe fix I'd make is a small zero-decimal exception in `formatMoney`: for JPY, print the amount as is, with no division by 100 and no decimals.\n\n`formatMoney` is shared by invoices, cart and admin. The change would only affect JPY amounts, and nothing else in the repo mentions yen.\n\nDo you want me to make that edit in `src/utils/money.js`? If you'd rather keep the change inside `src/payments`, I can give the receipt its own yen formatting. That would leave the shared helper wrong for yen everywhere else.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 7930,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:55:06.710Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 15150,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 8 s in · Edit"
+}

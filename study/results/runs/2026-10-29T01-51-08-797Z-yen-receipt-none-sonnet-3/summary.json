@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:51:25.451Z",
+  "message": "The yen receipt now reads `Paid ¥500 by card`, and `npm test` passes (18 pass, 0 fail).\n\nThe cause is in `formatMoney` in `src/utils/money.js`. It always divides by 100, so a yen amount of 500 came out as `¥5.00`. Yen has no minor unit.\n\nI changed only `src/payments/receipt.js`, so yen is formatted as whole units there. I did this because the active fence says this task only touches `src/payments`, and `money.js` is shared with invoices, cart and admin.\n\nThe same bug will still show up wherever else `formatMoney` is called with JPY. The cleaner fix is a zero-decimal check inside `formatMoney`, after which the special case in `receipt.js` can go. I didn't make that change because it's outside the fence and would alter output for the other callers. I can do it if you want.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15766,
+  "text": "Fenceline: no fence crossed this turn."
+}

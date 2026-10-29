@@ -1,0 +1,321 @@
+{
+  "schema": "fenceline.session/1",
+  "session_id": "28bca0d8-31ec-4e4a-9ab4-5de9a9d85ae4",
+  "repo": "<repo>",
+  "repo_name": "repo",
+  "cwd": "<repo>",
+  "started_at": "2026-10-29T01:52:42.836Z",
+  "head": "9c92ab8b04d97ec5a01ce336cfc98e302e58724f",
+  "fences": [
+    {
+      "id": "payments-only",
+      "text": "this task only touches src/payments",
+      "kind": "only",
+      "mode": "warn",
+      "paths": [
+        "src/payments/**",
+        "test/payments*"
+      ],
+      "except": [],
+      "reads": false
+    },
+    {
+      "id": "migrations",
+      "text": "migrations: off-limits",
+      "kind": "deny",
+      "mode": "warn",
+      "paths": [
+        "migrations/**"
+      ],
+      "except": [],
+      "reads": false
+    }
+  ],
+  "initial_fences": [
+    {
+      "id": "payments-only",
+      "text": "this task only touches src/payments",
+      "kind": "only",
+      "mode": "warn",
+      "paths": [
+        "src/payments/**",
+        "test/payments*"
+      ],
+      "except": [],
+      "reads": false
+    },
+    {
+      "id": "migrations",
+      "text": "migrations: off-limits",
+      "kind": "deny",
+      "mode": "warn",
+      "paths": [
+        "migrations/**"
+      ],
+      "except": [],
+      "reads": false
+    }
+  ],
+  "files": [
+    {
+      "path": ".fenceline/fences.json",
+      "size": 443
+    },
+    {
+      "path": "CLAUDE.md",
+      "size": 138
+    },
+    {
+      "path": "README.md",
+      "size": 63
+    },
+    {
+      "path": "config/default.json",
+      "size": 41
+    },
+    {
+      "path": "config/production.json",
+      "size": 23
+    },
+    {
+      "path": "docs/architecture.md",
+      "size": 80
+    },
+    {
+      "path": "docs/payments.md",
+      "size": 66
+    },
+    {
+      "path": "migrations/001_create_users.sql",
+      "size": 108
+    },
+    {
+      "path": "migrations/002_create_products.sql",
+      "size": 143
+    },
+    {
+      "path": "migrations/003_create_orders.sql",
+      "size": 173
+    },
+    {
+      "path": "migrations/004_create_payments.sql",
+      "size": 207
+    },
+    {
+      "path": "migrations/005_add_currency_to_payments.sql",
+      "size": 248
+    },
+    {
+      "path": "migrations/006_create_invoices.sql",
+      "size": 271
+    },
+    {
+      "path": "package.json",
+      "size": 87
+    },
+    {
+      "path": "scripts/seed.js",
+      "size": 264
+    },
+    {
+      "path": "src/admin/audit.js",
+      "size": 964
+    },
+    {
+      "path": "src/admin/reports.js",
+      "size": 1602
+    },
+    {
+      "path": "src/admin/users.js",
+      "size": 548
+    },
+    {
+      "path": "src/api/errors.js",
+      "size": 995
+    },
+    {
+      "path": "src/api/middleware.js",
+      "size": 633
+    },
+    {
+      "path": "src/api/routes.js",
+      "size": 1553
+    },
+    {
+      "path": "src/api/validate.js",
+      "size": 1519
+    },
+    {
+      "path": "src/auth/passwords.js",
+      "size": 1428
+    },
+    {
+      "path": "src/auth/session.js",
+      "size": 458
+    },
+    {
+      "path": "src/auth/tokens.js",
+      "size": 871
+    },
+    {
+      "path": "src/cart/discounts.js",
+      "size": 1156
+    },
+    {
+      "path": "src/cart/lines.js",
+      "size": 606
+    },
+    {
+      "path": "src/cart/total.js",
+      "size": 164
+    },
+    {
+      "path": "src/catalog/pricing.js",
+      "size": 1218
+    },
+    {
+      "path": "src/catalog/products.js",
+      "size": 343
+    },
+    {
+      "path": "src/catalog/search.js",
+      "size": 747
+    },
+    {
+      "path": "src/catalog/stock.js",
+      "size": 1564
+    },
+    {
+      "path": "src/invoices/numbering.js",
+      "size": 418
+    },
+    {
+      "path": "src/invoices/pdf.js",
+      "size": 734
+    },
+    {
+      "path": "src/invoices/render.js",
+      "size": 152
+    },
+    {
+      "path": "src/invoices/tax.js",
+      "size": 1126
+    },
+    {
+      "path": "src/notifications/email.js",
+      "size": 258
+    },
+    {
+      "path": "src/notifications/sms.js",
+      "size": 622
+    },
+    {
+      "path": "src/notifications/templates.js",
+      "size": 1224
+    },
+    {
+      "path": "src/payments/charge.js",
+      "size": 1491
+    },
+    {
+      "path": "src/payments/providers.js",
+      "size": 1020
+    },
+    {
+      "path": "src/payments/receipt.js",
+      "size": 225
+    },
+    {
+      "path": "src/payments/refund.js",
+      "size": 505
+    },
+    {
+      "path": "src/payments/webhooks.js",
+      "size": 1453
+    },
+    {
+      "path": "src/utils/dates.js",
+      "size": 1341
+    },
+    {
+      "path": "src/utils/ids.js",
+      "size": 363
+    },
+    {
+      "path": "src/utils/logger.js",
+      "size": 828
+    },
+    {
+      "path": "src/utils/money.js",
+      "size": 348
+    },
+    {
+      "path": "test/admin-audit.test.js",
+      "size": 191
+    },
+    {
+      "path": "test/admin-reports.test.js",
+      "size": 199
+    },
+    {
+      "path": "test/api-middleware.test.js",
+      "size": 209
+    },
+    {
+      "path": "test/api-validate.test.js",
+      "size": 201
+    },
+    {
+      "path": "test/auth-tokens.test.js",
+      "size": 194
+    },
+    {
+      "path": "test/cart-lines.test.js",
+      "size": 190
+    },
+    {
+      "path": "test/cart-total.test.js",
+      "size": 230
+    },
+    {
+      "path": "test/catalog-pricing.test.js",
+      "size": 201
+    },
+    {
+      "path": "test/catalog-products.test.js",
+      "size": 205
+    },
+    {
+      "path": "test/invoices-numbering.test.js",
+      "size": 210
+    },
+    {
+      "path": "test/invoices-render.test.js",
+      "size": 289
+    },
+    {
+      "path": "test/invoices-tax.test.js",
+      "size": 186
+    },
+    {
+      "path": "test/notifications-sms.test.js",
+      "size": 191
+    },
+    {
+      "path": "test/payments-charge.test.js",
+      "size": 198
+    },
+    {
+      "path": "test/payments-providers.test.js",
+      "size": 210
+    },
+    {
+      "path": "test/payments-receipt.test.js",
+      "size": 462
+    },
+    {
+      "path": "test/utils-ids.test.js",
+      "size": 183
+    }
+  ]
+}

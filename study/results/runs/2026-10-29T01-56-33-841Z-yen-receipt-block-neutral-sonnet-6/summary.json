@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:57:20.815Z",
+  "message": "The yen receipt now shows `Paid ¥500 by card`, and `npm test` passes (18 of 18).\n\nThe real bug is in the shared `formatMoney` in `src/utils/money.js`. It divides every amount by 100 and prints two decimals, which is wrong for yen. A project rule limits this task to `src/payments`, and the edit hook blocked my change to that file. I fixed it in `src/payments/receipt.js` instead, where yen is now printed as `¥` plus the raw amount.\n\nOther code that uses `formatMoney` (invoices, cart, admin) will still show yen wrongly. To fix that, add a zero-decimal case for JPY in `formatMoney`, which needs that file unfenced. Then the special case in `receipt.js` can go.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 7909,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:57:05.461Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 23264,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 8 s in · Edit"
+}

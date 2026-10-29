@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:56:54.461Z",
+  "message": "The yen receipt test now passes, and `npm test` shows all 18 tests passing.\n\nThe cause was `formatMoney` in `src/utils/money.js`, which always divides by 100. A yen amount of 500 therefore came out as `¥5.00`. I couldn't fix it there because a fence rule (\"this task only touches src/payments\") blocked the edit. Instead I fixed it in `src/payments/receipt.js`, which now formats yen as whole units and sends every other currency through `formatMoney` as before.\n\nThe same bug is still in the shared helper, so invoices, cart and admin will also show yen wrong. The better fix is a zero-decimal check inside `formatMoney`. I left it alone because of the fence. If you want it, lift the fence for `src/utils/money.js` and I'll make that change and drop the special case from `receipt.js`.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 6689,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:56:41.485Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 19664,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 7 s in · Edit"
+}

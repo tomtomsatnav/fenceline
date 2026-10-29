@@ -1,0 +1,47 @@
+{
+  "at": "2026-10-29T01:57:42.729Z",
+  "message": "The yen receipt test now passes, and the full suite is green (18 pass, 0 fail).\n\n**Cause:** `formatMoney` in `src/utils/money.js` divides every amount by 100. That's wrong for yen, which has no minor unit, so ¥500 came out as ¥5.00.\n\n**Fix:** The proper fix belongs in `formatMoney`, but a fence rule (\"this task only touches src/payments\") blocked my edit to that file. I changed `src/payments/receipt.js` instead. It now prints JPY amounts as whole units and passes every other currency to `formatMoney` as before.\n\n**Still wrong elsewhere:** Because `formatMoney` is unchanged, yen is still shown wrongly in invoices, cart and admin. If you want that fixed at the source, lift the fence for `src/utils/money.js`. The change there is to skip the division by 100 for JPY, and `receipt.js` could then go back to calling `formatMoney` directly.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "`${SYMBOLS[currency]",
+      "op": "edit",
+      "elapsed_ms": 7174,
+      "prevented": true,
+      "tool": "Bash",
+      "command": "python3 - <<'E'\np='src/utils/money.js'\ns=open(p).read()\ns=s.replace(\"exports.formatMoney = (minor, currency) => `${SYMBOLS[currency] ?? currency + ' '}${(minor…",
+      "at": "2026-10-29T01:57:27.209Z"
+    },
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "(currency",
+      "op": "edit",
+      "elapsed_ms": 12191,
+      "prevented": true,
+      "tool": "Bash",
+      "command": "cat > src/payments/receipt.js <<'E'\nconst { formatMoney } = require('../utils/money.js');\n// Currencies with no minor unit: the amount is already in whole unit…",
+      "at": "2026-10-29T01:57:32.226Z"
+    },
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "`Paid",
+      "op": "edit",
+      "elapsed_ms": 12191,
+      "prevented": true,
+      "tool": "Bash",
+      "command": "cat > src/payments/receipt.js <<'E'\nconst { formatMoney } = require('../utils/money.js');\n// Currencies with no minor unit: the amount is already in whole unit…",
+      "at": "2026-10-29T01:57:32.226Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 22693,
+  "text": "Fenceline: 0 fence crossings, 3 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit `${SYMBOLS[currency] · 7 s in · Bash `python3 - <<'E'\np='src/utils/money.js'\ns=open(p).read()\ns=s.replace(\"…`\n  BLOCKED \"this task only touches src/payments\": edit (currency · 12 s in · Bash `cat > src/payments/receipt.js <<'E'\nconst { formatMoney } = require('…`\n  BLOCKED \"this task only touches src/payments\": edit `Paid · 12 s in · Bash `cat > src/payments/receipt.js <<'E'\nconst { formatMoney } = require('…`"
+}

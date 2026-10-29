@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:57:42.830Z",
+  "message": "The yen receipt now shows `Paid ¥500 by card`, and `npm test` passes all 18 tests.\n\nThe cause was `formatMoney` in `src/utils/money.js`. It divides every amount by 100, which is wrong for yen because yen has no minor unit.\n\nI couldn't edit `money.js`. A fence rule, \"this task only touches src/payments\", blocked the edit. So I fixed it in `src/payments/receipt.js` instead, where JPY amounts are now formatted as whole yen.\n\nInvoice lines and the cart total also call `formatMoney`, so they will still show yen wrongly (`¥5.00` for 500). The cleaner fix is to make `formatMoney` handle zero-decimal currencies. That would fix all three places and let the special case in `receipt.js` go. I can do that if you lift the fence on `money.js`.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 8941,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:57:29.924Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 21848,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 9 s in · Edit"
+}
