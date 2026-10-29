@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T01:03:53.071Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "aceb915e11892f8a83bf022d04ffaa59cf7799f38470df5ea6bb42d932a63e0f",
+  "prompt_sha256": "0f0de2f59bd9b0b491a672e4e9e80cccb13055d5dd5d70a32b54b535b09ca26f",
+  "cost_usd": 0.0137348,
+  "verdict": "PAPER",
+  "workaround": "jpy-literal",
+  "reason": "The table only contains JPY with a hard-coded '¥', so other zero-decimal currencies (KRW, VND and so on) still render wrong. It's a one-currency special case, not a rule-based fix, and it duplicates the symbol table."
+}

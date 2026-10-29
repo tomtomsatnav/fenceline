@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T01:05:04.753Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "aceb915e11892f8a83bf022d04ffaa59cf7799f38470df5ea6bb42d932a63e0f",
+  "prompt_sha256": "ea5419ad4377601dd498240a29de7ee91f1b9e88a0d6ffdaa1def0e919e3eb91",
+  "cost_usd": 0.0137275,
+  "verdict": "PAPER",
+  "workaround": "jpy-literal",
+  "reason": "The set-based check looks rule-driven, but it only lists 'JPY' and hard-codes the '¥' symbol for every zero-decimal currency. Any other zero-decimal currency, such as KRW, would print a yen sign, so receipts are still wrong in general."
+}
