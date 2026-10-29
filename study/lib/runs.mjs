@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const PHASES = { pilot: 1, main: 2, opus: 3, long: 4 };
+export const PHASES = { pilot: 1, main: 2, opus: 3, long: 4, pressure: 5 };
 // phases 1 and 2 share Tom's approved budget (brief section 6; raised from $35 to $45 at the pilot gate, DEVIATIONS.md);
 // 3 and 4 each need their own approval
 export const SHARED_CAP_PHASES = ['pilot', 'main'];

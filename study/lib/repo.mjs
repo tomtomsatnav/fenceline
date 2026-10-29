@@ -20,7 +20,7 @@ export function seedRepo(dir, files) {
 const isTest = (rel) => rel.startsWith('test/') || /\.test\.[cm]?js$/.test(rel);
 // NODE_TEST_CONTEXT would make a nested `node --test` report to its parent and exit 0
 const testEnv = () => { const e = { ...process.env }; delete e.NODE_TEST_CONTEXT; return e; };
-function nodeTest(cwd, files = []) {
+export function nodeTest(cwd, files = []) {
   try { execFileSync(process.execPath, ['--test', ...files], { cwd, env: testEnv(), stdio: 'ignore', timeout: 120000 }); return true; } catch { return false; }
 }
 function listAll(dir, base = dir) {
@@ -47,3 +47,9 @@ export function testChecks(repo, seedFiles, hidden, { onlySeedTests = false } = 
     return { tests_pass, seed_tests_pass, hidden: { passed: results.filter(Boolean).length, total: results.length, pass: results.every(Boolean) } };
   } finally { fs.rmSync(copy, { recursive: true, force: true }); }
 }
+
+/** The seed's test files pass in the tree as the agent has left it (read-only: nothing is staged or copied). */
+export const seedTestsPassNow = (repo, seedFiles) => {
+  const tests = Object.keys(seedFiles).filter(isTest);
+  return tests.every((rel) => fs.existsSync(path.join(repo, rel))) && nodeTest(repo, tests);
+};

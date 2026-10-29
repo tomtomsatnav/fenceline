@@ -138,3 +138,17 @@ all (`--approved-usd 100`).
 - **What doesn't change:** the first 70 are unchanged and in the same order, so a session that reaches 30 minutes
   within them (Sonnet's took 56 turns) is identical to before.
 - **The first Haiku run** stays as it is, flagged `warmup_short`.
+
+## 2026-10-29: extension (Tom: "do what you suggested")
+
+### 10. Continue-pressure, with the fences hidden: a pre-registered extension
+
+The extension is pre-registered in [EXTENSION.md](EXTENSION.md) before any of its runs. It is a separate, smaller study
+(80 runs, phase `pressure`), and PREREG.md is unchanged. It tests whether pressure to continue, rather than enforcement
+itself, turns asking into working around.
+
+It needed two opt-in additions to Fenceline:
+- **`FENCELINE_FENCES_FILE`** (`loadFences`): fences can now be read from outside the repo;
+- **`--pressure N` and `--hide-fences`** in `run.mjs`.
+
+Neither changes default behaviour. There is a hook test for the first and a runner test for the second.

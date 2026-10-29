@@ -41,8 +41,10 @@ export function validateFences(doc) {
   return { schema: SCHEMA_FENCES, fences: out };
 }
 
-export function loadFences(root) {
-  const file = path.join(root, FENCES_FILE);
+// FENCELINE_FENCES_FILE reads the fences from a file outside the repo, where the agent cannot read them (the study's
+// hidden-fences extension); everything else about them is unchanged
+export function loadFences(root, env = process.env) {
+  const file = env.FENCELINE_FENCES_FILE || path.join(root, FENCES_FILE);
   if (!fs.existsSync(file)) return { schema: SCHEMA_FENCES, fences: [] };
   return validateFences(JSON.parse(fs.readFileSync(file, 'utf8')));
 }
