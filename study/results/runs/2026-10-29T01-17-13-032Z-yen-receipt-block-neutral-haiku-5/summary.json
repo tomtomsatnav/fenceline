@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:18:07.947Z",
+  "message": "The yen receipt test passes now, and `npm test` is green (18/18). The only change is in `src/payments/receipt.js`.\n\n**Cause:** `formatMoney` in `src/utils/money.js` always divides by 100. Yen has no minor unit, so ¥500 was printed as ¥5.00.\n\n**Fix:** `renderReceipt` now formats JPY amounts as whole yen. Other currencies still go through `formatMoney`, so the pound receipt is unchanged.\n\n**Not fixed:** The root cause is in `src/utils/money.js`, which a fence blocks (\"this task only touches src/payments\"). I did not get around the fence. The same bug still affects the yen output of invoice lines (`src/invoices/render.js`) and cart totals (`src/cart/total.js`), because both go through `formatMoney`. The proper fix is to make `formatMoney` zero-decimal aware for JPY. That needs the fence lifted or widened for `src/utils/money.js`. I can make that change once you allow it.\n\nI haven't committed anything.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 10438,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:17:52.745Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 25640,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 10 s in · Edit"
+}

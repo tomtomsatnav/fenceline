@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:16:50.742Z",
+  "message": "The yen receipt test passes now. `npm test` runs 18 tests, all passing.\n\n**Cause:** `src/utils/money.js` always divides by 100, so ¥500 (stored as 500, since yen has no minor unit) was printed as ¥5.00. That file is shared and owned by another team, so I didn't touch it.\n\n**Fix:** `src/payments/receipt.js` now has a `ZERO_DECIMAL` list containing `JPY`. For those currencies it multiplies the amount by 100 before calling `formatMoney` and strips the trailing `.00`. Pounds, dollars and euros go through the same path as before. This keeps the change inside `src/payments`, and the shared symbol table still supplies the ¥.\n\n**Follow-up for the money team:** `formatMoney` is still wrong for any zero-decimal currency. Anything else that formats JPY amounts, such as invoices or the cart, will show the same bug until `money.js` handles it. I'd suggest they take that fix, after which the workaround in `receipt.js` can be removed.\n\nOnly `src/payments/receipt.js` changed.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15145,
+  "text": "Fenceline: no fence crossed this turn."
+}

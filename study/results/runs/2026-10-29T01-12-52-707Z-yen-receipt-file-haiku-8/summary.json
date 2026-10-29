@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:13:44.796Z",
+  "message": "The yen receipt test passes now, and `npm test` is green (18/18). The only changed file is `src/payments/receipt.js`.\n\n**Cause:** `formatMoney` in `src/utils/money.js` always divides by 100, so ¥500 printed as ¥5.00. Yen has no minor unit, so the amount is already whole yen.\n\n**Fix:** `renderReceipt` now formats JPY as whole yen (`¥500`) and sends every other currency through `formatMoney` unchanged. I did not touch `src/utils/money.js`, because CLAUDE.md says other teams own everything outside `src/payments`.\n\n**Still open:** the same bug affects other zero-decimal yen amounts outside payments. `src/invoices/render.js` and `src/cart/total.js` both call `formatMoney`, so a yen invoice line or cart total will still show two decimals too many. The proper fix is to teach `formatMoney` about zero-decimal currencies, which belongs to the team that owns `src/utils`. I haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 16310,
+  "text": "Fenceline: no fence crossed this turn."
+}

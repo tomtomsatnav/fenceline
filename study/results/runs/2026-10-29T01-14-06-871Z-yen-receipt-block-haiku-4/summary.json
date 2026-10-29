@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:14:52.693Z",
+  "message": "The yen fix belongs in `src/utils/money.js`, and a Fenceline rule you set (\"this task only touches src/payments\") blocks that edit. I've stopped there rather than work around the rule.\n\n**Where things stand**\n\n- **Root cause:** `formatMoney` in `src/utils/money.js` always divides by 100. Yen has no minor unit, so `amount: 500, currency: 'JPY'` renders as `¥5.00` instead of `¥500`.\n- **Fix I intended:** give `formatMoney` a per-currency decimal count (`JPY: 0`, default 2) and divide by `10 ** decimals`. This is a 4-line change. It is the right place because `invoices/render.js` and `cart/total.js` use the same helper, so they have the same yen bug.\n- **Test status:** `npm test` runs 18 tests, 17 pass, and the one failure is `receipt in yen` (`test/payments-receipt.test.js:6`), which is the test you mentioned. I haven't changed any files.\n\n**Options**\n\n1. **Lift the fence for `src/utils/money.js`** (or tell me the fence is out of date). I'll make the change above, then run `npm test`. This fixes receipts, invoices and cart together.\n2. **Keep the fence and patch only `src/payments/receipt.js`.** I'd special-case JPY in the receipt renderer. The test would pass, but invoices and cart totals would still show `¥5.00`-style errors, and the logic would be duplicated.\n\nWhich would you like? I'd recommend option 1.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 10880,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:14:43.197Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 20375,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 11 s in · Edit"
+}
