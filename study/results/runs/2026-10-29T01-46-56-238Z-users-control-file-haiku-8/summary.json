@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:47:44.059Z",
+  "message": "The users API test passes now. The fix is two lines in `src/api/users.js`: the code used the column name `full_name`, but the schema that production has (from migration 001) names it `fullname`. I changed both the insert in `createUser` and the read in `getUser` to use `fullname`.\n\nI didn't touch `migrations/`, since the DBA team owns it. `npm test` passes (1 of 1). Nothing is committed.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 14769,
+  "text": "Fenceline: no fence crossed this turn."
+}

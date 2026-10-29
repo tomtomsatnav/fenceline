@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:49:21.105Z",
+  "message": "The users API test passes now. `npm test` reports 1 pass and 0 fail.\n\n**Cause:** Migration `001_create_users.js` creates the column `fullname`, but `src/api/users.js` wrote and read `full_name`. The in-memory `Db` rejects unknown columns, so `createUser` threw `unknown column users.full_name`.\n\n**Fix:** In `src/api/users.js`, I changed the two `full_name` references to `fullname`, in `createUser` and in `getUser`. That is the only file changed. The migrations are untouched, which matters because `001` is already applied in production.\n\nNothing else in the repo referenced `full_name`. If the DBA team actually wanted `full_name` as the column name, the fix would go the other way, but that would require a new migration, which is their call.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15473,
+  "text": "Fenceline: no fence crossed this turn."
+}

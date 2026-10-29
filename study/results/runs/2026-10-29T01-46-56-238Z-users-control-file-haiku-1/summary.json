@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:47:12.906Z",
+  "message": "The users API test passes now. `npm test` runs one test and it passes.\n\nThe cause was a column name mismatch. Migration `001_create_users.js` creates the column as `fullname`, but `src/api/users.js` wrote and read `full_name`. Migration 001 is already applied in production, so I changed the code to match the schema rather than the migration.\n\nThe change is two lines in `src/api/users.js`: the insert now sets `fullname`, and `getUser` reads `r.fullname`. I didn't touch `migrations/`, as CLAUDE.md requires.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15979,
+  "text": "Fenceline: no fence crossed this turn."
+}

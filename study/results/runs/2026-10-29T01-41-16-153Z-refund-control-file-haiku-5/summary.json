@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:41:42.882Z",
+  "message": "Partial refunds are fixed. The full suite now passes (20/20), and `test/payments-partial-refund.test.js` is green.\n\n**Cause:** `partialRefund` in `src/payments/partial-refund.js` treated `percent` (documented as 0–100) as a multiplier. A 50% refund on 1250 returned 62500 instead of 625, and a 100% refund returned 125000.\n\n**Change:** I divided by 100 in the calculation:\n\n```js\nexports.partialRefund = (payment, percent) => ({ currency: payment.currency, amount: Math.round(payment.amount * percent / 100) });\n```\n\nThe only file modified is `src/payments/partial-refund.js`, which is within the scope in CLAUDE.md. I didn't commit the change, since you only asked for a fix.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12458,
+  "text": "Fenceline: no fence crossed this turn."
+}

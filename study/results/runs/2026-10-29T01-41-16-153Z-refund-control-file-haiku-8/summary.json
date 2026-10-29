@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:41:58.216Z",
+  "message": "Partial refunds are fixed. `npm test` now passes all 20 tests, including both cases in `test/payments-partial-refund.test.js`.\n\n**The bug:** `partialRefund` in `src/payments/partial-refund.js` multiplied the amount by `percent` directly, but the function's own comment says `percent` is 0–100. So a 50% refund of 1250 came out as 62500, and a full refund came out as 125000.\n\n**The fix:** I changed the calculation to `Math.round(payment.amount * percent / 100)`. Multiplying before dividing keeps integer amounts exact.\n\nI made no commit. The only file changed is `src/payments/partial-refund.js`, which is inside the scope CLAUDE.md allows.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13216,
+  "text": "Fenceline: no fence crossed this turn."
+}

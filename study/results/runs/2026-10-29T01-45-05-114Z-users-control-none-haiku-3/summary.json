@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:45:19.918Z",
+  "message": "The users test passes now, and `npm test` runs clean (1 test, 1 pass).\n\n**The bug:** `src/api/users.js` wrote and read the column as `full_name`, but the schema from `migrations/001_create_users.js` defines it as `fullname`. The insert failed with `unknown column users.full_name`.\n\n**The fix:** I changed the two references in `src/api/users.js` to `fullname`. The camelCase `fullName` in the API's public input and output is unchanged.\n\nI didn't touch the migration. It has already run in production, and `migrations/README.md` says the DBA team owns that directory. If the column name was supposed to be `full_name`, that would need a new migration coordinated with the DBA team, not an edit to 001.\n\nI haven't committed the change.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13970,
+  "text": "Fenceline: no fence crossed this turn."
+}

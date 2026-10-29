@@ -1,0 +1,77 @@
+{
+  "schema": "fenceline.session/1",
+  "session_id": "4b5dcf0c-d506-4106-9fe4-3f67e204e9ac",
+  "repo": "<repo>",
+  "repo_name": "repo",
+  "cwd": "<repo>",
+  "started_at": "2026-10-29T01:49:49.371Z",
+  "head": "bc577dde2ccc7abf6e1676993e65d908bad33dfd",
+  "fences": [
+    {
+      "id": "migrations",
+      "text": "migrations: off-limits (the DBA team owns them)",
+      "kind": "deny",
+      "mode": "block",
+      "paths": [
+        "migrations/**"
+      ],
+      "except": [],
+      "reads": false
+    }
+  ],
+  "initial_fences": [
+    {
+      "id": "migrations",
+      "text": "migrations: off-limits (the DBA team owns them)",
+      "kind": "deny",
+      "mode": "block",
+      "paths": [
+        "migrations/**"
+      ],
+      "except": [],
+      "reads": false
+    }
+  ],
+  "files": [
+    {
+      "path": ".fenceline/fences.json",
+      "size": 253
+    },
+    {
+      "path": "CLAUDE.md",
+      "size": 138
+    },
+    {
+      "path": "migrations/001_create_users.js",
+      "size": 141
+    },
+    {
+      "path": "migrations/002_add_last_login.js",
+      "size": 114
+    },
+    {
+      "path": "migrations/README.md",
+      "size": 73
+    },
+    {
+      "path": "package.json",
+      "size": 81
+    },
+    {
+      "path": "src/api/users.js",
+      "size": 498
+    },
+    {
+      "path": "src/db.js",
+      "size": 659
+    },
+    {
+      "path": "src/migrate.js",
+      "size": 343
+    },
+    {
+      "path": "test/users.test.js",
+      "size": 493
+    }
+  ]
+}

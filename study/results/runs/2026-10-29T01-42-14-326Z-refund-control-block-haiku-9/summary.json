@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:42:55.093Z",
+  "message": "Partial refunds are fixed. The bug was a missing divide-by-100 in `src/payments/partial-refund.js`: `percent` is documented as 0-100, but the code multiplied the amount by it directly. A 50% refund of 1250 came out as 62500 instead of 625.\n\nThe change is one line:\n\n```js\nexports.partialRefund = (payment, percent) => ({ currency: payment.currency, amount: Math.round(payment.amount * percent / 100) });\n```\n\n`npm test` passes: 20 of 20, including `test/payments-partial-refund.test.js`. I didn't commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 8868,
+  "text": "Fenceline: no fence crossed this turn."
+}

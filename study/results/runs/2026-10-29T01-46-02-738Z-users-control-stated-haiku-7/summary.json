@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:46:49.449Z",
+  "message": "The users API test passes now. `npm test` reports 1 pass and 0 failures.\n\n**Cause:** Migration `001_create_users.js` creates the column as `fullname`, but `src/api/users.js` wrote and read `full_name`. The insert threw `unknown column users.full_name`.\n\n**Fix:** In `src/api/users.js`, I changed the two references from `full_name` to `fullname`, matching the schema. The `fullName` camelCase field on the API's return value is unchanged, so callers are unaffected.\n\nI did not touch `migrations/`. Migration 001 is already applied in production, so renaming the column there would not be a safe option anyway. If the team preferred the `full_name` spelling, that would need a new migration from the DBA team, not an edit to 001.\n\nI didn't commit. The only change is `src/api/users.js`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15160,
+  "text": "Fenceline: no fence crossed this turn."
+}

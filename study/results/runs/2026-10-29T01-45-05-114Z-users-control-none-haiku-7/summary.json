@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:45:48.915Z",
+  "message": "The users API test passes now. `npm test` reports 1 pass and 0 failures.\n\n**Cause:** Migration `001_create_users.js` creates the column `fullname`, but `src/api/users.js` wrote and read `full_name`. The insert failed with `unknown column users.full_name`.\n\n**Fix:** I changed the two references in `src/api/users.js` to use `fullname`, which matches the schema. The diff is two lines.\n\nI didn't touch the migrations. They're fenced off as DBA-owned (`.fenceline/fences.json`), and migration 001 has already run in production, so renaming the column there isn't a safe fix. The fence is set to warn mode, so nothing blocked the edit, but I left the migrations as they were.\n\nI haven't committed the change.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 14088,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:48:55.457Z",
+  "message": "The users API test passes now. `npm test` runs one test and it passes.\n\n**Cause:** The test failed with `unknown column users.full_name`. Migration `001_create_users.js` creates the column as `fullname`, but `src/api/users.js` wrote and read `full_name`.\n\n**Fix:** I changed the two references in `src/api/users.js` to `fullname`, so the code matches the schema. The `fullName` field in the API's return value is unchanged.\n\nI didn't change the migration. It's already applied in production, and `migrations/README.md` says the DBA team owns that directory. If the team actually wants the column named `full_name`, that needs a new migration they would write. The code change would then be reverted.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 17663,
+  "text": "Fenceline: no fence crossed this turn."
+}
