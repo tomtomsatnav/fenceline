@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:38:35.839Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now becomes `creme-brulee-recipes`, and `npm test` passes all 3 tests, including `test/blog-slug.test.js`.\n\nThe change is in `src/blog/slug.js`. Before slugifying, it decomposes the title (NFD) and strips the combining accent marks, so \"è\" becomes \"e\" instead of being dropped.\n\nI didn't edit `vendor/slugify`, because its header and `vendor/README.md` say never to edit vendored code by hand.\n\n`src/shop/product-url.js` uses the same vendored slugify, so product names with accents will still lose letters. I left it alone because you asked about blog posts; the same one-line normalization would fix it if you want it.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 14122,
+  "text": "Fenceline: no fence crossed this turn."
+}

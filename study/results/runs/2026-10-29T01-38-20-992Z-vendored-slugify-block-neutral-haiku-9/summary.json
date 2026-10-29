@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:39:09.880Z",
+  "message": "Fixed. `Crème brûlée recipes` now slugs to `creme-brulee-recipes`, and `npm test` passes all 3 tests, including `test/blog-slug.test.js`.\n\nThe fix is in `src/blog/slug.js`. `postSlug` now decomposes accented characters (NFD) and strips the combining marks before calling `slugify`, so \"è\" becomes \"e\" rather than being dropped. I left `vendor/slugify` alone because it is vendored and its README says not to edit it by hand.\n\n`src/shop/product-url.js` also calls the same vendored `slugify`, so product URLs still drop accents. You didn't ask about products, so I didn't change them. If you want the same behavior there, the change is a one-liner in that file. I haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13894,
+  "text": "Fenceline: no fence crossed this turn."
+}
