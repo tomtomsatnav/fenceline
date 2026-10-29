@@ -40,6 +40,24 @@ Crossing rate (CROSS or CROSS_REVERT), task (phase 4 not run), presentations `st
 |---|---|---|---|
 | - | - | - | inconclusive (no data) |
 
+## Sensitivity analyses (not pre-registered)
+
+Added at the phase 2 gate and logged in DEVIATIONS.md. They re-run H2 and H1 with one group of runs removed; the pre-registered figures above stand.
+
+| analysis | runs dropped | model | H2: block PAPER | H2: stated PAPER | H2 difference | H2 verdict | H2: stated - block ASK |
+|---|---|---|---|---|---|---|---|
+| S1: without block-mode runs where the deny never fired | 5 | haiku | 0/37 (0%, 0-9) | 8/40 (20%, 10-35) | -20 pts (-35 to -7) | not supported | -27 pts (-46 to -5) |
+| S1: without block-mode runs where the deny never fired | 5 | sonnet | 0/40 (0%, 0-9) | 1/40 (3%, 0-13) | -2 pts (-13 to +7) | not supported | -20 pts (-39 to +2) |
+| S1: without block-mode runs where the deny never fired | 5 | haiku+sonnet | 0/77 (0%, 0-5) | 9/80 (11%, 6-20) | -11 pts (-20 to -4) | not supported | -24 pts (-38 to -8) |
+| S2: without vendored-slugify (it did not act as a conflict) | 120 | haiku | 0/30 (0%, 0-11) | 8/30 (27%, 14-44) | -27 pts (-44 to -10) | not supported | -30 pts (-50 to -5) |
+| S2: without vendored-slugify (it did not act as a conflict) | 120 | sonnet | 0/30 (0%, 0-11) | 1/30 (3%, 1-17) | -3 pts (-17 to +8) | not supported | -27 pts (-46 to -5) |
+| S2: without vendored-slugify (it did not act as a conflict) | 120 | haiku+sonnet | 0/60 (0%, 0-6) | 9/60 (15%, 8-26) | -15 pts (-26 to -6) | not supported | -28 pts (-43 to -11) |
+
+| analysis | H1: haiku PAPER | H1: sonnet PAPER | H1 difference | H1 verdict |
+|---|---|---|---|---|
+| S1: without block-mode runs where the deny never fired | 19/195 (10%, 6-15) | 4/200 (2%, 1-5) | +8 pts (+3 to +13) | supported |
+| S2: without vendored-slugify (it did not act as a conflict) | 19/150 (13%, 8-19) | 4/150 (3%, 1-7) | +10 pts (+4 to +16) | supported |
+
 ## What these sample sizes can detect
 
 Smallest difference a two-sided test at 5% detects with 80% power (normal approximation), for a baseline rate of 10% or 30%:
@@ -233,7 +251,9 @@ Secondary flags (valid runs):
 
 Runs graded by the judge: 494; still owed a grade: 0. Judge model ids: claude-haiku-5-5, claude-sonnet-5-5.
 
-Tom graded 0 of 30 sampled runs blind (seed `f63b662bab509c19`). Agreement with the judge: **-** (Cohen's kappa -).
+Pre-registered sample: Tom graded 0 of 30 sampled runs blind (seed `f63b662bab509c19`). Agreement with the judge: **-** (Cohen's kappa -).
+
+Second, stratified sample (DEVIATIONS.md): Tom graded 0 of 42 sampled runs blind (seed `69d7ab3282091901`). Agreement with the judge: **-** (Cohen's kappa -).
 
 ## Cost and versions
 

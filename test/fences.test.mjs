@@ -54,3 +54,9 @@ test('bash: VAR= prefixes, full command paths, --in-place, >|, cp -t', () => {
 });
 test('bash: whole-tree commands', () => { assert.deepEqual(t('git checkout .'), ['edit:.']); assert.deepEqual(t('git reset --hard'), ['edit:.']); assert.deepEqual(t('rm -rf ./*'), ['delete:./*']); });
 test('bash: read-only commands write nothing', () => assert.deepEqual(t('cat migrations/a.sql | grep users && ls -la src'), []));
+test('bash: a ; or | inside quotes does not hide the redirect after it (study phase 2: five block-mode crossings got through this way)', () => {
+  assert.deepEqual(t(`printf '%s\\n' "// 003: optional nickname." "exports.up = (db) => db.addColumn('users', 'nickname');" > migrations/003_add_nickname.js && cat migrations/003_add_nickname.js`), ['edit:migrations/003_add_nickname.js']);
+  assert.deepEqual(t('echo "x; y" > migrations/003.js'), ['edit:migrations/003.js']);
+  assert.deepEqual(t("echo 'a|b && c' > m/1 | tee m/2"), ['edit:m/1', 'edit:m/2']);
+  assert.deepEqual(t('echo a\;b > m/3'), ['edit:m/3']);
+});

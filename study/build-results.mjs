@@ -10,7 +10,7 @@ import { TASKS, CONFLICT } from './tasks/index.mjs';
 import { CATEGORIES } from './lib/categorise.mjs';
 import { PRESENTATIONS } from './lib/presentation.mjs';
 import { loadBatches, spend, runCost, PHASES, SHARED_CAP_PHASES, SHARED_CAP_USD } from './lib/runs.mjs';
-import { categoryOf, cells, h1, h2, h3, valid, MARGIN } from './lib/analysis.mjs';
+import { categoryOf, cells, h1, h2, h3, valid, MARGIN, sensitivity } from './lib/analysis.mjs';
 import { wilson, mde, fmtRate, fmtDiff, pct } from './lib/stats.mjs';
 import { score } from './audit.mjs';
 
@@ -53,6 +53,13 @@ const x3 = h3(runs);
 P('## H3: are stated rules crossed more often in long sessions?', '', `Crossing rate (CROSS or CROSS_REVERT), task ${x3.tasks.join(', ') || '(phase 4 not run)'}, presentations \`stated\` and \`file\`, both models.`, '');
 table(['long: crossed', 'short (main grid): crossed', 'difference (long - short)', 'verdict'], [[fmtRate(x3.a), fmtRate(x3.b), fmtDiff(x3.d), x3.verdict]]);
 
+// ---- sensitivity analyses (added after the main grid; DEVIATIONS.md)
+P('## Sensitivity analyses (not pre-registered)', '', 'Added at the phase 2 gate and logged in DEVIATIONS.md. They re-run H2 and H1 with one group of runs removed; the pre-registered figures above stand.', '');
+const sens = sensitivity(runs);
+table(['analysis', 'runs dropped', 'model', 'H2: block PAPER', 'H2: stated PAPER', 'H2 difference', 'H2 verdict', 'H2: stated - block ASK'],
+  sens.flatMap((x) => x.h2.map((y) => [`${x.id}: ${x.label}`, x.dropped, y.model, fmtRate(y.paper.a), fmtRate(y.paper.b), fmtDiff(y.paper.d), y.paper.verdict, fmtDiff(y.ask.d)])));
+table(['analysis', 'H1: haiku PAPER', 'H1: sonnet PAPER', 'H1 difference', 'H1 verdict'], sens.map((x) => [`${x.id}: ${x.label}`, fmtRate(x.h1.a), fmtRate(x.h1.b), fmtDiff(x.h1.d), x.h1.verdict]));
+
 // ---- what the grid can and cannot see
 P('## What these sample sizes can detect', '', 'Smallest difference a two-sided test at 5% detects with 80% power (normal approximation), for a baseline rate of 10% or 30%:', '');
 table(['comparison', 'n per arm', 'baseline 10%', 'baseline 30%'], [
@@ -82,11 +89,11 @@ for (const phase of Object.keys(PHASES)) {
 P('## The judge and the blind audit', '');
 const judged = runs.filter((r) => r.grade); const failed = judged.filter((r) => !r.grade.verdict);
 P(`Runs graded by the judge: ${judged.length - failed.length}${failed.length ? ` (plus ${failed.length} failed attempts, to be retried)` : ''}; still owed a grade: ${runs.filter((r) => categoryOf(r) === 'UNGRADED').length}. Judge model ids: ${[...new Set(judged.flatMap((r) => r.grade.models_used))].join(', ') || '-'}.`, '');
-const s = score(auditDir, runs);
-if (!s) P('Audit not drawn yet.', '');
-else {
-  P(`Tom graded ${s.n_graded} of ${s.n_sampled} sampled runs blind (seed \`${s.seed}\`). Agreement with the judge: **${Number.isFinite(s.agree) ? pct(s.agree) : '-'}** (Cohen's kappa ${Number.isFinite(s.kappa) ? s.kappa.toFixed(2) : '-'}).`, '');
-  if (Number.isFinite(s.agree) && s.agree < 0.85) P(`> **Agreement is below 85%.** Every REROUTE/PAPER figure above rests on the judge; read them with that in mind.`, '');
+for (const [label, dir] of [['Pre-registered sample', auditDir], ['Second, stratified sample (DEVIATIONS.md)', path.join(auditDir, 'stratified')]]) {
+  const s = score(dir, runs);
+  if (!s) { P(`${label}: not drawn yet.`, ''); continue; }
+  P(`${label}: Tom graded ${s.n_graded} of ${s.n_sampled} sampled runs blind (seed \`${s.seed}\`). Agreement with the judge: **${Number.isFinite(s.agree) ? pct(s.agree) : '-'}** (Cohen's kappa ${Number.isFinite(s.kappa) ? s.kappa.toFixed(2) : '-'}).`, '');
+  if (Number.isFinite(s.agree) && s.agree < 0.85) P('> **Agreement is below 85%.** Every REROUTE/PAPER figure above rests on the judge; read them with that in mind.', '');
   if (s.disagreements.length) table(['audit id', 'run', 'Tom', 'judge'], s.disagreements.map((d) => [d.id, `[${d.run}](${rel(path.join(resultsDir, 'runs', d.run))})`, d.a, d.b ?? '-']));
 }
 
