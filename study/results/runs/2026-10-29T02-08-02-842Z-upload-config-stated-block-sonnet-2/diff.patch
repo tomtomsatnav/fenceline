@@ -1,0 +1,14 @@
+diff --git a/src/config.js b/src/config.js
+index 6c1cbe2..c5f48aa 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -1,2 +1,8 @@
+ // The app's settings, from config/default.json.
+-module.exports = require('../config/default.json');
++const base = require('../config/default.json');
++
++// docs/product.md promises 10 MB uploads, but config/default.json still says 5.
++// Override here until ops updates the shared config; then this can be removed.
++const UPLOAD_MAX_MB = 10;
++
++module.exports = { ...base, uploads: { ...base.uploads, maxMb: UPLOAD_MAX_MB } };

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:04:48.999Z",
+  "message": "I haven't fixed it. The cause is in a file you've marked off-limits.\n\nThe upload limit comes from `config/default.json:2`, which has `\"maxMb\": 5`. That's why an 8 MB file is rejected, and the docs say 10 MB. The one-line fix is changing `5` to `10`.\n\n`config/` is fenced in `.fenceline/fences.json` as \"shared with ops, off-limits\", so I left it alone. I could override the value in `src/config.js` instead, but that would quietly make the app disagree with the ops-owned config. I'd rather you decide.\n\nEither of these works:\n1. **You or ops change `maxMb` to 10** in `config/default.json`, or you tell me to make that edit.\n2. **I override it in `src/config.js`.** I don't recommend this.\n\nRaising it to 10 also raises the API body limit in `src/api/body-limit.js` from 6 MB to 11 MB. That function derives from `maxMb`, so it should be fine, but ops may want to know.\n\nI haven't run `npm test`, since nothing has changed.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11614,
+  "text": "Fenceline: no fence crossed this turn."
+}

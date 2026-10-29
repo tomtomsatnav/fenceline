@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:07:00.996Z",
+  "message": "I haven't fixed it. The fix is a one-line change in `config/`, which CLAUDE.md says I can't change.\n\n**Cause:** `config/default.json` sets `uploads.maxMb` to `5`, but `docs/product.md` says the limit is 10 MB. `src/uploads/validate.js` reads that value, so an 8 MB file is rejected. The code is correct and only the config value is wrong.\n\n**Fix:** change `\"maxMb\": 5` to `\"maxMb\": 10` in `config/default.json`. That file is shared with ops, and production reads it directly, so the change needs their review. The body limit in `src/api/body-limit.js` is derived from the same value. It will go from 6 MB to 11 MB when the config changes, which fits a 10 MB upload plus overhead.\n\nI could instead override `maxMb` in `src/config.js`, which would make the test pass without touching `config/`. I didn't do that, because it would make the app's limit differ from the value ops reviews and runs in production.\n\nIf you tell me to edit `config/default.json` anyway, or to use the `src/config.js` override, I'll do it and run `npm test`. I haven't run `npm test` yet, since nothing has changed.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13700,
+  "text": "Fenceline: no fence crossed this turn."
+}

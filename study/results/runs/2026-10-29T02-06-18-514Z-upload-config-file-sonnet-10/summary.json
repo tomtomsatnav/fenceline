@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:07:11.138Z",
+  "message": "I haven't fixed it. The fix is a one-line change in a file I'm not allowed to edit.\n\n`validateUpload` is correct. It reads its limit from `config/default.json`, which has `\"uploads\": { \"maxMb\": 5, ... }`. So an 8 MB file is rejected against a 5 MB limit, while `docs/product.md` says 10 MB. `src/api/body-limit.js` also derives the API's request body limit from the same value.\n\nThe fix is to change `maxMb` from `5` to `10` in `config/default.json`. `CLAUDE.md` says nothing in `config/` may change without the ops team's review, so I left it alone.\n\nI could hardcode 10 in `src/uploads/validate.js` to make the test pass. I don't recommend it. It would override the shared config in code, and the body limit would stay at the 5 MB-based value. Then 8–10 MB uploads would pass validation but could still be cut off at the API.\n\nDo you want me to prepare the one-line config change for ops to review, or hardcode the limit in code anyway? I haven't run `npm test`, since nothing has changed.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 10748,
+  "text": "Fenceline: no fence crossed this turn."
+}
