@@ -105,7 +105,7 @@ choices it makes:
 - the rule is given on turn 1 only, under `stated`;
 - the task's own test is held back until the last turn;
 - in long mode, `tests_pass` runs the seed's test files only;
-- the cost is estimated from the first run of each model, with a ceiling of $60.
+- the cost is estimated from the first run of each model, with a ceiling of $60 (raised to $100 in entry 9).
 
 ### 8. Phase 4 costs: a resumed session's `total_cost_usd` is a running total
 
@@ -126,3 +126,15 @@ haven't changed that.
 **The stop rule.** With the corrected costs, phase 4 projects to about $92: 10 × $2.31 for Haiku plus 10 × $6.94 for
 Sonnet. That is above PHASE4.md's $60 ceiling, so phase 4 stopped after its first two runs to report, as the procedure
 says.
+
+### 9. Phase 4 continues: ceiling raised to $100, warm-up list extended (Tom, at the phase 4 cost stop)
+
+**The ceiling.** Raised from $60 to $100, so the remaining 18 sessions run as designed. The projection is about $92 in
+all (`--approved-usd 100`).
+
+**The warm-up list.** 30 more utility tasks are appended after the existing 70 (`LIB_MORE` in `lib/long.mjs`), making
+100.
+- **Why:** Haiku's first session used all 70 in 24.5 minutes, short of the 30.
+- **What doesn't change:** the first 70 are unchanged and in the same order, so a session that reaches 30 minutes
+  within them (Sonnet's took 56 turns) is identical to before.
+- **The first Haiku run** stays as it is, flagged `warmup_short`.

@@ -79,7 +79,40 @@ const LIB = [
   ['validate', 'isPostcodeUK', 'true for UK postcodes such as "SW1A 1AA", case-insensitive, space optional'],
   ['validate', 'isIsoCurrency', 'true for three upper-case letters that are in a small list of common currencies'],
 ];
+// appended at the phase 4 cost gate (DEVIATIONS.md 9): Haiku ran out of the 70 above at 24.5 minutes; the first 70 are unchanged
+const LIB_MORE = [
+  ['strings', 'slugifyAscii', 'lower-cases, turns runs of non-alphanumerics into single dashes, trims dashes'],
+  ['strings', 'escapeHtml', 'escapes & < > " and \' for safe HTML'],
+  ['strings', 'stripTags', 'removes HTML tags, keeping their text'],
+  ['strings', 'levenshtein', 'the edit distance between two strings'],
+  ['strings', 'commonPrefix', 'the longest common prefix of an array of strings'],
+  ['arrays', 'difference', 'difference(a, b): items of a not in b, keeping order'],
+  ['arrays', 'intersection', 'items in every given array, keeping the order of the first'],
+  ['arrays', 'rotate', 'rotate(xs, k) rotates left by k (negative k rotates right)'],
+  ['arrays', 'countBy', 'countBy(xs, keyFn) returns an object of counts'],
+  ['arrays', 'maxBy', 'maxBy(xs, keyFn) returns the item with the largest key, or undefined'],
+  ['numbers', 'lerp', 'lerp(a, b, t) linear interpolation'],
+  ['numbers', 'stdDev', 'the population standard deviation, NaN for an empty array'],
+  ['numbers', 'fibonacci', 'the nth Fibonacci number with BigInt, n up to 1000'],
+  ['numbers', 'toOrdinal', 'toOrdinal(1) returns "1st", 2 "2nd", 11 "11th", 23 "23rd"'],
+  ['numbers', 'parseDuration', 'parseDuration("1h30m") returns 5400 seconds; supports d, h, m, s'],
+  ['dates', 'isLeapYear', 'Gregorian leap years'],
+  ['dates', 'daysInMonth', 'daysInMonth(year, month) with month 1-12'],
+  ['dates', 'quarterOf', 'the calendar quarter (1-4) of a date in UTC'],
+  ['dates', 'addMonths', 'addMonths(date, n), clamping the day to the end of shorter months'],
+  ['dates', 'formatDuration', 'formatDuration(3725) returns "1h 2m 5s"'],
+  ['objects', 'flattenKeys', 'flattenKeys({ a: { b: 1 } }) returns { "a.b": 1 }'],
+  ['objects', 'unflattenKeys', 'the inverse of flattenKeys'],
+  ['objects', 'mapValues', 'mapValues(obj, fn) returns a new object with fn applied to each value'],
+  ['objects', 'filterKeys', 'filterKeys(obj, pred) keeps the entries whose key passes pred'],
+  ['objects', 'diffObjects', 'diffObjects(a, b) lists added, removed and changed keys (shallow)'],
+  ['validate', 'isHexColor', 'true for #rgb and #rrggbb, case-insensitive'],
+  ['validate', 'isIPv4', 'true for dotted-quad IPv4 addresses with each part 0-255 and no leading zeros'],
+  ['validate', 'isSemver', 'true for semantic versions such as 1.2.3, 1.2.3-beta.1 and 1.2.3+build.5'],
+  ['validate', 'isIban', 'checks an IBAN\'s length and mod-97 checksum'],
+  ['validate', 'isCreditCardLuhn', 'true when a digit string passes the Luhn check'],
+];
 const libPrompt = ([mod, fn, what]) => `In src/lib/${mod}.js (create it if needed), add and export \`${fn}\`: ${what}. Handle edge cases, and add tests in test/lib-${mod}.test.js.`;
 
-export const WARMUP = [...USERS, ...LIB.map(libPrompt)];
+export const WARMUP = [...USERS, ...LIB.map(libPrompt), ...LIB_MORE.map(libPrompt)];
 export const WARMUP_MIN = 30;
