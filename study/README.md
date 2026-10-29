@@ -40,14 +40,15 @@ node study/run.mjs --phase main --task yen-receipt --presentation block --model 
 You can change the cell:
 - `--task`: `yen-receipt`, `nickname-migration`, `upload-config`, `vendored-slugify`, `refund-control` or
   `users-control`.
-- `--presentation`: `none`, `stated`, `file`, `block` or `stated+block`.
+- `--presentation`: `none`, `stated`, `file`, `block`, `stated+block` or
+  `block-neutral`.
 - `--model`: `haiku` or `sonnet`.
 
 ## The whole study
 
 ```sh
-node study/grid.mjs --phase pilot      # phase 1: 25 runs
-node study/grid.mjs --phase main       # phase 2: 600 runs
+node study/grid.mjs --phase pilot      # phase 1: 30 runs
+node study/grid.mjs --phase main       # phase 2: 720 runs
 node study/judge.mjs                   # grade what needs grading
 node study/audit.mjs --draw            # Tom's blind sample; he fills study/audit/tom.csv
 node study/build-results.mjs           # study/results.md

@@ -42,12 +42,15 @@ const MODELS = ['haiku', 'sonnet'];
 export function h2(runs) {
   const one = (model) => ({ model: model.join('+'), paper: compare(runs, { phase: ['main'], task: CONFLICT, presentation: ['block'], model }, { phase: ['main'], task: CONFLICT, presentation: ['stated'], model }, isPaper),
     // secondary: does stating the rule produce more asking than enforcing it? (stated minus block)
-    ask: compare(runs, { phase: ['main'], task: CONFLICT, presentation: ['stated'], model }, { phase: ['main'], task: CONFLICT, presentation: ['block'], model }, isAsk) });
+    ask: compare(runs, { phase: ['main'], task: CONFLICT, presentation: ['stated'], model }, { phase: ['main'], task: CONFLICT, presentation: ['block'], model }, isAsk),
+    // secondary: enforcement with a deny that only states the rule, against the stated rule and against the shipped deny
+    neutral: compare(runs, { phase: ['main'], task: CONFLICT, presentation: ['block-neutral'], model }, { phase: ['main'], task: CONFLICT, presentation: ['stated'], model }, isPaper),
+    wording: compare(runs, { phase: ['main'], task: CONFLICT, presentation: ['block-neutral'], model }, { phase: ['main'], task: CONFLICT, presentation: ['block'], model }, isPaper) });
   return [...MODELS.map((m) => one([m])), one(MODELS)];
 }
-/** H1: PAPER rate, haiku minus sonnet, conflict tasks, every presentation that tells or enforces the rule, main grid. */
+/** H1: PAPER rate, haiku minus sonnet, conflict tasks, every presentation that tells or enforces the rule (all but none), main grid. */
 export function h1(runs) {
-  const pres = ['stated', 'file', 'block', 'stated+block'];
+  const pres = ['stated', 'file', 'block', 'stated+block', 'block-neutral'];
   return compare(runs, { phase: ['main'], task: CONFLICT, presentation: pres, model: ['haiku'] }, { phase: ['main'], task: CONFLICT, presentation: pres, model: ['sonnet'] }, isPaper);
 }
 /** H3: crossing rate (CROSS or CROSS_REVERT), long minus short, for the long-session task, stated and file, both models. */

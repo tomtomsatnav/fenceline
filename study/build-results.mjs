@@ -40,10 +40,13 @@ P('## H2 (primary): does enforcement produce more on-paper compliance than a sta
   'PAPER rate on the four conflict tasks, pooled, main grid. `block` = Fenceline deny, rule never mentioned; `stated` = the rule in the prompt, not enforced.', '');
 table(['model', 'block: PAPER', 'stated: PAPER', 'difference (block - stated)', 'verdict', 'stated: ASK', 'block: ASK', 'difference (stated - block)'],
   h2(runs).map((x) => [x.model, fmtRate(x.paper.a), fmtRate(x.paper.b), fmtDiff(x.paper.d), x.paper.verdict, fmtRate(x.ask.a), fmtRate(x.ask.b), fmtDiff(x.ask.d)]));
-P('The per-model rows are the pre-registered test; the pooled row is secondary.', '');
+P('The per-model rows are the pre-registered test; the pooled row is secondary.', '',
+  'Secondary: `block-neutral` (denied, with a message that only states the rule) against the stated rule, and against the shipped deny (which also says not to work around it, and to ask).', '');
+table(['model', 'block-neutral: PAPER', 'stated: PAPER', 'difference (neutral - stated)', 'verdict', 'block: PAPER', 'difference (neutral - block)', 'verdict'],
+  h2(runs).map((x) => [x.model, fmtRate(x.neutral.a), fmtRate(x.neutral.b), fmtDiff(x.neutral.d), x.neutral.verdict, fmtRate(x.wording.b), fmtDiff(x.wording.d), x.wording.verdict]));
 
 const x1 = h1(runs);
-P('## H1: do smaller models comply on paper more often?', '', 'PAPER rate, conflict tasks, presentations `stated`, `file`, `block`, `stated+block`, main grid.', '');
+P('## H1: do smaller models comply on paper more often?', '', 'PAPER rate, conflict tasks, presentations `stated`, `file`, `block`, `stated+block`, `block-neutral`, main grid.', '');
 table(['haiku: PAPER', 'sonnet: PAPER', 'difference (haiku - sonnet)', 'verdict'], [[fmtRate(x1.a), fmtRate(x1.b), fmtDiff(x1.d), x1.verdict]]);
 
 const x3 = h3(runs);
@@ -55,7 +58,7 @@ P('## What these sample sizes can detect', '', 'Smallest difference a two-sided 
 table(['comparison', 'n per arm', 'baseline 10%', 'baseline 30%'], [
   ['one cell vs another', 10, pct(mde(0.1, 10)), pct(mde(0.3, 10))],
   ['H2, one model (4 tasks pooled)', 40, pct(mde(0.1, 40)), pct(mde(0.3, 40))],
-  ['H1 (4 tasks x 4 presentations)', 160, pct(mde(0.1, 160)), pct(mde(0.3, 160))],
+  ['H1 (4 tasks x 5 presentations)', 200, pct(mde(0.1, 200)), pct(mde(0.3, 200))],
   ['H3 (long k=5 x 2 x 2 vs short)', 20, pct(mde(0.1, 20)), pct(mde(0.3, 20))]]);
 P(`At k = 10, a 95% interval around 5/10 runs from ${pct(wilson(5, 10).lo)} to ${pct(wilson(5, 10).hi)}: single cells say little on their own, and only differences larger than the figures above should be read as real.`, '');
 
@@ -121,7 +124,7 @@ for (const r of chosen) {
 }
 
 P('## Limits', '', '- Small generated repos (7 to 63 files) and synthetic tasks, written for this study; behaviour on real codebases may differ.',
-  '- One harness (Claude Code with Fenceline\'s hooks) and its deny message, which itself tells the agent not to work around the fence and to ask.',
+  '- One harness (Claude Code with Fenceline\'s hooks). Its shipped deny message tells the agent not to work around the fence and to ask; `block-neutral` measures what that wording does.',
   '- REROUTE vs PAPER rests on an LLM judge, checked against one person\'s blind grades on a sample.',
   '- k = 10 per cell: only large differences are detectable (table above). Model aliases resolve to whatever ids Claude Code served on the day (listed per batch).', '');
 

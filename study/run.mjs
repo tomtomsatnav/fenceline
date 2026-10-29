@@ -2,7 +2,7 @@
 // WARNING: each trial runs a real `claude -p` agent with permission to edit and run commands, unsandboxed, in a fresh
 // temp repo. Adapted from evals/run.mjs: Fenceline loaded as a plugin, the fences in .fenceline/fences.json, ground truth
 // from git. What changes per trial is the task and how the constraint is presented (lib/presentation.mjs).
-//   node study/run.mjs --phase pilot|main|opus|long --task yen-receipt --presentation none|stated|file|block|stated+block
+//   node study/run.mjs --phase pilot|main|opus|long --task yen-receipt --presentation none|stated|file|block|stated+block|block-neutral
 //                      --model haiku|sonnet|opus --k 5 [--parallel 2] [--timeout-min 15] [--max-budget-usd 2]
 // Every trial is kept (crashes and timeouts too) in study/results/runs/<batch>-<t>/ with machine paths redacted, and
 // listed in study/results/<batch>.json. Phases 1 and 2 stop before a trial once their shared spend reaches $35; phases 3
@@ -40,7 +40,7 @@ const cap = SHARED_CAP_PHASES.includes(phase) ? Number(opt('cap-usd', SHARED_CAP
 if (!Number.isFinite(cap)) throw new Error(`phase ${phase} needs Tom's approval: pass --approved-usd <the budget he approved>`);
 if (SHARED_CAP_PHASES.includes(phase) && cap > SHARED_CAP_USD) throw new Error(`phases 1-2 are capped at $${SHARED_CAP_USD}`);
 
-const { prompt, files, fences: rawFences, mode } = build(task, presentation);
+const { prompt, files, fences: rawFences, mode, denyStyle } = build(task, presentation);
 const fences = validateFences({ fences: rawFences }).fences;
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const batch = `${stamp}-${task.id}-${presentation.replace('+', '-')}-${model}`;
@@ -58,6 +58,7 @@ async function trial(t) {
   seedRepo(repo, files);
   const sessionId = crypto.randomUUID();
   const env = { ...process.env, FENCELINE_HOME: home }; delete env.CLAUDE_CODE_SESSION_ID; delete env.FENCELINE_DISABLE; delete env.NODE_TEST_CONTEXT;
+  if (denyStyle === 'neutral') env.FENCELINE_DENY_STYLE = 'neutral'; else delete env.FENCELINE_DENY_STYLE;
   const r = await runClaude(['-p', prompt, '--model', model, '--plugin-dir', root, '--session-id', sessionId, '--setting-sources', 'project',
     '--permission-mode', 'acceptEdits', '--allowedTools', 'Bash Edit Write Read Glob Grep', '--output-format', 'json', '--max-budget-usd', String(maxBudget)],
   { cwd: repo, env, timeoutMs: timeoutMin * 60000 });
@@ -74,7 +75,7 @@ async function trial(t) {
   const invalid = !events.length ? 'Fenceline hooks did not run (no events.jsonl)'
     : (!r.json && !r.timed_out) ? `claude exited ${r.code} without a JSON result`
       : isInfraError(r.json) ? `infrastructure error: ${String(r.json.result).slice(0, 200)}` : null;
-  const row = { schema: 'fenceline.study.run/1', phase, task: task.id, task_kind: task.kind, presentation, mode, model, length, trial: t, session_id: sessionId,
+  const row = { schema: 'fenceline.study.run/1', phase, task: task.id, task_kind: task.kind, presentation, mode, deny_style: denyStyle, model, length, trial: t, session_id: sessionId,
     invalid, claude_exit: r.code, timed_out: r.timed_out, result_subtype: r.json?.subtype ?? null, models_used: Object.keys(r.json?.modelUsage ?? {}),
     wall_s: r.wall_s, cost_usd: r.json?.total_cost_usd ?? null, max_budget_usd: maxBudget, turns: r.json?.num_turns ?? null,
     changed, git_crossed: gitCrossed, hook_crossed: hookCrossed,
@@ -100,7 +101,7 @@ const writeBatch = (stopped) => {
   names.sort((a, b) => Number(a.split('-').at(-1)) - Number(b.split('-').at(-1)));
   fs.writeFileSync(path.join(outDir, `${batch}.json`), JSON.stringify({ schema: 'fenceline.study.batch/1', generated_at: new Date().toISOString(),
     fenceline_commit: git(root, ['rev-parse', 'HEAD']), fenceline_dirty: git(root, ['status', '--porcelain', '--', 'src', 'hooks', 'study/tasks', 'study/lib', 'study/run.mjs']).length > 0,
-    claude_version: claudeVersion(), model_alias: model, phase, task: task.id, presentation, mode, length, k, prompt, fences, stopped_early: stopped, runs: names }, null, 2).split(tmpRoot).join('<tmp>'));
+    claude_version: claudeVersion(), model_alias: model, phase, task: task.id, presentation, mode, deny_style: denyStyle, length, k, prompt, fences, stopped_early: stopped, runs: names }, null, 2).split(tmpRoot).join('<tmp>'));
 };
 let stopped = null;
 const parallel = Math.max(1, Number(opt('parallel', '1')));

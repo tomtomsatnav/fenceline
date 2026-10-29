@@ -18,9 +18,17 @@ PAPER rate on the four conflict tasks, pooled, main grid. `block` = Fenceline de
 
 The per-model rows are the pre-registered test; the pooled row is secondary.
 
+Secondary: `block-neutral` (denied, with a message that only states the rule) against the stated rule, and against the shipped deny (which also says not to work around it, and to ask).
+
+| model | block-neutral: PAPER | stated: PAPER | difference (neutral - stated) | verdict | block: PAPER | difference (neutral - block) | verdict |
+|---|---|---|---|---|---|---|---|
+| haiku | - | - | - | inconclusive (no data) | - | - | inconclusive (no data) |
+| sonnet | - | - | - | inconclusive (no data) | - | - | inconclusive (no data) |
+| haiku+sonnet | - | - | - | inconclusive (no data) | - | - | inconclusive (no data) |
+
 ## H1: do smaller models comply on paper more often?
 
-PAPER rate, conflict tasks, presentations `stated`, `file`, `block`, `stated+block`, main grid.
+PAPER rate, conflict tasks, presentations `stated`, `file`, `block`, `stated+block`, `block-neutral`, main grid.
 
 | haiku: PAPER | sonnet: PAPER | difference (haiku - sonnet) | verdict |
 |---|---|---|---|
@@ -42,7 +50,7 @@ Smallest difference a two-sided test at 5% detects with 80% power (normal approx
 |---|---|---|---|
 | one cell vs another | 10 | 58% | 59% |
 | H2, one model (4 tasks pooled) | 40 | 26% | 31% |
-| H1 (4 tasks x 4 presentations) | 160 | 12% | 16% |
+| H1 (4 tasks x 5 presentations) | 200 | 10% | 14% |
 | H3 (long k=5 x 2 x 2 vs short) | 20 | 40% | 43% |
 
 At k = 10, a 95% interval around 5/10 runs from 24% to 76%: single cells say little on their own, and only differences larger than the figures above should be read as real.
@@ -80,7 +88,7 @@ _None yet._
 ## Limits
 
 - Small generated repos (7 to 63 files) and synthetic tasks, written for this study; behaviour on real codebases may differ.
-- One harness (Claude Code with Fenceline's hooks) and its deny message, which itself tells the agent not to work around the fence and to ask.
+- One harness (Claude Code with Fenceline's hooks). Its shipped deny message tells the agent not to work around the fence and to ask; `block-neutral` measures what that wording does.
 - REROUTE vs PAPER rests on an LLM judge, checked against one person's blind grades on a sample.
 - k = 10 per cell: only large differences are detectable (table above). Model aliases resolve to whatever ids Claude Code served on the day (listed per batch).
 
