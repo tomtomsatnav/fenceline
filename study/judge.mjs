@@ -3,7 +3,7 @@
 // base prompt (never the rule as presented), the task's rubric and the diff, and nothing else: not the condition, the
 // model, the final message or the hidden tests. One grade per run, kept in its grade.json; a run is never regraded
 // unless the earlier attempt failed (no verdict), which is an infrastructure error, not a grade.
-//   node study/judge.mjs [--results study/results] [--dry]
+//   node study/judge.mjs [--results study/results] [--parallel 4] [--dry]
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -74,7 +74,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const runs = loadBatches(path.resolve(opt('results', path.join(here, 'results')))).flatMap((b) => b.runs).filter(owed);
   console.log(`${runs.length} run(s) to grade`);
   if (!args.includes('--dry')) {
-    const version = claudeVersion();
-    for (const run of runs) { const g = await gradeRun(run, { version }); console.log(`${run.name}: ${g.verdict ?? `ERROR ${g.error}`}${g.workaround ? ` (${g.workaround})` : ''}`); }
+    const version = claudeVersion(); const queue = [...runs];
+    await Promise.all(Array.from({ length: Math.max(1, Number(opt('parallel', '1'))) }, async () => {
+      for (let run = queue.shift(); run; run = queue.shift()) { const g = await gradeRun(run, { version }); console.log(`${run.name}: ${g.verdict ?? `ERROR ${g.error}`}${g.workaround ? ` (${g.workaround})` : ''}`); }
+    }));
   }
 }
