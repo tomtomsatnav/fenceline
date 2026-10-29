@@ -76,7 +76,7 @@ async function trial(t) {
     const started_ms = Date.now() - t0;
     r = await call(p, turns.length > 0);
     for (const m of Object.keys(r.json?.modelUsage ?? {})) modelsUsed.add(m);
-    turns.push({ n: turns.length + 1, kind, started_ms, wall_s: r.wall_s, cost_usd: r.json?.total_cost_usd ?? null, num_turns: r.json?.num_turns ?? null, claude_exit: r.code, timed_out: r.timed_out, subtype: r.json?.subtype ?? null, is_error: r.json?.is_error ?? null });
+    turns.push({ n: turns.length + 1, kind, started_ms, wall_s: r.wall_s, cost_usd: r.json?.total_cost_usd ?? null /* cumulative over the session */, num_turns: r.json?.num_turns ?? null, claude_exit: r.code, timed_out: r.timed_out, subtype: r.json?.subtype ?? null, is_error: r.json?.is_error ?? null });
     return r.code === 0 && r.json && !r.json.is_error;
   };
   let warmupShort = false;
@@ -108,10 +108,12 @@ async function trial(t) {
     : (!r.json && !r.timed_out) ? `claude exited ${r.code} without a JSON result`
       : isInfraError(r.json) ? `infrastructure error: ${String(r.json.result).slice(0, 200)}`
         : turns.at(-1).kind !== 'task' ? `session ended during the warm-up (turn ${turns.length}: exit ${r.code}${r.timed_out ? ', timed out' : ''}), so the task was never given` : null;
-  const sum = (f) => (turns.some((x) => x[f] == null) && f === 'cost_usd' ? null : turns.reduce((a, x) => a + (x[f] ?? 0), 0));
+  const sum = (f) => turns.reduce((a, x) => a + (x[f] ?? 0), 0);
+  // a resumed session reports total_cost_usd as the running total for the whole session, so its cost is the last value
+  const sessionCost = turns.at(-1).cost_usd ?? null;
   const row = { schema: 'fenceline.study.run/1', phase, task: task.id, task_kind: task.kind, presentation, mode, deny_style: denyStyle, model, length, trial: t, session_id: sessionId,
     invalid, claude_exit: r.code, timed_out: r.timed_out, result_subtype: r.json?.subtype ?? null, models_used: [...new Set([...modelsUsed])],
-    wall_s: sum('wall_s'), cost_usd: sum('cost_usd'), max_budget_usd: maxBudget * turns.length, turns: sum('num_turns'),
+    wall_s: sum('wall_s'), cost_usd: sessionCost, max_budget_usd: maxBudget * turns.length, turns: sum('num_turns'),
     ...(length === 'long' ? { session_turns: turns, warmup_turns: turns.filter((x) => x.kind === 'warmup').length, warmup_min: (turns.find((x) => x.kind === 'task')?.started_ms ?? Date.now() - t0) / 60000, warmup_short: warmupShort,
       // which turn the first landed crossing happened in (event time against turn start times; both from session start)
       first_crossing_turn: (() => { const c = events.flatMap((e) => (e.crossings || []).filter((x) => !x.prevented && x.op !== 'read').map((x) => x.elapsed_ms))[0]; return c == null ? null : turns.filter((x) => x.started_ms <= c).length || 1; })() } : {}),

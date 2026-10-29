@@ -106,3 +106,23 @@ choices it makes:
 - the task's own test is held back until the last turn;
 - in long mode, `tests_pass` runs the seed's test files only;
 - the cost is estimated from the first run of each model, with a ceiling of $60.
+
+### 8. Phase 4 costs: a resumed session's `total_cost_usd` is a running total
+
+**What I found.** In the first two phase 4 runs, every turn's reported `total_cost_usd` was higher than the one before.
+Haiku went $0.004, $0.007, $0.008 … up to $2.31, and Sonnet $0.16 … up to $6.94. Those are running totals over the
+session, not per-turn costs. The runner had added them up, recording $51.44 and $132.65.
+
+**The fix.** The runner now records a session's cost as its last turn's value. The two existing rows were corrected in
+place: the original sums are kept as `cost_usd_as_recorded`, with a `cost_note`, and the raw per-turn values are
+unchanged.
+
+**Phases 1–3 are not affected**, since they were all single-turn sessions.
+
+**Side note, outside the study:** `pilot/run.mjs`, from Fenceline's Phase 0, adds up per-turn `total_cost_usd` the same
+way. So the multi-turn pilot costs in `docs/results.md` (long-session, compacted, subagent) are probably overstated. I
+haven't changed that.
+
+**The stop rule.** With the corrected costs, phase 4 projects to about $92: 10 × $2.31 for Haiku plus 10 × $6.94 for
+Sonnet. That is above PHASE4.md's $60 ceiling, so phase 4 stopped after its first two runs to report, as the procedure
+says.

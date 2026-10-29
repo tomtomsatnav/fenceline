@@ -1,0 +1,4387 @@
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..f37d8b2
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,89 @@
++# app
++
++## Users API
++
++The user functions live in `src/api/users.js`, CSV import and export in `src/api/export.js`, and display helpers in `src/api/format.js`. Every function that takes `db` throws `Error('db is required')` when it is missing.
++
++A user object has this shape:
++
++```js
++{ id: string, email: string, fullName: string, createdAt: string, lastLogin: string | null }
++```
++
++`createdAt` and `lastLogin` are ISO 8601 timestamps.
++
++### `createUser(db, { email, fullName })`
++
++Creates a user with a new random id, timestamped now.
++
++- Returns the new user.
++- Throws if the email has no "@" or is already in use (compared case-insensitively), or if `fullName` is blank or longer than 100 characters.
++
++### `insertUser(db, { id, email, fullName, createdAt, lastLogin })`
++
++Stores a user with the given id and timestamps, applying the same validation as `createUser`. `createUser` and `importUsersCsv` use it.
++
++- Returns the stored user.
++
++### `getUser(db, id)`
++
++Looks up a user by id.
++
++- Returns the user, or `null` if none has that id.
++
++### `getUserByEmail(db, email)`
++
++Looks up a user by email, ignoring case.
++
++- Returns the user, or `null` if none has that email.
++
++### `listUsers(db, { limit, offset })`
++
++Lists users, oldest first, one page at a time. `limit` defaults to 50 and `offset` to 0.
++
++- Returns an array of users.
++
++### `countUsers(db)`
++
++- Returns the number of users.
++
++### `searchUsers(db, query)`
++
++Finds users whose full name or email contains `query`, ignoring case.
++
++- Returns matching users in storage order.
++
++### `updateUser(db, id, { email, fullName })`
++
++Changes the given fields. Fields left out or `undefined` are unchanged.
++
++- Returns the updated user.
++- Throws if the user does not exist, or if a new email or full name is invalid or already taken.
++
++### `deleteUser(db, id)`
++
++- Returns `true` if a user was removed, `false` if none had that id.
++
++### `recordLogin(db, id, when)`
++
++Sets the user's last login time. `when` is a `Date` and defaults to now.
++
++- Returns the updated user.
++- Throws if the user does not exist.
++
++### `exportUsersCsv(db)`
++
++Exports every user as CSV, with the header `id,email,fullName,createdAt,lastLogin`. Fields containing commas, quotes or line breaks are quoted.
++
++- Returns the CSV text, ending in a newline.
++
++### `importUsersCsv(db, csv)`
++
++Adds users from CSV in the format `exportUsersCsv` writes, keeping their ids and timestamps. Each row goes through the same validation as `insertUser`.
++
++- Returns the number of users added.
++- Throws if the header is not the export header, or a row fails validation. Rows are inserted one at a time, so rows before the failing one stay in place.
++
++### `displayName(user)`
++
++- Returns `user.fullName` when it is non-blank, otherwise the part of the email before "@".
+diff --git a/src/api/export.js b/src/api/export.js
+new file mode 100644
+index 0000000..bcf6f4c
+--- /dev/null
++++ b/src/api/export.js
+@@ -0,0 +1,74 @@
++const { listUsers, insertUser } = require('./users.js');
++
++const COLUMNS = ['id', 'email', 'fullName', 'createdAt', 'lastLogin'];
++
++// Quote a CSV field when it contains a comma, a quote or a line break; double any quotes inside it.
++const csvField = (value) => {
++  if (value == null) return '';
++  const s = String(value);
++  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
++};
++
++/**
++ * Exports every user as CSV, with a header row and columns `id,email,fullName,createdAt,lastLogin`.
++ * @param {Db} db
++ * @returns {string} CSV text ending in a newline.
++ * @throws {Error} If `db` is missing.
++ */
++exports.exportUsersCsv = (db) => {
++  const rows = listUsers(db, { limit: Infinity }).map((u) => COLUMNS.map((c) => csvField(u[c])).join(','));
++  return [COLUMNS.join(','), ...rows].join('\n') + '\n';
++};
++
++// Splits CSV text into rows of fields, honouring quoted fields with commas, quotes and line breaks.
++const parseCsv = (text) => {
++  const records = [];
++  let record = [];
++  let field = '';
++  let quoted = false;
++  for (let i = 0; i < text.length; i++) {
++    const c = text[i];
++    if (quoted) {
++      if (c !== '"') field += c;
++      else if (text[i + 1] === '"') { field += '"'; i++; }
++      else quoted = false;
++    } else if (c === '"') {
++      quoted = true;
++    } else if (c === ',') {
++      record.push(field);
++      field = '';
++    } else if (c === '\n' || c === '\r') {
++      if (c === '\r' && text[i + 1] === '\n') i++;
++      record.push(field);
++      records.push(record);
++      record = [];
++      field = '';
++    } else {
++      field += c;
++    }
++  }
++  if (field !== '' || record.length > 0) {
++    record.push(field);
++    records.push(record);
++  }
++  return records;
++};
++
++/**
++ * Adds users from CSV in the format `exportUsersCsv` writes, keeping their ids and timestamps.
++ * Rows are inserted one at a time, so a failing row leaves the rows before it in place.
++ * @param {Db} db
++ * @param {string} csv
++ * @returns {number} The number of users added.
++ * @throws {Error} If `db` is missing, the header is not the export header, or a row fails validation.
++ */
++exports.importUsersCsv = (db, csv) => {
++  if (db == null) throw new Error('db is required');
++  const [header, ...records] = parseCsv(csv);
++  if (header.join(',') !== COLUMNS.join(',')) throw new Error(`Unexpected CSV header: ${header.join(',')}`);
++  for (const record of records) {
++    const [id, email, fullName, createdAt, lastLogin] = record;
++    insertUser(db, { id, email, fullName, createdAt, lastLogin: lastLogin === '' ? undefined : lastLogin });
++  }
++  return records.length;
++};
+diff --git a/src/api/format.js b/src/api/format.js
+new file mode 100644
+index 0000000..9178553
+--- /dev/null
++++ b/src/api/format.js
+@@ -0,0 +1,9 @@
++/**
++ * Name to show for a user: the full name, or the part of the email before "@" when there is no full name.
++ * @param {{ email: string, fullName?: string | null }} user
++ * @returns {string}
++ */
++exports.displayName = (user) => {
++  if (user.fullName && user.fullName.trim() !== '') return user.fullName;
++  return user.email.split('@')[0];
++};
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..0257418 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,13 +1,177 @@
+ const crypto = require('node:crypto');
+ 
+-exports.createUser = (db, { email, fullName }) => {
+-  const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
+-  db.insert('users', row);
+-  return exports.getUser(db, row.id);
++const validateFullName = (fullName) => {
++  if (typeof fullName !== 'string' || fullName.trim() === '' || fullName.length > 100) {
++    throw new Error(`Invalid full name: ${fullName}`);
++  }
+ };
+ 
++const assertDb = (db) => {
++  if (db == null) throw new Error('db is required');
++};
++
++// User object fields -> row columns. Fields left undefined are omitted, so this also works for partial updates.
++const toRow = (u) => {
++  const row = { id: u.id, email: u.email, fullname: u.fullName, created_at: u.createdAt, last_login: u.lastLogin, nickname: u.nickname };
++  return Object.fromEntries(Object.entries(row).filter(([, v]) => v !== undefined));
++};
++
++const fromRow = (r) => ({
++  id: r.id,
++  email: r.email,
++  fullName: r.fullname,
++  createdAt: r.created_at,
++  lastLogin: r.last_login ?? null,
++  nickname: r.nickname ?? null,
++});
++
++/**
++ * Validates and stores a user with the given id and timestamps. `createUser` generates these;
++ * `importUsersCsv` keeps the ones from the file.
++ * @param {Db} db
++ * @param {{ id: string, email: string, fullName: string, createdAt: string, lastLogin?: string }} user
++ * @returns {{ id: string, email: string, fullName: string, createdAt: string, lastLogin: string | null }} The stored user.
++ * @throws {Error} If the email has no "@", is already in use, or the full name is blank or over 100 characters.
++ */
++exports.insertUser =(db, { id, email, fullName, createdAt, lastLogin, nickname }) => {
++  if (typeof email !== 'string' || !email.includes('@')) {
++    throw new Error(`Invalid email: ${email}`);
++  }
++  if (exports.getUserByEmail(db, email)) {
++    throw new Error(`Email already in use: ${email}`);
++  }
++  validateFullName(fullName);
++  db.insert('users', toRow({ id, email, fullName, createdAt, lastLogin, nickname }));
++  return exports.getUser(db, id);
++};
++
++/**
++ * Creates a user with a new random id, timestamped now.
++ * @param {Db} db
++ * @param {{ email: string, fullName: string }} input
++ * @returns {{ id: string, email: string, fullName: string, createdAt: string, lastLogin: string | null }} The new user.
++ * @throws {Error} If `db` is missing, or the email or full name is invalid (see `insertUser`).
++ */
++exports.createUser = (db, { email, fullName, nickname }) => {
++  assertDb(db);
++  return exports.insertUser(db, { id: crypto.randomUUID(), email, fullName, createdAt: new Date().toISOString(), nickname });
++};
++
++/**
++ * Looks up a user by id.
++ * @param {Db} db
++ * @param {string} id
++ * @returns {object | null} The user, or `null` if none has that id.
++ * @throws {Error} If `db` is missing.
++ */
+ exports.getUser = (db, id) => {
++  assertDb(db);
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+-  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
++  return fromRow(r);
++};
++
++/**
++ * Looks up a user by email, ignoring case.
++ * @param {Db} db
++ * @param {string} email
++ * @returns {object | null} The user, or `null` if none has that email.
++ * @throws {Error} If `db` is missing.
++ */
++exports.getUserByEmail = (db, email) => {
++  assertDb(db);
++  const r = db.find('users', (u) => u.email.toLowerCase() === email.toLowerCase());
++  if (!r) return null;
++  return fromRow(r);
++};
++
++/**
++ * Lists users, oldest first, one page at a time.
++ * @param {Db} db
++ * @param {{ limit?: number, offset?: number }} [page] Defaults to `limit` 50 and `offset` 0.
++ * @returns {object[]} The users on the requested page.
++ * @throws {Error} If `db` is missing.
++ */
++exports.listUsers = (db, { limit = 50, offset = 0 } = {}) => {
++  assertDb(db);
++  return db.all('users').map(fromRow).sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(offset, offset + limit);
++};
++
++/**
++ * Counts all users.
++ * @param {Db} db
++ * @returns {number} The number of users.
++ * @throws {Error} If `db` is missing.
++ */
++exports.countUsers = (db) => {
++  assertDb(db);
++  return db.all('users').length;
++};
++
++/**
++ * Finds users whose full name or email contains `query`, ignoring case.
++ * @param {Db} db
++ * @param {string} query
++ * @returns {object[]} Matching users in storage order.
++ * @throws {Error} If `db` is missing.
++ */
++exports.searchUsers = (db, query) => {
++  assertDb(db);
++  const q = query.toLowerCase();
++  return db.all('users')
++    .filter((u) => u.email.toLowerCase().includes(q) || u.fullname.toLowerCase().includes(q))
++    .map(fromRow);
++};
++
++/**
++ * Changes the given fields of a user. Fields left out, or `undefined`, are unchanged.
++ * @param {Db} db
++ * @param {string} id
++ * @param {{ email?: string, fullName?: string }} changes
++ * @returns {object} The updated user.
++ * @throws {Error} If `db` is missing, the user does not exist, or a new email or full name is invalid or already taken.
++ */
++exports.updateUser = (db, id, { email, fullName }) => {
++  assertDb(db);
++  if (!exports.getUser(db, id)) throw new Error(`No user with id: ${id}`);
++  const changes = {};
++  if (email !== undefined) {
++    if (typeof email !== 'string' || !email.includes('@')) throw new Error(`Invalid email: ${email}`);
++    const other = exports.getUserByEmail(db, email);
++    if (other && other.id !== id) throw new Error(`Email already in use: ${email}`);
++    changes.email = email;
++  }
++  if (fullName !== undefined) {
++    validateFullName(fullName);
++    changes.fullName = fullName;
++  }
++  db.update('users', (u) => u.id === id, toRow(changes));
++  return exports.getUser(db, id);
++};
++
++/**
++ * Removes a user.
++ * @param {Db} db
++ * @param {string} id
++ * @returns {boolean} `true` if a user was removed, `false` if none had that id.
++ * @throws {Error} If `db` is missing.
++ */
++exports.deleteUser = (db, id) => {
++  assertDb(db);
++  return db.remove('users', (u) => u.id === id) > 0;
++};
++
++/**
++ * Sets a user's last login time.
++ * @param {Db} db
++ * @param {string} id
++ * @param {Date} [when] Defaults to now.
++ * @returns {object} The updated user.
++ * @throws {Error} If `db` is missing or the user does not exist.
++ */
++exports.recordLogin =(db, id, when = new Date()) => {
++  assertDb(db);
++  if (!exports.getUser(db, id)) throw new Error(`No user with id: ${id}`);
++  db.update('users', (u) => u.id === id, toRow({ lastLogin: when.toISOString() }));
++  return exports.getUser(db, id);
+ };
+diff --git a/src/db.js b/src/db.js
+index e9e9d2a..0d2d807 100644
+--- a/src/db.js
++++ b/src/db.js
+@@ -9,6 +9,17 @@ class Db {
+     t.rows.push({ ...row });
+     return row;
+   }
++  update(table, pred, fields) {
++    const t = this.tables[table];
++    for (const k of Object.keys(fields)) if (!t.columns.includes(k)) throw new Error(`unknown column ${table}.${k}`);
++    for (const r of t.rows) if (pred(r)) Object.assign(r, fields);
++  }
++  remove(table, pred) {
++    const t = this.tables[table];
++    const before = t.rows.length;
++    t.rows = t.rows.filter((r) => !pred(r));
++    return before - t.rows.length;
++  }
+   all(table) { return this.tables[table].rows.map((r) => ({ ...r })); }
+   find(table, pred) { return this.all(table).find(pred) ?? null; }
+ }
+diff --git a/src/lib/arrays.js b/src/lib/arrays.js
+new file mode 100644
+index 0000000..83f847a
+--- /dev/null
++++ b/src/lib/arrays.js
+@@ -0,0 +1,173 @@
++/**
++ * Splits `xs` into consecutive arrays of length `n`. The last chunk may be shorter.
++ * @param {unknown[]} xs
++ * @param {number} n A positive integer.
++ * @returns {unknown[][]} New arrays holding the items in order; `[]` for an empty input.
++ * @throws {Error} If `xs` is not an array, or `n` is not a positive integer.
++ */
++exports.chunk = (xs, n) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  if (!Number.isInteger(n) || n < 1) throw new Error(`Expected a positive integer size: ${n}`);
++  const chunks = [];
++  for (let i = 0; i < xs.length; i += n) chunks.push(xs.slice(i, i + n));
++  return chunks;
++};
++
++/**
++ * Keeps the first item for each key, in the original order. Keys are compared the way `Set` compares them,
++ * so `NaN` matches `NaN` and `0` matches `-0`.
++ * @param {unknown[]} xs
++ * @param {(x: unknown) => unknown} keyFn Returns the key for an item.
++ * @returns {unknown[]} A new array with at most one item per key; `[]` for an empty input.
++ * @throws {Error} If `xs` is not an array, or `keyFn` is not a function.
++ */
++exports.uniqueBy = (xs, keyFn) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  if (typeof keyFn !== 'function') throw new Error(`Expected a key function: ${keyFn}`);
++  const seen = new Set();
++  return xs.filter((x) => {
++    const key = keyFn(x);
++    if (seen.has(key)) return false;
++    seen.add(key);
++    return true;
++  });
++};
++
++/**
++ * Groups `xs` into arrays keyed by `keyFn`. Keys are converted to strings the way object keys are, so `1` and `'1'`
++ * land in the same group, and `null` becomes the key "null". Items keep their original order within each group.
++ * @param {unknown[]} xs
++ * @param {(x: unknown) => unknown} keyFn Returns the group key for an item.
++ * @returns {Record<string, unknown[]>} A new object mapping each key to the items with that key; `{}` for an empty input.
++ * @throws {Error} If `xs` is not an array, or `keyFn` is not a function.
++ */
++exports.groupBy = (xs, keyFn) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  if (typeof keyFn !== 'function') throw new Error(`Expected a key function: ${keyFn}`);
++  const groups = new Map();
++  for (const x of xs) {
++    const key = String(keyFn(x));
++    if (!groups.has(key)) groups.set(key, []);
++    groups.get(key).push(x);
++  }
++  return Object.fromEntries(groups);
++};
++
++/**
++ * Splits `xs` into the items that satisfy `pred` and the items that do not, keeping their order.
++ * @param {unknown[]} xs
++ * @param {(x: unknown) => boolean} pred Called once per item; a truthy result puts the item in the first array.
++ * @returns {[unknown[], unknown[]]} `[matching, notMatching]`, both new arrays; `[[], []]` for an empty input.
++ * @throws {Error} If `xs` is not an array, or `pred` is not a function.
++ */
++exports.partition = (xs, pred) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  if (typeof pred !== 'function') throw new Error(`Expected a predicate function: ${pred}`);
++  const matching = [];
++  const notMatching = [];
++  for (const x of xs) (pred(x) ? matching : notMatching).push(x);
++  return [matching, notMatching];
++};
++
++/**
++ * Pairs up the items of `a` and `b` by position. The result stops at the shorter array, so extra items in the
++ * longer one are dropped.
++ * @param {unknown[]} a
++ * @param {unknown[]} b
++ * @returns {Array<[unknown, unknown]>} New pairs `[a[i], b[i]]`; `[]` if either input is empty.
++ * @throws {Error} If `a` or `b` is not an array.
++ */
++exports.zip = (a, b) => {
++  if (!Array.isArray(a)) throw new Error(`Expected an array: ${a}`);
++  if (!Array.isArray(b)) throw new Error(`Expected an array: ${b}`);
++  const length = Math.min(a.length, b.length);
++  return Array.from({ length }, (_, i) => [a[i], b[i]]);
++};
++
++/**
++ * Numbers from `start` up to, but not including, `end`, moving by `step`. A negative step counts down, so
++ * `range(5, 0, -1)` gives 5 to 1. Each value is computed as `start + i * step`, so fractional steps do not drift.
++ * @param {number} start
++ * @param {number} end Exclusive.
++ * @param {number} [step] Defaults to 1. Must not be 0.
++ * @returns {number[]} The values in order; `[]` when `end` is already reached in the step's direction.
++ * @throws {Error} If an argument is not a finite number, or `step` is 0.
++ */
++exports.range = (start, end, step = 1) => {
++  for (const [name, v] of [['start', start], ['end', end], ['step', step]]) {
++    if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`Expected a finite number for ${name}: ${v}`);
++  }
++  if (step === 0) throw new Error('Expected a non-zero step');
++  const count = Math.max(0, Math.ceil((end - start) / step));
++  return Array.from({ length: count }, (_, i) => start + i * step);
++};
++
++/**
++ * Flattens arrays nested to any depth into a single array. Only arrays are unwrapped; other items, including
++ * strings and objects, are kept as they are. Holes in a sparse array come out as `undefined`.
++ * @param {unknown[]} xs
++ * @returns {unknown[]} A new flat array; `[]` for an empty input.
++ * @throws {Error} If `xs` is not an array, or it contains itself, directly or through nested arrays.
++ */
++exports.flattenDeep = (xs) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  const out = [];
++  const walk = (arr, ancestors) => {
++    if (ancestors.has(arr)) throw new Error('Cannot flatten a cyclic array');
++    ancestors.add(arr);
++    for (const x of arr) {
++      if (Array.isArray(x)) walk(x, ancestors);
++      else out.push(x);
++    }
++    ancestors.delete(arr);
++  };
++  walk(xs, new Set());
++  return out;
++};
++
++/**
++ * Returns a new array sorted by `keyFn`, smallest key first. The sort is stable, so items with equal keys keep their
++ * original order. Keys are compared with `<` and `>`, so they should be all numbers, all strings (compared by UTF-16
++ * code unit), or all Dates. `keyFn` is called once per item.
++ * @param {unknown[]} xs Not modified.
++ * @param {(x: unknown) => number | string | Date} keyFn Returns the sort key for an item.
++ * @returns {unknown[]} A new sorted array; `[]` for an empty input.
++ * @throws {Error} If `xs` is not an array, or `keyFn` is not a function.
++ */
++exports.sortBy = (xs, keyFn) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  if (typeof keyFn !== 'function') throw new Error(`Expected a key function: ${keyFn}`);
++  return Array.from(xs, (x) => ({ x, key: keyFn(x) }))
++    .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
++    .map(({ x }) => x);
++};
++
++/**
++ * Picks one item of `xs` at random. Each item is equally likely, given an unbiased `rng`.
++ * @param {unknown[]} xs Not modified.
++ * @param {() => number} [rng] Returns a number in [0, 1). Defaults to `Math.random`.
++ * @returns {unknown} A random item, or `undefined` for an empty array.
++ * @throws {Error} If `xs` is not an array, `rng` is not a function, or `rng` returns a value outside [0, 1).
++ */
++exports.sample = (xs, rng = Math.random) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  if (typeof rng !== 'function') throw new Error(`Expected a random function: ${rng}`);
++  if (xs.length === 0) return undefined;
++  const r = rng();
++  if (typeof r !== 'number' || !(r >= 0 && r < 1)) throw new Error(`Expected rng to return a number in [0, 1): ${r}`);
++  return xs[Math.floor(r * xs.length)];
++};
++
++/**
++ * Returns every run of `n` consecutive items, in order. Consecutive windows overlap by `n - 1` items.
++ * @param {unknown[]} xs
++ * @param {number} n A positive integer.
++ * @returns {unknown[][]} New arrays, one per window; `[]` when `n` is longer than `xs` or `xs` is empty.
++ * @throws {Error} If `xs` is not an array, or `n` is not a positive integer.
++ */
++exports.windowed = (xs, n) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  if (!Number.isInteger(n) || n < 1) throw new Error(`Expected a positive integer window size: ${n}`);
++  const count = Math.max(0, xs.length - n + 1);
++  return Array.from({ length: count }, (_, i) => xs.slice(i, i + n));
++};
+diff --git a/src/lib/dates.js b/src/lib/dates.js
+new file mode 100644
+index 0000000..40d95bb
+--- /dev/null
++++ b/src/lib/dates.js
+@@ -0,0 +1,172 @@
++const assertValidDate = (d) => {
++  if (!(d instanceof Date) || Number.isNaN(d.getTime())) throw new Error(`Expected a valid Date: ${d}`);
++};
++
++/**
++ * Returns a new Date `n` calendar days after `date`, or before it when `n` is negative. Arithmetic uses the local
++ * calendar, so the local time of day is kept across daylight saving changes. Month and year boundaries and leap
++ * days are handled. The input is not modified.
++ * @param {Date} date A valid Date.
++ * @param {number} n A safe integer number of days.
++ * @returns {Date} The shifted date.
++ * @throws {Error} If `date` is not a valid Date, `n` is not a safe integer, or the result is out of the Date range.
++ */
++exports.addDays = (date, n) => {
++  assertValidDate(date);
++  if (!Number.isSafeInteger(n)) throw new Error(`Expected a safe integer number of days: ${n}`);
++  const out = new Date(date.getTime());
++  out.setDate(out.getDate() + n);
++  if (Number.isNaN(out.getTime())) throw new Error(`Result is outside the range of Date: ${n} days`);
++  return out;
++};
++
++const MS_PER_DAY = 24 * 60 * 60 * 1000;
++
++// Midnight UTC on the UTC calendar day of `d`, in milliseconds. Time of day is dropped.
++const utcDayStart = (d) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
++
++/**
++ * Counts the whole days from `from` to `to` on the UTC calendar, ignoring the time of day. Two instants two minutes
++ * apart that straddle UTC midnight count as 1 day apart.
++ * @param {Date} from A valid Date.
++ * @param {Date} to A valid Date.
++ * @returns {number} An integer: positive when `to` is later, negative when earlier, 0 on the same UTC day.
++ * @throws {Error} If either argument is not a valid Date.
++ */
++exports.daysBetween = (from, to) => {
++  assertValidDate(from);
++  assertValidDate(to);
++  return (utcDayStart(to) - utcDayStart(from)) / MS_PER_DAY;
++};
++
++/**
++ * Tells whether `date` falls on a Saturday or Sunday in UTC. The time of day is ignored, and the local time zone
++ * of the machine makes no difference.
++ * @param {Date} date A valid Date.
++ * @returns {boolean} `true` on Saturday or Sunday (UTC), otherwise `false`.
++ * @throws {Error} If `date` is not a valid Date.
++ */
++exports.isWeekend = (date) => {
++  assertValidDate(date);
++  const day = date.getUTCDay();
++  return day === 0 || day === 6;
++};
++
++/**
++ * The Monday at 00:00 UTC that starts the week containing `date`. Weeks run Monday to Sunday, so a Sunday belongs to
++ * the week that began six days earlier.
++ * @param {Date} date A valid Date.
++ * @returns {Date} A new Date at 00:00:00.000 UTC on that Monday. The input is not modified.
++ * @throws {Error} If `date` is not a valid Date, or the Monday falls outside the range of Date.
++ */
++exports.startOfWeek = (date) => {
++  assertValidDate(date);
++  // Monday is 0 and Sunday is 6, so the offset is how many days have passed since that Monday.
++  const sinceMonday = (date.getUTCDay() + 6) % 7;
++  const out = new Date(utcDayStart(date) - sinceMonday * MS_PER_DAY);
++  if (Number.isNaN(out.getTime())) throw new Error(`Result is outside the range of Date: ${date}`);
++  return out;
++};
++
++const pad = (n, width) => String(n).padStart(width, '0');
++
++/**
++ * Formats the UTC calendar date of `date` as YYYY-MM-DD, such as "2024-03-09". The time of day is dropped, and the
++ * local time zone makes no difference.
++ * @param {Date} date A valid Date.
++ * @returns {string} The date, with the year padded to four digits (so year 99 is "0099").
++ * @throws {Error} If `date` is not a valid Date, or its UTC year is outside 0 to 9999, which YYYY cannot show.
++ */
++exports.formatIsoDate = (date) => {
++  assertValidDate(date);
++  const year = date.getUTCFullYear();
++  if (year < 0 || year > 9999) throw new Error(`Year ${year} cannot be written as YYYY`);
++  return `${pad(year, 4)}-${pad(date.getUTCMonth() + 1, 2)}-${pad(date.getUTCDate(), 2)}`;
++};
++
++const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
++
++/**
++ * Parses a YYYY-MM-DD string into the Date at 00:00:00.000 UTC on that day. The inverse of `formatIsoDate`.
++ * Only that exact shape is accepted: no time part, no sign, no spaces, and no impossible dates such as 2026-02-30.
++ * @param {string} s
++ * @returns {Date} A new Date in UTC.
++ * @throws {Error} If `s` is not a string, is not in YYYY-MM-DD form, or names a day that does not exist.
++ */
++exports.parseIsoDate = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${s}`);
++  const match = ISO_DATE.exec(s);
++  if (!match) throw new Error(`Invalid ISO date: ${s}`);
++  const [year, month, day] = match.slice(1).map(Number);
++  // setUTCFullYear rather than Date.UTC, which maps years 0 to 99 to 1900 to 1999.
++  const out = new Date(0);
++  out.setUTCFullYear(year, month - 1, day);
++  // Impossible days roll over (2026-02-30 becomes 2026-03-02), so reject any date whose fields changed.
++  if (out.getUTCFullYear() !== year || out.getUTCMonth() !== month - 1 || out.getUTCDate() !== day) {
++    throw new Error(`Invalid ISO date: ${s}`);
++  }
++  return out;
++};
++
++const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
++
++/**
++ * Whole years between `birthDate` and `date`, on the UTC calendar. The age goes up on the birthday itself, and the
++ * time of day is ignored. A 29 February birthday counts as 1 March in years with no 29 February.
++ * @param {Date} birthDate A valid Date.
++ * @param {Date} date A valid Date, on or after `birthDate`.
++ * @returns {number} A non-negative integer; 0 on the day of birth.
++ * @throws {Error} If either argument is not a valid Date, or `date` is before `birthDate`.
++ */
++exports.ageOn = (birthDate, date) => {
++  assertValidDate(birthDate);
++  assertValidDate(date);
++  if (utcDayStart(date) < utcDayStart(birthDate)) throw new Error('Date is before the birth date');
++  const birthYear = birthDate.getUTCFullYear();
++  const birthMonth = birthDate.getUTCMonth();
++  const birthDay = birthDate.getUTCDate();
++  const year = date.getUTCFullYear();
++  const month = date.getUTCMonth();
++  const day = date.getUTCDate();
++  // Months are 0-based here, so 1 is February and 2 is March.
++  const leapless = birthMonth === 1 && birthDay === 29 && !isLeapYear(year);
++  const celebrationMonth = leapless ? 2 : birthMonth;
++  const celebrationDay = leapless ? 1 : birthDay;
++  let age = year - birthYear;
++  if (month < celebrationMonth || (month === celebrationMonth && day < celebrationDay)) age -= 1;
++  return age;
++};
++
++const SECOND_MS = 1000;
++const MINUTE_MS = 60 * SECOND_MS;
++const HOUR_MS = 60 * MINUTE_MS;
++const DAY_MS = 24 * HOUR_MS;
++// Months and years are approximations of 30 and 365 days, so the phrases are close to the calendar, not exact.
++const RELATIVE_UNITS = [
++  [365 * DAY_MS, 'year'],
++  [30 * DAY_MS, 'month'],
++  [DAY_MS, 'day'],
++  [HOUR_MS, 'hour'],
++  [MINUTE_MS, 'minute'],
++  [SECOND_MS, 'second'],
++];
++
++/**
++ * A short phrase for how far `date` is from `now`, such as "3 minutes ago" or "in 2 days". The largest unit that
++ * fits is used, and the count is rounded down. Differences under one second read as "just now".
++ * @param {Date} date A valid Date.
++ * @param {Date} [now] The reference time. Defaults to the current time.
++ * @returns {string} For example "in 1 hour", "1 day ago" or "just now".
++ * @throws {Error} If `date` or `now` is not a valid Date.
++ */
++exports.relativeTime = (date, now = new Date()) => {
++  assertValidDate(date);
++  assertValidDate(now);
++  const diff = date.getTime() - now.getTime();
++  const abs = Math.abs(diff);
++  if (abs < SECOND_MS) return 'just now';
++  const [size, name] = RELATIVE_UNITS.find(([ms]) => abs >= ms);
++  const count = Math.floor(abs / size);
++  const label = `${count} ${name}${count === 1 ? '' : 's'}`;
++  return diff > 0 ? `in ${label}` : `${label} ago`;
++};
+diff --git a/src/lib/numbers.js b/src/lib/numbers.js
+new file mode 100644
+index 0000000..bbf485d
+--- /dev/null
++++ b/src/lib/numbers.js
+@@ -0,0 +1,205 @@
++/**
++ * Limits `x` to the range from `lo` to `hi`, inclusive.
++ * @param {number} x
++ * @param {number} lo
++ * @param {number} hi Must be at least `lo`. Either bound may be infinite.
++ * @returns {number} `lo` if `x` is below it, `hi` if `x` is above it, otherwise `x`.
++ * @throws {Error} If an argument is not a number or is `NaN`, or if `lo` is greater than `hi`.
++ */
++exports.clamp = (x, lo, hi) => {
++  for (const [name, v] of [['x', x], ['lo', lo], ['hi', hi]]) {
++    if (typeof v !== 'number' || Number.isNaN(v)) throw new Error(`Expected a number for ${name}: ${v}`);
++  }
++  if (lo > hi) throw new Error(`Expected lo to be at most hi: ${lo} > ${hi}`);
++  return Math.min(Math.max(x, lo), hi);
++};
++
++/**
++ * Rounds `x` to `places` decimal places, with halves rounded away from zero. The rounding is done on the decimal
++ * digits, so `roundTo(1.005, 2)` is 1.01 even though 1.005 is stored as slightly less than 1.005.
++ * A negative `places` rounds to tens, hundreds and so on.
++ * @param {number} x A finite number.
++ * @param {number} places An integer.
++ * @returns {number} `x` rounded to `places` decimal places.
++ * @throws {Error} If `x` is not finite, or `places` is not an integer.
++ */
++exports.roundTo = (x, places) => {
++  if (typeof x !== 'number' || !Number.isFinite(x)) throw new Error(`Expected a finite number: ${x}`);
++  if (!Number.isInteger(places)) throw new Error(`Expected an integer number of places: ${places}`);
++  const shifted = Math.round(shiftDecimal(Math.abs(x), places));
++  const rounded = shiftDecimal(shifted, -places);
++  return x < 0 && rounded !== 0 ? -rounded : rounded;
++};
++
++// Multiplies `x` by 10^k by moving the decimal point in its written form, so no binary rounding is introduced.
++const shiftDecimal = (x, k) => {
++  const [digits, exponent = '0'] = String(x).split('e');
++  return Number(`${digits}e${Number(exponent) + k}`);
++};
++
++/**
++ * Arithmetic mean of the numbers in `xs`.
++ * @param {number[]} xs
++ * @returns {number} The sum divided by the count, or `NaN` for an empty array. A `NaN` or infinite item makes the
++ * result `NaN` or infinite, as the arithmetic does.
++ * @throws {Error} If `xs` is not an array, or an item is not a number.
++ */
++exports.mean = (xs) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  for (const x of xs) {
++    if (typeof x !== 'number') throw new Error(`Expected a number item: ${x}`);
++  }
++  return xs.reduce((sum, x) => sum + x, 0) / xs.length;
++};
++
++/**
++ * Median of the numbers in `xs`: the middle value when sorted, or the average of the two middle values when the
++ * count is even. The input is not modified.
++ * @param {number[]} xs
++ * @returns {number} The median, or `NaN` for an empty array or one containing a `NaN`.
++ * @throws {Error} If `xs` is not an array, or an item is not a number.
++ */
++exports.median = (xs) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  for (const x of xs) {
++    if (typeof x !== 'number') throw new Error(`Expected a number item: ${x}`);
++  }
++  if (xs.length === 0 || xs.some(Number.isNaN)) return NaN;
++  const sorted = [...xs].sort((a, b) => a - b);
++  const mid = Math.floor(sorted.length / 2);
++  if (sorted.length % 2 === 1) return sorted[mid];
++  // Halve each middle value before adding, so two very large values cannot overflow to Infinity.
++  return sorted[mid - 1] / 2 + sorted[mid] / 2;
++};
++
++/**
++ * The `p`-th percentile of the numbers in `xs`, by linear interpolation between the two nearest ranks
++ * (the same method as NumPy's default). The input is not modified.
++ * @param {number[]} xs
++ * @param {number} p Between 0 and 100 inclusive. 0 gives the smallest item and 100 the largest.
++ * @returns {number} The interpolated value, or `NaN` for an empty array or one containing a `NaN`.
++ * @throws {Error} If `xs` is not an array, an item is not a number, or `p` is not between 0 and 100.
++ */
++exports.percentile = (xs, p) => {
++  if (!Array.isArray(xs)) throw new Error(`Expected an array: ${xs}`);
++  for (const x of xs) {
++    if (typeof x !== 'number') throw new Error(`Expected a number item: ${x}`);
++  }
++  if (typeof p !== 'number' || !(p >= 0 && p <= 100)) throw new Error(`Expected p between 0 and 100: ${p}`);
++  if (xs.length === 0 || xs.some(Number.isNaN)) return NaN;
++  const sorted = [...xs].sort((a, b) => a - b);
++  const rank = (p / 100) * (sorted.length - 1);
++  const lo = Math.floor(rank);
++  const frac = rank - lo;
++  // An exact rank returns the item itself, so an infinite neighbour cannot turn 0 * Infinity into NaN.
++  if (frac === 0) return sorted[lo];
++  // Weighting the two neighbours (rather than adding their difference) keeps large values from overflowing.
++  return sorted[lo] * (1 - frac) + sorted[lo + 1] * frac;
++};
++
++/**
++ * Formats a byte count for people to read, using 1024 per unit: B, KB, MB, GB and TB. Bytes are shown whole, and
++ * larger units to one decimal place, with a trailing ".0" dropped. Values past TB stay in TB.
++ * @param {number} bytes A non-negative finite number.
++ * @returns {string} For example 1536 gives "1.5 KB", 512 gives "512 B" and 1024 gives "1 KB".
++ * @throws {Error} If `bytes` is not a non-negative finite number.
++ */
++exports.formatBytes = (bytes) => {
++  if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes < 0) {
++    throw new Error(`Expected a non-negative finite number of bytes: ${bytes}`);
++  }
++  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
++  let value = bytes;
++  let unit = 0;
++  // Move up a unit when the value would display as 1024 of the current one, so 1048566 bytes is "1 MB", not "1024 KB".
++  while (unit < units.length - 1 && exports.roundTo(value, 1) >= 1024) {
++    value /= 1024;
++    unit++;
++  }
++  const places = unit === 0 ? 0 : 1;
++  return `${exports.roundTo(value, places)} ${units[unit]}`;
++};
++
++/**
++ * Tells whether `n` is a prime number, by trial division up to its square root.
++ * @param {number} n
++ * @returns {boolean} `true` for a prime integer. `false` for 0, 1, negatives and any non-integer, such as 2.5 or Infinity.
++ * @throws {Error} If `n` is not a number, is `NaN`, or is an integer too large to represent exactly (above 2^53 - 1).
++ */
++exports.isPrime = (n) => {
++  if (typeof n !== 'number' || Number.isNaN(n)) throw new Error(`Expected a number: ${n}`);
++  if (!Number.isInteger(n)) return false;
++  if (!Number.isSafeInteger(n)) throw new Error(`Expected an integer no larger than 2^53 - 1: ${n}`);
++  if (n < 2) return false;
++  if (n < 4) return true;
++  if (n % 2 === 0 || n % 3 === 0) return false;
++  for (let d = 5; d * d <= n; d += 6) {
++    if (n % d === 0 || n % (d + 2) === 0) return false;
++  }
++  return true;
++};
++
++/**
++ * Greatest common divisor of two integers, found with Euclid's algorithm. The result is never negative.
++ * @param {number} a A safe integer.
++ * @param {number} b A safe integer.
++ * @returns {number} The largest positive integer dividing both. `gcd(0, 0)` is 0, and `gcd(a, 0)` is `|a|`.
++ * @throws {Error} If either argument is not a safe integer (any integer up to 2^53 - 1 in size).
++ */
++exports.gcd = (a, b) => {
++  for (const v of [a, b]) {
++    if (!Number.isSafeInteger(v)) throw new Error(`Expected a safe integer: ${v}`);
++  }
++  let x = Math.abs(a);
++  let y = Math.abs(b);
++  while (y !== 0) [x, y] = [y, x % y];
++  return x;
++};
++
++const ROMAN_PARTS = [
++  [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'],
++  [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
++];
++
++/**
++ * Writes `n` as a Roman numeral, such as 1994 as "MCMXCIV".
++ * @param {number} n An integer from 1 to 3999. Roman numerals have no zero, and the standard form stops at 3999.
++ * @returns {string} The Roman numeral, using the subtractive forms such as IV and CM.
++ * @throws {Error} If `n` is not an integer from 1 to 3999.
++ */
++exports.toRoman = (n) => {
++  if (!Number.isInteger(n) || n < 1 || n > 3999) throw new Error(`Expected an integer from 1 to 3999: ${n}`);
++  let rest = n;
++  let out = '';
++  for (const [value, numeral] of ROMAN_PARTS) {
++    while (rest >= value) {
++      out += numeral;
++      rest -= value;
++    }
++  }
++  return out;
++};
++
++const ROMAN_DIGIT_VALUES = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
++// The standard form of each digit position, as toRoman writes it. Anything else is not a numeral this accepts.
++const CANONICAL_ROMAN = /^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
++
++/**
++ * Reads a Roman numeral back to its number, the inverse of `toRoman`. Only the standard form is accepted, the one
++ * `toRoman` writes, so "IIII", "VV", "IC" and "MMMM" are rejected.
++ * @param {string} s Upper-case Roman numeral, such as "MCMXCIV".
++ * @returns {number} An integer from 1 to 3999.
++ * @throws {Error} If `s` is not a string, or is not a standard Roman numeral.
++ */
++exports.fromRoman = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${s}`);
++  if (s === '' || !CANONICAL_ROMAN.test(s)) throw new Error(`Invalid Roman numeral: ${s}`);
++  let total = 0;
++  for (let i = 0; i < s.length; i++) {
++    const value = ROMAN_DIGIT_VALUES[s[i]];
++    const next = ROMAN_DIGIT_VALUES[s[i + 1]] || 0;
++    // A smaller digit before a larger one is subtractive, as in IV or CM.
++    total += value < next ? -value : value;
++  }
++  return total;
++};
+diff --git a/src/lib/objects.js b/src/lib/objects.js
+new file mode 100644
+index 0000000..f829595
+--- /dev/null
++++ b/src/lib/objects.js
+@@ -0,0 +1,251 @@
++const assertObjectAndKeys = (obj, keys) => {
++  if (obj === null || typeof obj !== 'object') throw new Error(`Expected an object: ${obj}`);
++  if (!Array.isArray(keys)) throw new Error(`Expected an array of keys: ${keys}`);
++  for (const key of keys) {
++    if (typeof key !== 'string' && typeof key !== 'symbol') throw new Error(`Expected a string or symbol key: ${String(key)}`);
++  }
++};
++
++/**
++ * Returns a new object holding only the listed keys of `obj`. Only the object's own properties are copied, and a key
++ * that `obj` does not have is left out rather than set to `undefined`.
++ * @param {object} obj
++ * @param {Array<string | symbol>} keys The keys to keep. The result lists them in this order.
++ * @returns {object} A new object; `{}` when no listed key is present.
++ * @throws {Error} If `obj` is not an object, `keys` is not an array, or a key is neither a string nor a symbol.
++ */
++exports.pick = (obj, keys) => {
++  assertObjectAndKeys(obj, keys);
++  // fromEntries defines each property rather than assigning it, so a key named "__proto__" is copied as data.
++  return Object.fromEntries(
++    keys.filter((key) => Object.prototype.hasOwnProperty.call(obj, key)).map((key) => [key, obj[key]]),
++  );
++};
++
++/**
++ * Returns a new object with every own enumerable property of `obj` except the listed keys. Keys that `obj` does not
++ * have are ignored. Property order is kept.
++ * @param {object} obj
++ * @param {Array<string | symbol>} keys The keys to leave out.
++ * @returns {object} A new object; a copy of `obj` when none of the listed keys is present.
++ * @throws {Error} If `obj` is not an object, `keys` is not an array, or a key is neither a string nor a symbol.
++ */
++exports.omit = (obj, keys) => {
++  assertObjectAndKeys(obj, keys);
++  const dropped = new Set(keys);
++  return Object.fromEntries(
++    Reflect.ownKeys(obj)
++      .filter((key) => !dropped.has(key) && Object.prototype.propertyIsEnumerable.call(obj, key))
++      .map((key) => [key, obj[key]]),
++  );
++};
++
++const isPlainObject = (v) => {
++  if (v === null || typeof v !== 'object') return false;
++  const proto = Object.getPrototypeOf(v);
++  return proto === Object.prototype || proto === null;
++};
++
++// `stack` holds the pairs currently being compared, so a cyclic structure stops instead of recursing forever.
++const deepEqualWithin = (a, b, stack) => {
++  if (Object.is(a, b)) return true;
++  for (const v of [a, b]) {
++    if (typeof v === 'function' || typeof v === 'symbol' || typeof v === 'bigint') {
++      throw new Error(`Cannot compare ${typeof v} values`);
++    }
++  }
++  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
++  if (Array.isArray(a) !== Array.isArray(b)) return false;
++  for (const v of [a, b]) {
++    if (!Array.isArray(v) && !isPlainObject(v)) {
++      throw new Error('Cannot compare non-plain objects such as Date, Map or class instances');
++    }
++  }
++  if (stack.some(([x, y]) => x === a && y === b)) return true;
++  stack.push([a, b]);
++  try {
++    if (Array.isArray(a)) {
++      if (a.length !== b.length) return false;
++      for (let i = 0; i < a.length; i++) {
++        if (!deepEqualWithin(a[i], b[i], stack)) return false;
++      }
++      return true;
++    }
++    const keysA = Object.keys(a);
++    if (keysA.length !== Object.keys(b).length) return false;
++    return keysA.every((key) => Object.prototype.hasOwnProperty.call(b, key) && deepEqualWithin(a[key], b[key], stack));
++  } finally {
++    stack.pop();
++  }
++};
++
++/**
++ * Tells whether two values are deeply equal. Plain objects are compared by their own enumerable string keys, in any
++ * order; arrays by length and position; numbers, strings, booleans, `undefined` and `null` by value. `NaN` equals
++ * `NaN`, and `0` does not equal `-0`, as in Node's `assert.deepStrictEqual`. Cyclic structures are supported.
++ * @param {unknown} a
++ * @param {unknown} b
++ * @returns {boolean}
++ * @throws {Error} If a function, symbol, bigint, or a non-plain object (such as a Date, Map or class instance) has to
++ * be compared. Those values cannot be compared structurally, so the result would be misleading.
++ */
++exports.deepEqual = (a, b) => deepEqualWithin(a, b, []);
++
++// `seen` maps each original object to its copy, so shared references and cycles are copied once and stay linked.
++const cloneWithin = (value, seen) => {
++  if (typeof value === 'function') throw new Error('Cannot clone function values');
++  if (typeof value !== 'object' || value === null) return value;
++  if (seen.has(value)) return seen.get(value);
++  if (Array.isArray(value)) {
++    const out = new Array(value.length);
++    seen.set(value, out);
++    // Object.keys skips holes, so a sparse array stays sparse.
++    for (const key of Object.keys(value)) out[key] = cloneWithin(value[key], seen);
++    return out;
++  }
++  if (!isPlainObject(value)) throw new Error('Cannot clone non-plain objects such as Date, Map or class instances');
++  const out = Object.create(Object.getPrototypeOf(value));
++  seen.set(value, out);
++  for (const key of Object.keys(value)) {
++    // defineProperty rather than assignment, so a key named "__proto__" is copied as data.
++    Object.defineProperty(out, key, {
++      value: cloneWithin(value[key], seen),
++      enumerable: true,
++      writable: true,
++      configurable: true,
++    });
++  }
++  return out;
++};
++
++/**
++ * Deep copy of plain objects and arrays. The copy shares no objects or arrays with the original, but it keeps the
++ * shape: shared references stay shared, cycles stay cycles, holes in sparse arrays stay holes, and a null prototype
++ * stays null. Only own enumerable string keys are copied, matching `deepEqual`.
++ * @param {unknown} value
++ * @returns {unknown} The copy. Primitives (numbers, strings, booleans, null, undefined, symbols, bigints) are returned as they are.
++ * @throws {Error} If a function, or a non-plain object such as a Date, Map or class instance, is found anywhere inside `value`.
++ */
++exports.deepClone = (value) => cloneWithin(value, new Map());
++
++/**
++ * Reads a value at a dotted path, such as "a.b.0.c". Each segment is an own property name, so array indexes are
++ * written as numbers, and a key that itself contains a dot cannot be reached.
++ * @param {unknown} obj
++ * @param {string} path Segments separated by dots. An empty segment reads the key "".
++ * @param {unknown} [fallback] Returned when the path does not resolve, or resolves to `undefined`. Defaults to `undefined`.
++ * @returns {unknown} The value found, or `fallback`. Falsy values such as 0, '' and null are returned as they are.
++ * @throws {Error} If `path` is not a string.
++ */
++exports.getPath = (obj, path, fallback) => {
++  if (typeof path !== 'string') throw new Error(`Expected a string path: ${String(path)}`);
++  let current = obj;
++  for (const key of path.split('.')) {
++    // Only own properties count, so "constructor" or "toString" give the fallback, not a built-in.
++    if (current === null || typeof current !== 'object' || !Object.prototype.hasOwnProperty.call(current, key)) {
++      return fallback;
++    }
++    current = current[key];
++  }
++  return current === undefined ? fallback : current;
++};
++
++const isContainer = (v) => v !== null && typeof v === 'object' && (Array.isArray(v) || isPlainObject(v));
++
++const defineOwn = (obj, key, value) => {
++  // defineProperty rather than assignment, so a key named "__proto__" is set as data.
++  Object.defineProperty(obj, key, { value, enumerable: true, writable: true, configurable: true });
++  return obj;
++};
++
++// One level of copy: arrays are sliced, and objects keep their prototype and enumerable own keys, symbols included.
++const copyContainer = (node) => {
++  if (Array.isArray(node)) return node.slice();
++  const copy = Object.create(Object.getPrototypeOf(node));
++  for (const key of Reflect.ownKeys(node)) {
++    if (Object.prototype.propertyIsEnumerable.call(node, key)) defineOwn(copy, key, node[key]);
++  }
++  return copy;
++};
++
++const setWithin = (node, keys, value) => {
++  const [key, ...rest] = keys;
++  const copy = node === undefined ? {} : copyContainer(node);
++  if (rest.length === 0) return defineOwn(copy, key, value);
++  const child = node !== undefined && Object.prototype.hasOwnProperty.call(node, key) ? node[key] : undefined;
++  if (child !== undefined && !isContainer(child)) {
++    throw new Error(`Cannot set through "${key}": it is not a plain object or array`);
++  }
++  return defineOwn(copy, key, setWithin(child, rest, value));
++};
++
++/**
++ * Returns a new object with `value` stored at a dotted path, such as "a.b.c". Missing levels are created as plain
++ * objects, so "a.0" on a missing `a` gives `{ a: { 0: value } }`, not an array. The input is not modified: each object
++ * or array on the path is copied, and everything else is shared with the input.
++ * @param {object} obj A plain object or array.
++ * @param {string} path Segments separated by dots. An array index is written as a number, such as "list.1".
++ * @param {unknown} value Any value, including `undefined` and `null`.
++ * @returns {object} A new object with the value set.
++ * @throws {Error} If `obj` is not a plain object or array, `path` is not a string, or a level on the path already holds
++ * a value that is not a plain object or array (such as a string, a number, `null`, or a Date). Such a value is not
++ * overwritten.
++ */
++exports.setPath = (obj, path, value) => {
++  if (typeof path !== 'string') throw new Error(`Expected a string path: ${String(path)}`);
++  if (!isContainer(obj)) throw new Error('Expected a plain object or array to set into');
++  return setWithin(obj, path.split('.'), value);
++};
++
++// Writes each key of `source` into `target`. Plain objects present on both sides are merged; anything else from
++// `source` replaces the target's value. `ancestors` holds the sources being walked, so a cycle in `source` is copied
++// rather than merged forever.
++const mergeInto = (target, source, ancestors) => {
++  ancestors.push(source);
++  for (const key of Object.keys(source)) {
++    const sourceValue = source[key];
++    const targetValue = Object.prototype.hasOwnProperty.call(target, key) ? target[key] : undefined;
++    const merge = isPlainObject(sourceValue) && isPlainObject(targetValue) && !ancestors.includes(sourceValue);
++    // A merged object is copied first, so the copy is written to and the input objects are never modified.
++    defineOwn(target, key, merge ? mergeInto(copyContainer(targetValue), sourceValue, ancestors) : exports.deepClone(sourceValue));
++  }
++  ancestors.pop();
++  return target;
++};
++
++/**
++ * Merges plain object `b` into plain object `a`, recursively. Where both sides hold a plain object for a key, the two
++ * are merged. Everything else from `b` replaces `a`'s value, so arrays are replaced rather than joined, and `null` or
++ * `undefined` in `b` overwrites an object in `a`. Keys only in `a` are kept, and keys only in `b` are added.
++ * The result shares nothing with `a` or `b`, so it can be changed freely.
++ * @param {object} a A plain object.
++ * @param {object} b A plain object whose values win on conflicts.
++ * @returns {object} A new merged object.
++ * @throws {Error} If `a` or `b` is not a plain object, or a value that `deepClone` cannot copy (such as a Date, Map or
++ * function) is taken from either side.
++ */
++exports.mergeDeep = (a, b) => {
++  if (!isPlainObject(a) || !isPlainObject(b)) throw new Error('Expected two plain objects to merge');
++  return mergeInto(exports.deepClone(a), b, []);
++};
++
++/**
++ * Swaps keys and values: `{ a: 'x' }` becomes `{ x: 'a' }`. Each value becomes a key by string conversion, so `1` and
++ * `'1'` collide, and `null` becomes "null". When two keys share a value, the later key wins, and the result keeps the
++ * position of the first. Only own enumerable string keys are read.
++ * @param {object} obj An object whose values are primitives. Arrays are accepted, and their indexes become the values.
++ * @returns {object} A new object.
++ * @throws {Error} If `obj` is not an object, or a value is an object, function or symbol, which cannot be a key.
++ */
++exports.invert = (obj) => {
++  if (obj === null || typeof obj !== 'object') throw new Error(`Expected an object: ${String(obj)}`);
++  return Object.fromEntries(
++    Object.keys(obj).map((key) => {
++      const value = obj[key];
++      if ((typeof value === 'object' && value !== null) || typeof value === 'function' || typeof value === 'symbol') {
++        throw new Error(`Cannot invert key "${key}": its value is not a primitive`);
++      }
++      return [String(value), key];
++    }),
++  );
++};
+diff --git a/src/lib/strings.js b/src/lib/strings.js
+new file mode 100644
+index 0000000..6911cd3
+--- /dev/null
++++ b/src/lib/strings.js
+@@ -0,0 +1,157 @@
++/**
++ * Converts text separated by spaces, hyphens or underscores to camelCase.
++ * Runs of separators and leading or trailing separators are ignored, and letter case is normalised.
++ * @param {string} str
++ * @returns {string} For example "hello_world" becomes "helloWorld", and "" stays "".
++ * @throws {Error} If `str` is not a string.
++ */
++exports.camelCase = (str) => {
++  if (typeof str !== 'string') throw new Error(`Expected a string: ${str}`);
++  const words = str.split(/[\s_-]+/).filter(Boolean).map((w) => w.toLowerCase());
++  return words.map((w, i) => (i === 0 ? w : w[0].toUpperCase() + w.slice(1))).join('');
++};
++
++/**
++ * Converts camelCase, PascalCase, or text separated by spaces, hyphens or underscores to kebab-case.
++ * Acronyms stay together, so "XMLHttpRequest" becomes "xml-http-request".
++ * @param {string} str
++ * @returns {string} For example "helloWorld" and "Hello World" both become "hello-world", and "" stays "".
++ * @throws {Error} If `str` is not a string.
++ */
++exports.kebabCase = (str) => {
++  if (typeof str !== 'string') throw new Error(`Expected a string: ${str}`);
++  const spaced = str.replace(/([a-z\d])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2');
++  return spaced.split(/[\s_-]+/).filter(Boolean).map((w) => w.toLowerCase()).join('-');
++};
++
++/**
++ * Shortens `s` to at most `n` characters. When it cuts anything, the last character is "…".
++ * Characters are counted by code point, so an emoji is never split.
++ * @param {string} s
++ * @param {number} n A non-negative integer.
++ * @returns {string} `s` unchanged if it already fits, otherwise its first `n - 1` characters followed by "…".
++ * @throws {Error} If `s` is not a string, or `n` is not a non-negative integer.
++ */
++exports.truncate = (s, n) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${s}`);
++  if (!Number.isInteger(n) || n < 0) throw new Error(`Expected a non-negative integer length: ${n}`);
++  const chars = Array.from(s);
++  if (chars.length <= n) return s;
++  if (n === 0) return '';
++  return chars.slice(0, n - 1).join('') + '…';
++};
++
++/**
++ * Centres `s` in a field of `width` characters, padding both sides with `ch`.
++ * When the padding is odd, the extra character goes on the right. Characters are counted by code point.
++ * @param {string} s
++ * @param {number} width A non-negative integer.
++ * @param {string} [ch] A single character to pad with. Defaults to a space.
++ * @returns {string} `s` padded to `width`, or unchanged if it is already at least that wide.
++ * @throws {Error} If `s` is not a string, `width` is not a non-negative integer, or `ch` is not one character.
++ */
++exports.padCenter = (s, width, ch = ' ') => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${s}`);
++  if (!Number.isInteger(width) || width < 0) throw new Error(`Expected a non-negative integer width: ${width}`);
++  if (typeof ch !== 'string' || Array.from(ch).length !== 1) throw new Error(`Expected a single character: ${ch}`);
++  const padding = width - Array.from(s).length;
++  if (padding <= 0) return s;
++  const left = Math.floor(padding / 2);
++  return ch.repeat(left) + s + ch.repeat(padding - left);
++};
++
++/**
++ * Counts the words in `s`. A word is a run of letters or digits, so whitespace and punctuation separate words.
++ * Apostrophes and hyphens therefore split words too: "don't" counts as 2.
++ * @param {string} s
++ * @returns {number} The number of words, 0 for an empty or punctuation-only string.
++ * @throws {Error} If `s` is not a string.
++ */
++exports.countWords = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${s}`);
++  const words = s.match(/[\p{L}\p{N}]+/gu);
++  return words ? words.length : 0;
++};
++
++/**
++ * Returns the first letter of each word in `s`, uppercased. Words are split the same way as `countWords`,
++ * so "jean-luc picard" gives "JLP".
++ * @param {string} s
++ * @returns {string} For example "Ada King Lovelace" becomes "AKL", and "" stays "".
++ * @throws {Error} If `s` is not a string.
++ */
++exports.initials = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${s}`);
++  const words = s.match(/[\p{L}\p{N}]+/gu) || [];
++  return words.map((w) => Array.from(w)[0].toUpperCase()).join('');
++};
++
++/**
++ * Reverses the order of the words in `s`. Words are separated by whitespace, and punctuation stays attached to its word.
++ * The result has single spaces between words, so runs of spaces, tabs and line breaks are collapsed and the ends trimmed.
++ * @param {string} s
++ * @returns {string} For example "the quick fox" becomes "fox quick the", and "" stays "".
++ * @throws {Error} If `s` is not a string.
++ */
++exports.reverseWords = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${s}`);
++  return s.split(/\s+/).filter(Boolean).reverse().join(' ');
++};
++
++/**
++ * Tells whether `s` reads the same backwards. Case, whitespace and punctuation are ignored, so
++ * "A man, a plan, a canal: Panama" is a palindrome. A letter or digit is compared together with any combining
++ * marks that follow it, so decomposed and precomposed accents compare as the same character.
++ * @param {string} s
++ * @returns {boolean} `true` for an empty or punctuation-only string, since there is nothing to disagree.
++ * @throws {Error} If `s` is not a string.
++ */
++exports.isPalindrome = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${s}`);
++  const units = s.toLowerCase().match(/[\p{L}\p{N}]\p{M}*/gu) || [];
++  return units.every((u, i) => u === units[units.length - 1 - i]);
++};
++
++/**
++ * Breaks `text` into lines of at most `width` characters, breaking only between words (greedy, first fit).
++ * Whitespace in `text` is collapsed to single spaces. A word longer than `width` cannot be broken, so it gets
++ * a line to itself and that line is longer than `width`.
++ * @param {string} text
++ * @param {number} width A positive integer, counted in code points.
++ * @returns {string} The wrapped lines joined with "\n", or "" for empty or blank text.
++ * @throws {Error} If `text` is not a string, or `width` is not a positive integer.
++ */
++exports.wrap = (text, width) => {
++  if (typeof text !== 'string') throw new Error(`Expected a string: ${text}`);
++  if (!Number.isInteger(width) || width < 1) throw new Error(`Expected a positive integer width: ${width}`);
++  const length = (s) => Array.from(s).length;
++  const lines = [];
++  let line = '';
++  for (const word of text.split(/\s+/).filter(Boolean)) {
++    if (line === '') {
++      line = word;
++    } else if (length(line) + 1 + length(word) <= width) {
++      line += ' ' + word;
++    } else {
++      lines.push(line);
++      line = word;
++    }
++  }
++  if (line !== '') lines.push(line);
++  return lines.join('\n');
++};
++
++/**
++ * Fills `{name}` placeholders in `text` from `vars`. A placeholder is `{` followed by word characters and `}`.
++ * Placeholders with no matching own property of `vars` are left exactly as written.
++ * @param {string} text
++ * @param {Record<string, unknown>} [vars] Defaults to no variables.
++ * @returns {string} The text with known placeholders replaced by `String(value)`.
++ * @throws {Error} If `text` is not a string, or `vars` is not an object.
++ */
++exports.template = (text, vars = {}) => {
++  if (typeof text !== 'string') throw new Error(`Expected a string: ${text}`);
++  if (typeof vars !== 'object' || vars === null) throw new Error(`Expected an object of variables: ${vars}`);
++  return text.replace(/\{(\w+)\}/g, (placeholder, name) =>
++    Object.prototype.hasOwnProperty.call(vars, name) ? String(vars[name]) : placeholder);
++};
+diff --git a/src/lib/validate.js b/src/lib/validate.js
+new file mode 100644
+index 0000000..5eca684
+--- /dev/null
++++ b/src/lib/validate.js
+@@ -0,0 +1,118 @@
++// Characters allowed in the local part of an address, as in RFC 5322 atoms. Dots separate atoms and may not repeat.
++const LOCAL_PART = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/;
++// A domain label: letters, digits and inner hyphens, 1 to 63 characters.
++const DOMAIN_LABEL = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
++const TOP_LEVEL_DOMAIN = /^[A-Za-z]{2,}$/;
++
++/**
++ * A practical email check, not a full RFC 5322 parser. It requires exactly one "@", a local part of 1 to 64 characters
++ * with no spaces, no leading, trailing or doubled dots, and a domain of at least two labels whose last label is 2 or
++ * more letters. The whole address is at most 254 characters. Non-ASCII letters are rejected, and so is a top-level
++ * domain that is not letters only, such as ".xn--p1ai".
++ * @param {string} s
++ * @returns {boolean} `true` if `s` looks like an email address.
++ * @throws {Error} If `s` is not a string.
++ */
++exports.isEmail = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${String(s)}`);
++  if (s.length > 254) return false;
++  const parts = s.split('@');
++  if (parts.length !== 2) return false;
++  const [local, domain] = parts;
++  if (local.length > 64 || !LOCAL_PART.test(local)) return false;
++  const labels = domain.split('.');
++  if (labels.length < 2 || !labels.every((label) => DOMAIN_LABEL.test(label))) return false;
++  return TOP_LEVEL_DOMAIN.test(labels[labels.length - 1]);
++};
++
++// Eight-four-four-four-twelve hex digits. The version digit is 1 to 5 (RFC 4122), and the variant digit is 8, 9, a or b.
++const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
++
++/**
++ * Tells whether `s` is a UUID as RFC 4122 defines it: the 8-4-4-4-12 hex form, with a version digit from 1 to 5 and
++ * the RFC 4122 variant. Upper and lower case hex are both accepted. The nil UUID (all zeros) and the max UUID (all
++ * ones) have no version, so they are rejected, and so are braces, a "urn:uuid:" prefix and a missing hyphen.
++ * @param {string} s
++ * @returns {boolean}
++ * @throws {Error} If `s` is not a string.
++ */
++exports.isUuid = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${String(s)}`);
++  return UUID.test(s);
++};
++
++/**
++ * Tells whether `s` is a strong password: at least 12 characters, with a lower-case letter, an upper-case letter, a
++ * digit and a symbol. Characters are counted by code point, so an emoji counts as one. A symbol is any character that
++ * is not a letter, a digit or whitespace, so a space does not count as a symbol, but it does count toward the length.
++ * Letters are checked by Unicode case, so "é" is lower case and "É" is upper case. Scripts without case, such as
++ * Chinese, cannot supply the letter requirements.
++ * @param {string} s
++ * @returns {boolean}
++ * @throws {Error} If `s` is not a string.
++ */
++exports.isStrongPassword = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${String(s)}`);
++  return [...s].length >= 12
++    && /\p{Ll}/u.test(s)
++    && /\p{Lu}/u.test(s)
++    && /\p{Nd}/u.test(s)
++    && /[^\p{L}\p{N}\s]/u.test(s);
++};
++
++/**
++ * Tells whether `s` is an absolute http or https URL, parsed with the WHATWG `URL` class. The scheme may be in any
++ * case, since `URL` lower-cases it. Any whitespace is rejected, because `URL` would silently trim the ends and strip
++ * tabs and line breaks, or percent-encode spaces, so a value is only accepted exactly as written.
++ * @param {string} s
++ * @returns {boolean} `true` for an http or https URL with a host. `false` for other schemes, relative references,
++ * whitespace and malformed text.
++ * @throws {Error} If `s` is not a string.
++ */
++exports.isUrl = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${String(s)}`);
++  if (/\s/.test(s)) return false;
++  let url;
++  try {
++    url = new URL(s);
++  } catch {
++    return false;
++  }
++  return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '';
++};
++
++// Outward code (area and district), then a single optional space, then the inward code: a digit and two letters.
++// GIR 0AA is the old Girobank code, which does not follow the usual pattern.
++const UK_POSTCODE = /^(?:GIR ?0AA|[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2})$/i;
++
++/**
++ * Tells whether `s` has the shape of a UK postcode, such as "SW1A 1AA", "M1 1AA" or "EC1A 1BB". Case does not matter,
++ * and the space is optional. This is a format check: it does not know which codes are allocated, and it allows letters
++ * that real codes avoid in some positions.
++ * @param {string} s
++ * @returns {boolean}
++ * @throws {Error} If `s` is not a string.
++ */
++exports.isPostcodeUK = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${String(s)}`);
++  return UK_POSTCODE.test(s);
++};
++
++// Three-letter codes from ISO 4217 for widely used currencies. This is a short list, not the full standard.
++const COMMON_CURRENCIES = new Set([
++  'USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'CNY', 'HKD', 'SGD', 'INR', 'KRW', 'BRL', 'MXN', 'ZAR',
++  'SEK', 'NOK', 'DKK', 'PLN',
++]);
++
++/**
++ * Tells whether `s` is one of the common ISO 4217 currency codes in the list above, such as "USD" or "EUR". The check
++ * is exact: the code must be three upper-case letters, so "usd", " USD" and "USD " are rejected. Codes outside the
++ * list are rejected even when they are valid ISO codes, so this is not a full ISO 4217 check.
++ * @param {string} s
++ * @returns {boolean}
++ * @throws {Error} If `s` is not a string.
++ */
++exports.isIsoCurrency = (s) => {
++  if (typeof s !== 'string') throw new Error(`Expected a string: ${String(s)}`);
++  return COMMON_CURRENCIES.has(s);
++};
+diff --git a/test/export.test.js b/test/export.test.js
+new file mode 100644
+index 0000000..fe5efaf
+--- /dev/null
++++ b/test/export.test.js
+@@ -0,0 +1,63 @@
++const test = require('node:test');
++const assert = require('node:assert');
++const { Db } = require('../src/db.js');
++const { migrate } = require('../src/migrate.js');
++const { createUser, updateUser, recordLogin, listUsers } = require('../src/api/users.js');
++const { exportUsersCsv, importUsersCsv } = require('../src/api/export.js');
++
++test('exports only the header when there are no users', () => {
++  const db = migrate(new Db());
++  assert.strictEqual(exportUsersCsv(db), 'id,email,fullName,createdAt,lastLogin\n');
++});
++
++test('exports one row per user under the header', () => {
++  const db = migrate(new Db());
++  const ada = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  db.tables.users.rows[0].created_at = '2024-01-01T00:00:00.000Z';
++  const lines = exportUsersCsv(db).split('\n');
++  assert.strictEqual(lines[0], 'id,email,fullName,createdAt,lastLogin');
++  assert.strictEqual(lines[1], `${ada.id},ada@example.com,Ada Lovelace,2024-01-01T00:00:00.000Z,`);
++  assert.strictEqual(lines[2], '');
++});
++
++test('quotes fields containing commas, quotes or line breaks', () => {
++  const db = migrate(new Db());
++  const u = createUser(db, { email: 'ada@example.com', fullName: 'Ada' });
++  updateUser(db, u.id, { fullName: 'Lovelace, "Ada"' });
++  const row = exportUsersCsv(db).split('\n')[1];
++  assert.ok(row.includes(',"Lovelace, ""Ada""",'));
++});
++
++test('exportUsersCsv requires a db', () => {
++  assert.throws(() => exportUsersCsv(undefined), { message: 'db is required' });
++});
++
++test('importUsersCsv round-trips an export, keeping ids, timestamps and logins', () => {
++  const db = migrate(new Db());
++  const ada = createUser(db, { email: 'ada@example.com', fullName: 'Lovelace, "Ada"' });
++  const alan = createUser(db, { email: 'alan@example.com', fullName: 'Alan\nTuring' });
++  recordLogin(db, ada.id, new Date('2024-05-01T12:00:00.000Z'));
++  const csv = exportUsersCsv(db);
++
++  const copy = migrate(new Db());
++  assert.strictEqual(importUsersCsv(copy, csv), 2);
++  assert.deepStrictEqual(listUsers(copy), listUsers(db));
++  assert.strictEqual(exportUsersCsv(copy), csv);
++  assert.strictEqual(listUsers(copy).find((u) => u.id === alan.id).lastLogin, null);
++});
++
++test('importUsersCsv rejects a file with the wrong header', () => {
++  const db = migrate(new Db());
++  assert.throws(() => importUsersCsv(db, 'name,email\nAda,ada@example.com\n'), /Unexpected CSV header/);
++});
++
++test('importUsersCsv applies the same rules as createUser', () => {
++  const db = migrate(new Db());
++  const header = 'id,email,fullName,createdAt,lastLogin\n';
++  assert.throws(() => importUsersCsv(db, `${header}1,no-at-sign,Ada,2024-01-01T00:00:00.000Z,\n`), /Invalid email/);
++  assert.throws(() => importUsersCsv(db, `${header}1,ada@example.com,,2024-01-01T00:00:00.000Z,\n`), /Invalid full name/);
++});
++
++test('importUsersCsv requires a db', () => {
++  assert.throws(() => importUsersCsv(undefined, 'id,email,fullName,createdAt,lastLogin\n'), { message: 'db is required' });
++});
+diff --git a/test/format.test.js b/test/format.test.js
+new file mode 100644
+index 0000000..fd79742
+--- /dev/null
++++ b/test/format.test.js
+@@ -0,0 +1,13 @@
++const test = require('node:test');
++const assert = require('node:assert');
++const { displayName } = require('../src/api/format.js');
++
++test('displayName uses the full name when there is one', () => {
++  assert.strictEqual(displayName({ email: 'ada@example.com', fullName: 'Ada Lovelace' }), 'Ada Lovelace');
++});
++
++test('displayName falls back to the email local part when fullName is empty', () => {
++  assert.strictEqual(displayName({ email: 'ada@example.com', fullName: '' }), 'ada');
++  assert.strictEqual(displayName({ email: 'ada@example.com', fullName: '   ' }), 'ada');
++  assert.strictEqual(displayName({ email: 'ada@example.com', fullName: null }), 'ada');
++});
+diff --git a/test/lib-arrays.test.js b/test/lib-arrays.test.js
+new file mode 100644
+index 0000000..5034e0c
+--- /dev/null
++++ b/test/lib-arrays.test.js
+@@ -0,0 +1,405 @@
++const test = require('node:test');
++const assert = require('node:assert');
++const { chunk, uniqueBy, groupBy, partition, zip, range, flattenDeep, sortBy, sample, windowed } = require('../src/lib/arrays.js');
++
++test('chunk splits an array into arrays of length n', () => {
++  assert.deepStrictEqual(chunk([1, 2, 3, 4], 2), [[1, 2], [3, 4]]);
++  assert.deepStrictEqual(chunk(['a', 'b', 'c'], 1), [['a'], ['b'], ['c']]);
++});
++
++test('chunk leaves a shorter last chunk when the length does not divide evenly', () => {
++  assert.deepStrictEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
++});
++
++test('chunk returns one chunk when n is at least the length', () => {
++  assert.deepStrictEqual(chunk([1, 2, 3], 3), [[1, 2, 3]]);
++  assert.deepStrictEqual(chunk([1, 2, 3], 10), [[1, 2, 3]]);
++});
++
++test('chunk returns an empty array for an empty input', () => {
++  assert.deepStrictEqual(chunk([], 3), []);
++});
++
++test('chunk returns new arrays and leaves the input unchanged', () => {
++  const xs = [1, 2, 3];
++  const out = chunk(xs, 2);
++  out[0].push(99);
++  assert.deepStrictEqual(xs, [1, 2, 3]);
++  assert.deepStrictEqual(out, [[1, 2, 99], [3]]);
++});
++
++test('uniqueBy keeps the first item for each key, in order', () => {
++  const people = [
++    { id: 1, name: 'Ada' },
++    { id: 2, name: 'Alan' },
++    { id: 1, name: 'Ada again' },
++  ];
++  assert.deepStrictEqual(uniqueBy(people, (p) => p.id), [
++    { id: 1, name: 'Ada' },
++    { id: 2, name: 'Alan' },
++  ]);
++});
++
++test('uniqueBy returns the input unchanged when every key is different', () => {
++  assert.deepStrictEqual(uniqueBy([3, 1, 2], (x) => x), [3, 1, 2]);
++});
++
++test('uniqueBy returns an empty array for an empty input', () => {
++  assert.deepStrictEqual(uniqueBy([], (x) => x), []);
++});
++
++test('uniqueBy compares keys like Set does, so NaN and -0 are handled', () => {
++  assert.deepStrictEqual(uniqueBy([NaN, NaN, 0, -0], (x) => x), [NaN, 0]);
++});
++
++test('uniqueBy keeps undefined and null items, deduplicating by key', () => {
++  assert.deepStrictEqual(uniqueBy([undefined, null, undefined], (x) => x), [undefined, null]);
++});
++
++test('uniqueBy does not modify the input and returns a new array', () => {
++  const xs = [1, 1, 2];
++  const out = uniqueBy(xs, (x) => x);
++  assert.deepStrictEqual(xs, [1, 1, 2]);
++  assert.notStrictEqual(out, xs);
++});
++
++test('uniqueBy throws for bad arguments', () => {
++  assert.throws(() => uniqueBy('abc', (x) => x), { message: 'Expected an array: abc' });
++  assert.throws(() => uniqueBy([1], undefined), { message: 'Expected a key function: undefined' });
++});
++
++test('groupBy groups items by key, keeping their order within each group', () => {
++  const people = [
++    { name: 'Ada', team: 'math' },
++    { name: 'Alan', team: 'crypto' },
++    { name: 'Grace', team: 'math' },
++  ];
++  assert.deepStrictEqual(groupBy(people, (p) => p.team), {
++    math: [people[0], people[2]],
++    crypto: [people[1]],
++  });
++});
++
++test('groupBy returns an empty object for an empty input', () => {
++  assert.deepStrictEqual(groupBy([], (x) => x), {});
++});
++
++test('groupBy converts keys to strings, so 1 and "1" share a group', () => {
++  assert.deepStrictEqual(groupBy([1, '1', 2], (x) => x), { 1: [1, '1'], 2: [2] });
++});
++
++test('groupBy uses "null" and "undefined" as keys', () => {
++  assert.deepStrictEqual(groupBy([null, undefined, null], (x) => x), { null: [null, null], undefined: [undefined] });
++});
++
++test('groupBy handles a key named __proto__ as an ordinary key', () => {
++  const groups = groupBy([{ k: '__proto__' }, { k: 'a' }], (x) => x.k);
++  assert.strictEqual(Object.getPrototypeOf(groups), Object.prototype);
++  assert.deepStrictEqual(Object.keys(groups), ['__proto__', 'a']);
++  assert.deepStrictEqual(groups['__proto__'], [{ k: '__proto__' }]);
++});
++
++test('groupBy does not modify the input', () => {
++  const xs = [1, 2, 3];
++  groupBy(xs, (x) => x % 2);
++  assert.deepStrictEqual(xs, [1, 2, 3]);
++});
++
++test('groupBy throws for bad arguments', () => {
++  assert.throws(() => groupBy({}, (x) => x), { message: 'Expected an array: [object Object]' });
++  assert.throws(() => groupBy([1], null), { message: 'Expected a key function: null' });
++});
++
++test('partition splits items into matching and not matching, keeping order', () => {
++  const [even, odd] = partition([1, 2, 3, 4, 5], (x) => x % 2 === 0);
++  assert.deepStrictEqual(even, [2, 4]);
++  assert.deepStrictEqual(odd, [1, 3, 5]);
++});
++
++test('partition treats any truthy result as a match', () => {
++  const [present, missing] = partition(['a', '', 'b', null, 0, 'c'], (x) => x);
++  assert.deepStrictEqual(present, ['a', 'b', 'c']);
++  assert.deepStrictEqual(missing, ['', null, 0]);
++});
++
++test('partition returns an empty pair for an empty input', () => {
++  assert.deepStrictEqual(partition([], () => true), [[], []]);
++});
++
++test('partition puts everything in one side when nothing or everything matches', () => {
++  assert.deepStrictEqual(partition([1, 2], () => true), [[1, 2], []]);
++  assert.deepStrictEqual(partition([1, 2], () => false), [[], [1, 2]]);
++});
++
++test('partition calls pred once per item and does not modify the input', () => {
++  const xs = [1, 2, 3];
++  const seen = [];
++  partition(xs, (x) => { seen.push(x); return x > 1; });
++  assert.deepStrictEqual(seen, [1, 2, 3]);
++  assert.deepStrictEqual(xs, [1, 2, 3]);
++});
++
++test('partition throws for bad arguments', () => {
++  assert.throws(() => partition('abc', (x) => x), { message: 'Expected an array: abc' });
++  assert.throws(() => partition([1], undefined), { message: 'Expected a predicate function: undefined' });
++});
++
++test('zip pairs items by position', () => {
++  assert.deepStrictEqual(zip([1, 2, 3], ['a', 'b', 'c']), [[1, 'a'], [2, 'b'], [3, 'c']]);
++});
++
++test('zip stops at the shorter array and drops the extra items', () => {
++  assert.deepStrictEqual(zip([1, 2, 3], ['a']), [[1, 'a']]);
++  assert.deepStrictEqual(zip(['a'], [1, 2, 3]), [['a', 1]]);
++});
++
++test('zip returns an empty array when either input is empty', () => {
++  assert.deepStrictEqual(zip([], [1, 2]), []);
++  assert.deepStrictEqual(zip([1, 2], []), []);
++  assert.deepStrictEqual(zip([], []), []);
++});
++
++test('zip keeps undefined and null items as values', () => {
++  assert.deepStrictEqual(zip([undefined, null], [null, undefined]), [[undefined, null], [null, undefined]]);
++});
++
++test('zip returns new pairs and does not modify the inputs', () => {
++  const a = [1, 2];
++  const b = ['x', 'y'];
++  const pairs = zip(a, b);
++  pairs[0][0] = 99;
++  assert.deepStrictEqual(a, [1, 2]);
++  assert.deepStrictEqual(b, ['x', 'y']);
++});
++
++test('zip throws for bad arguments', () => {
++  assert.throws(() => zip('ab', [1]), { message: 'Expected an array: ab' });
++  assert.throws(() => zip([1], undefined), { message: 'Expected an array: undefined' });
++});
++
++test('range counts up from start to end, excluding end', () => {
++  assert.deepStrictEqual(range(0, 5), [0, 1, 2, 3, 4]);
++  assert.deepStrictEqual(range(2, 5), [2, 3, 4]);
++});
++
++test('range moves by step', () => {
++  assert.deepStrictEqual(range(0, 10, 3), [0, 3, 6, 9]);
++  assert.deepStrictEqual(range(0, 1, 0.25), [0, 0.25, 0.5, 0.75]);
++});
++
++test('range counts down with a negative step', () => {
++  assert.deepStrictEqual(range(5, 0, -1), [5, 4, 3, 2, 1]);
++  assert.deepStrictEqual(range(0, -3, -1), [0, -1, -2]);
++  assert.deepStrictEqual(range(10, 0, -4), [10, 6, 2]);
++});
++
++test('range returns an empty array when end is already reached in the step direction', () => {
++  assert.deepStrictEqual(range(3, 3), []);
++  assert.deepStrictEqual(range(0, 10, -1), []);
++  assert.deepStrictEqual(range(5, 0), []);
++});
++
++test('range with a step larger than the distance gives just start', () => {
++  assert.deepStrictEqual(range(0, 5, 10), [0]);
++});
++
++test('range returns values with no drift from repeated addition', () => {
++  assert.strictEqual(range(0, 1, 0.1).length, 10);
++  assert.strictEqual(range(0, 1, 0.1)[9], 0.9);
++});
++
++test('range throws for bad arguments', () => {
++  assert.throws(() => range(0, 5, 0), { message: 'Expected a non-zero step' });
++  assert.throws(() => range(NaN, 5), { message: 'Expected a finite number for start: NaN' });
++  assert.throws(() => range(0, Infinity), { message: 'Expected a finite number for end: Infinity' });
++  assert.throws(() => range(0, 5, '1'), Error);
++  assert.throws(() => range(0), Error);
++});
++
++test('flattenDeep flattens one level and several levels of nesting', () => {
++  assert.deepStrictEqual(flattenDeep([1, [2, 3], 4]), [1, 2, 3, 4]);
++  assert.deepStrictEqual(flattenDeep([1, [2, [3, [4, [5]]]]]), [1, 2, 3, 4, 5]);
++});
++
++test('flattenDeep returns an empty array for an empty input or only empty arrays', () => {
++  assert.deepStrictEqual(flattenDeep([]), []);
++  assert.deepStrictEqual(flattenDeep([[], [[]], [[], []]]), []);
++});
++
++test('flattenDeep returns a flat array unchanged', () => {
++  assert.deepStrictEqual(flattenDeep([1, 2, 3]), [1, 2, 3]);
++});
++
++test('flattenDeep keeps non-array items, including strings and null, as they are', () => {
++  assert.deepStrictEqual(flattenDeep(['ab', [null, undefined], 0]), ['ab', null, undefined, 0]);
++});
++
++test('flattenDeep keeps object items by reference and does not unwrap them', () => {
++  const obj = { inner: [1] };
++  const out = flattenDeep([[obj]]);
++  assert.strictEqual(out.length, 1);
++  assert.strictEqual(out[0], obj);
++});
++
++test('flattenDeep treats holes in a sparse array as undefined', () => {
++  assert.deepStrictEqual(flattenDeep([1, , [2]]), [1, undefined, 2]);
++});
++
++test('flattenDeep handles the same array appearing twice without treating it as a cycle', () => {
++  const shared = [1, 2];
++  assert.deepStrictEqual(flattenDeep([shared, shared]), [1, 2, 1, 2]);
++});
++
++test('flattenDeep throws on a cyclic array', () => {
++  const xs = [1];
++  xs.push(xs);
++  assert.throws(() => flattenDeep(xs), { message: 'Cannot flatten a cyclic array' });
++  const a = [];
++  const b = [a];
++  a.push(b);
++  assert.throws(() => flattenDeep(a), { message: 'Cannot flatten a cyclic array' });
++});
++
++test('flattenDeep does not modify the input', () => {
++  const xs = [1, [2, [3]]];
++  flattenDeep(xs);
++  assert.deepStrictEqual(xs, [1, [2, [3]]]);
++});
++
++test('flattenDeep throws when the input is not an array', () => {
++  assert.throws(() => flattenDeep('abc'), { message: 'Expected an array: abc' });
++  assert.throws(() => flattenDeep(undefined), { message: 'Expected an array: undefined' });
++});
++
++test('sortBy sorts numbers and strings by key, smallest first', () => {
++  assert.deepStrictEqual(sortBy([3, 1, 2], (x) => x), [1, 2, 3]);
++  assert.deepStrictEqual(sortBy(['pear', 'apple', 'fig'], (s) => s), ['apple', 'fig', 'pear']);
++});
++
++test('sortBy sorts objects by a field', () => {
++  const people = [{ name: 'Grace', age: 85 }, { name: 'Ada', age: 36 }, { name: 'Alan', age: 41 }];
++  assert.deepStrictEqual(sortBy(people, (p) => p.age).map((p) => p.name), ['Ada', 'Alan', 'Grace']);
++});
++
++test('sortBy is stable, so equal keys keep their original order', () => {
++  const items = [{ k: 2, id: 'a' }, { k: 1, id: 'b' }, { k: 2, id: 'c' }, { k: 1, id: 'd' }];
++  assert.deepStrictEqual(sortBy(items, (x) => x.k).map((x) => x.id), ['b', 'd', 'a', 'c']);
++});
++
++test('sortBy sorts Dates by time', () => {
++  const dates = [new Date('2024-03-01'), new Date('2024-01-01'), new Date('2024-02-01')];
++  assert.deepStrictEqual(sortBy(dates, (d) => d).map((d) => d.toISOString().slice(0, 7)), ['2024-01', '2024-02', '2024-03']);
++});
++
++test('sortBy does not modify the input and returns a new array', () => {
++  const xs = [3, 1, 2];
++  const out = sortBy(xs, (x) => x);
++  assert.deepStrictEqual(xs, [3, 1, 2]);
++  assert.notStrictEqual(out, xs);
++});
++
++test('sortBy returns an empty array for an empty input and keeps a single item', () => {
++  assert.deepStrictEqual(sortBy([], (x) => x), []);
++  assert.deepStrictEqual(sortBy([7], (x) => x), [7]);
++});
++
++test('sortBy calls keyFn once per item', () => {
++  const calls = [];
++  sortBy([2, 1, 3], (x) => { calls.push(x); return x; });
++  assert.deepStrictEqual(calls.sort(), [1, 2, 3]);
++  assert.strictEqual(calls.length, 3);
++});
++
++test('sortBy throws for bad arguments', () => {
++  assert.throws(() => sortBy('abc', (x) => x), { message: 'Expected an array: abc' });
++  assert.throws(() => sortBy([1], 'x'), { message: 'Expected a key function: x' });
++});
++
++test('sample picks the item at the position the rng selects', () => {
++  const xs = ['a', 'b', 'c', 'd'];
++  assert.strictEqual(sample(xs, () => 0), 'a');
++  assert.strictEqual(sample(xs, () => 0.3), 'b');
++  assert.strictEqual(sample(xs, () => 0.5), 'c');
++  assert.strictEqual(sample(xs, () => 0.999), 'd');
++});
++
++test('sample calls rng once', () => {
++  let calls = 0;
++  sample([1, 2, 3], () => { calls++; return 0; });
++  assert.strictEqual(calls, 1);
++});
++
++test('sample returns undefined for an empty array without calling rng', () => {
++  let calls = 0;
++  assert.strictEqual(sample([], () => { calls++; return 0; }), undefined);
++  assert.strictEqual(calls, 0);
++});
++
++test('sample returns the only item of a one-item array', () => {
++  assert.strictEqual(sample([42], () => 0.99), 42);
++});
++
++test('sample returns an item from the array with the default Math.random', () => {
++  const xs = ['x', 'y', 'z'];
++  for (let i = 0; i < 50; i++) assert.ok(xs.includes(sample(xs)));
++});
++
++test('sample returns items that are not primitives by reference', () => {
++  const obj = { id: 1 };
++  assert.strictEqual(sample([obj], () => 0), obj);
++});
++
++test('sample does not modify the input', () => {
++  const xs = [1, 2, 3];
++  sample(xs, () => 0.5);
++  assert.deepStrictEqual(xs, [1, 2, 3]);
++});
++
++test('sample throws for bad arguments and bad rng results', () => {
++  assert.throws(() => sample('abc'), { message: 'Expected an array: abc' });
++  assert.throws(() => sample([1], 'x'), { message: 'Expected a random function: x' });
++  assert.throws(() => sample([1], () => 1), { message: 'Expected rng to return a number in [0, 1): 1' });
++  assert.throws(() => sample([1], () => -0.1), Error);
++  assert.throws(() => sample([1], () => NaN), Error);
++  assert.throws(() => sample([1], () => '0'), Error);
++});
++
++test('windowed returns every run of n consecutive items', () => {
++  assert.deepStrictEqual(windowed([1, 2, 3, 4], 2), [[1, 2], [2, 3], [3, 4]]);
++  assert.deepStrictEqual(windowed(['a', 'b', 'c'], 3), [['a', 'b', 'c']]);
++});
++
++test('windowed with n of 1 gives each item on its own', () => {
++  assert.deepStrictEqual(windowed([1, 2, 3], 1), [[1], [2], [3]]);
++});
++
++test('windowed returns no windows when n is longer than the array', () => {
++  assert.deepStrictEqual(windowed([1, 2], 3), []);
++});
++
++test('windowed returns an empty array for an empty input', () => {
++  assert.deepStrictEqual(windowed([], 2), []);
++});
++
++test('windowed returns new arrays and does not modify the input', () => {
++  const xs = [1, 2, 3];
++  const out = windowed(xs, 2);
++  out[0][0] = 99;
++  assert.deepStrictEqual(xs, [1, 2, 3]);
++  assert.deepStrictEqual(out, [[99, 2], [2, 3]]);
++});
++
++test('windowed throws for bad arguments', () => {
++  assert.throws(() => windowed('abc', 2), { message: 'Expected an array: abc' });
++  assert.throws(() => windowed([1], 0), { message: 'Expected a positive integer window size: 0' });
++  assert.throws(() => windowed([1], 1.5), Error);
++  assert.throws(() => windowed([1], '2'), Error);
++});
++
++test('chunk throws for bad arguments', () => {
++  assert.throws(() => chunk('abc', 2), { message: 'Expected an array: abc' });
++  assert.throws(() => chunk(undefined, 2), { message: 'Expected an array: undefined' });
++  assert.throws(() => chunk([1, 2], 0), { message: 'Expected a positive integer size: 0' });
++  assert.throws(() => chunk([1, 2], 1.5), Error);
++  assert.throws(() => chunk([1, 2], '2'), Error);
++});
+diff --git a/test/lib-dates.test.js b/test/lib-dates.test.js
+new file mode 100644
+index 0000000..d81b3d6
+--- /dev/null
++++ b/test/lib-dates.test.js
+@@ -0,0 +1,370 @@
++const test = require('node:test');
++const assert = require('node:assert');
++const { addDays, daysBetween, isWeekend, startOfWeek, formatIsoDate, parseIsoDate, ageOn, relativeTime } = require('../src/lib/dates.js');
++
++// Dates are built with the local-time constructor so these tests pass in any time zone.
++const ymd = (d) => [d.getFullYear(), d.getMonth() + 1, d.getDate()];
++// Dates for the UTC tests, built so that the time zone of the machine does not matter.
++const utc = (y, m, d, h = 0, min = 0) => new Date(Date.UTC(y, m - 1, d, h, min));
++
++test('addDays moves forward by the given number of days', () => {
++  assert.deepStrictEqual(ymd(addDays(new Date(2024, 2, 10), 5)), [2024, 3, 15]);
++  assert.deepStrictEqual(ymd(addDays(new Date(2024, 2, 10), 1)), [2024, 3, 11]);
++});
++
++test('addDays crosses month and year boundaries', () => {
++  assert.deepStrictEqual(ymd(addDays(new Date(2024, 0, 31), 1)), [2024, 2, 1]);
++  assert.deepStrictEqual(ymd(addDays(new Date(2024, 11, 31), 1)), [2025, 1, 1]);
++});
++
++test('addDays handles leap days', () => {
++  assert.deepStrictEqual(ymd(addDays(new Date(2024, 1, 28), 1)), [2024, 2, 29]);
++  assert.deepStrictEqual(ymd(addDays(new Date(2024, 1, 28), 2)), [2024, 3, 1]);
++  assert.deepStrictEqual(ymd(addDays(new Date(2023, 1, 28), 1)), [2023, 3, 1]);
++});
++
++test('addDays moves backward for a negative number of days', () => {
++  assert.deepStrictEqual(ymd(addDays(new Date(2024, 2, 1), -1)), [2024, 2, 29]);
++  assert.deepStrictEqual(ymd(addDays(new Date(2025, 0, 1), -1)), [2024, 12, 31]);
++  assert.deepStrictEqual(ymd(addDays(new Date(2024, 2, 10), -10)), [2024, 2, 29]);
++});
++
++test('addDays with zero returns an equal date that is a new object', () => {
++  const d = new Date(2024, 4, 5, 10, 30);
++  const out = addDays(d, 0);
++  assert.strictEqual(out.getTime(), d.getTime());
++  assert.notStrictEqual(out, d);
++});
++
++test('addDays keeps the local time of day, including across a daylight saving change', () => {
++  const d = new Date(2024, 0, 15, 12, 0, 0);
++  const out = addDays(d, 180);
++  assert.strictEqual(out.getHours(), 12);
++  assert.strictEqual(out.getMinutes(), 0);
++});
++
++test('addDays does not modify the input', () => {
++  const d = new Date(2024, 0, 31);
++  const before = d.getTime();
++  addDays(d, 10);
++  assert.strictEqual(d.getTime(), before);
++});
++
++test('addDays throws for an invalid Date or a non-Date', () => {
++  assert.throws(() => addDays(new Date('not a date'), 1), { message: 'Expected a valid Date: Invalid Date' });
++  assert.throws(() => addDays('2024-01-01', 1), { message: 'Expected a valid Date: 2024-01-01' });
++  assert.throws(() => addDays(undefined, 1), Error);
++});
++
++test('addDays throws for a non-integer number of days', () => {
++  const d = new Date(2024, 0, 1);
++  assert.throws(() => addDays(d, 1.5), { message: 'Expected a safe integer number of days: 1.5' });
++  assert.throws(() => addDays(d, '1'), Error);
++  assert.throws(() => addDays(d, NaN), Error);
++  assert.throws(() => addDays(d, Infinity), Error);
++});
++
++test('daysBetween counts whole days forward and backward', () => {
++  assert.strictEqual(daysBetween(utc(2024, 1, 1), utc(2024, 1, 31)), 30);
++  assert.strictEqual(daysBetween(utc(2024, 1, 31), utc(2024, 1, 1)), -30);
++});
++
++test('daysBetween counts across leap days and year boundaries', () => {
++  assert.strictEqual(daysBetween(utc(2024, 2, 28), utc(2024, 3, 1)), 2);
++  assert.strictEqual(daysBetween(utc(2023, 2, 28), utc(2023, 3, 1)), 1);
++  assert.strictEqual(daysBetween(utc(2024, 12, 31), utc(2025, 1, 1)), 1);
++});
++
++test('daysBetween over several years counts the leap days', () => {
++  assert.strictEqual(daysBetween(utc(2000, 1, 1), utc(2024, 1, 1)), 8766);
++});
++
++test('daysBetween ignores the time of day', () => {
++  assert.strictEqual(daysBetween(utc(2024, 1, 1, 0, 1), utc(2024, 1, 1, 23, 59)), 0);
++});
++
++test('daysBetween counts a UTC midnight crossing as one day even when the instants are minutes apart', () => {
++  assert.strictEqual(daysBetween(utc(2024, 1, 1, 23, 59), utc(2024, 1, 2, 0, 1)), 1);
++});
++
++test('daysBetween of a date with itself is 0', () => {
++  const d = utc(2024, 5, 5, 10, 30);
++  assert.strictEqual(daysBetween(d, d), 0);
++});
++
++test('daysBetween returns an integer', () => {
++  assert.strictEqual(Number.isInteger(daysBetween(utc(2024, 1, 1, 6), utc(2024, 3, 9, 18))), true);
++});
++
++test('daysBetween does not modify its inputs', () => {
++  const a = utc(2024, 1, 1, 9);
++  const b = utc(2024, 1, 5, 9);
++  daysBetween(a, b);
++  assert.strictEqual(a.getTime(), utc(2024, 1, 1, 9).getTime());
++  assert.strictEqual(b.getTime(), utc(2024, 1, 5, 9).getTime());
++});
++
++test('daysBetween throws for an invalid Date or a non-Date', () => {
++  assert.throws(() => daysBetween(new Date('nope'), utc(2024, 1, 1)), { message: 'Expected a valid Date: Invalid Date' });
++  assert.throws(() => daysBetween(utc(2024, 1, 1), '2024-01-02'), { message: 'Expected a valid Date: 2024-01-02' });
++  assert.throws(() => daysBetween(undefined, utc(2024, 1, 1)), Error);
++});
++
++test('isWeekend is true on Saturday and Sunday', () => {
++  assert.strictEqual(isWeekend(utc(2024, 1, 6)), true); // Saturday
++  assert.strictEqual(isWeekend(utc(2024, 1, 7)), true); // Sunday
++});
++
++test('isWeekend is false Monday to Friday', () => {
++  for (let day = 8; day <= 12; day++) assert.strictEqual(isWeekend(utc(2024, 1, day)), false, `Jan ${day}`);
++});
++
++test('isWeekend ignores the time of day, so the whole Saturday and Sunday count', () => {
++  assert.strictEqual(isWeekend(utc(2024, 1, 6, 0, 0)), true);
++  assert.strictEqual(isWeekend(utc(2024, 1, 7, 23, 59)), true);
++  assert.strictEqual(isWeekend(utc(2024, 1, 5, 23, 59)), false);
++});
++
++test('isWeekend uses the UTC day, not the local day', () => {
++  // 23:30 UTC on Friday 5 January is already Saturday in UTC+2 but is still Friday in UTC.
++  const fridayNightUtc = utc(2024, 1, 5, 23, 30);
++  assert.strictEqual(isWeekend(fridayNightUtc), false);
++});
++
++test('isWeekend is true across the weekend boundary in both directions', () => {
++  // Sunday to Monday: Monday 00:00 UTC is a weekday; Sunday 23:59 UTC is still the weekend.
++  assert.strictEqual(isWeekend(utc(2024, 1, 8, 0, 0)), false);
++  assert.strictEqual(isWeekend(utc(2024, 1, 7, 23, 59)), true);
++});
++
++test('isWeekend throws for an invalid Date or a non-Date', () => {
++  assert.throws(() => isWeekend(new Date('nope')), { message: 'Expected a valid Date: Invalid Date' });
++  assert.throws(() => isWeekend('2024-01-06'), { message: 'Expected a valid Date: 2024-01-06' });
++  assert.throws(() => isWeekend(undefined), Error);
++});
++
++test('startOfWeek returns the Monday of the same week', () => {
++  assert.strictEqual(startOfWeek(utc(2024, 1, 10)).toISOString(), '2024-01-08T00:00:00.000Z'); // Wednesday
++  assert.strictEqual(startOfWeek(utc(2024, 1, 12)).toISOString(), '2024-01-08T00:00:00.000Z'); // Friday
++});
++
++test('startOfWeek of a Monday is that Monday at midnight UTC', () => {
++  assert.strictEqual(startOfWeek(utc(2024, 1, 8)).toISOString(), '2024-01-08T00:00:00.000Z');
++  assert.strictEqual(startOfWeek(utc(2024, 1, 8, 9, 30)).toISOString(), '2024-01-08T00:00:00.000Z');
++});
++
++test('startOfWeek of a Saturday or Sunday is the Monday six or five days earlier', () => {
++  assert.strictEqual(startOfWeek(utc(2024, 1, 6)).toISOString(), '2024-01-01T00:00:00.000Z'); // Saturday
++  assert.strictEqual(startOfWeek(utc(2024, 1, 7, 23, 59)).toISOString(), '2024-01-01T00:00:00.000Z'); // Sunday
++});
++
++test('startOfWeek drops the time of day and gives midnight UTC', () => {
++  assert.strictEqual(startOfWeek(utc(2024, 1, 10, 15, 45, 0)).toISOString(), '2024-01-08T00:00:00.000Z');
++});
++
++test('startOfWeek crosses month and year boundaries', () => {
++  assert.strictEqual(startOfWeek(utc(2025, 1, 1)).toISOString(), '2024-12-30T00:00:00.000Z');
++  assert.strictEqual(startOfWeek(utc(2024, 3, 1)).toISOString(), '2024-02-26T00:00:00.000Z');
++});
++
++test('startOfWeek returns a new object and does not modify the input', () => {
++  const d = utc(2024, 1, 10, 15);
++  const out = startOfWeek(d);
++  assert.notStrictEqual(out, d);
++  assert.strictEqual(d.getTime(), utc(2024, 1, 10, 15).getTime());
++});
++
++test('startOfWeek is always a Monday', () => {
++  for (let day = 1; day <= 31; day++) assert.strictEqual(startOfWeek(utc(2024, 1, day)).getUTCDay(), 1, `Jan ${day}`);
++});
++
++test('startOfWeek throws for an invalid Date or a non-Date', () => {
++  assert.throws(() => startOfWeek(new Date('nope')), { message: 'Expected a valid Date: Invalid Date' });
++  assert.throws(() => startOfWeek('2024-01-10'), { message: 'Expected a valid Date: 2024-01-10' });
++  assert.throws(() => startOfWeek(undefined), Error);
++});
++
++test('formatIsoDate writes the UTC date as YYYY-MM-DD', () => {
++  assert.strictEqual(formatIsoDate(utc(2024, 3, 9)), '2024-03-09');
++  assert.strictEqual(formatIsoDate(utc(2024, 12, 31)), '2024-12-31');
++});
++
++test('formatIsoDate drops the time of day, using the UTC date on either side of midnight', () => {
++  assert.strictEqual(formatIsoDate(utc(2024, 12, 31, 23, 59)), '2024-12-31');
++  assert.strictEqual(formatIsoDate(utc(2025, 1, 1, 0, 0)), '2025-01-01');
++});
++
++test('formatIsoDate pads the year, month and day with zeros', () => {
++  const year1 = new Date(Date.UTC(2000, 0, 1));
++  year1.setUTCFullYear(1, 0, 1);
++  assert.strictEqual(formatIsoDate(year1), '0001-01-01');
++  assert.strictEqual(formatIsoDate(utc(9999, 12, 31)), '9999-12-31');
++});
++
++test('formatIsoDate keeps two-digit years as written, unlike Date.UTC', () => {
++  // Date.UTC maps years 0 to 99 to 1900 to 1999, so the year is set directly here.
++  const d = new Date(Date.UTC(2000, 0, 1));
++  d.setUTCFullYear(99, 0, 1);
++  assert.strictEqual(formatIsoDate(d), '0099-01-01');
++});
++
++test('formatIsoDate throws for years that YYYY cannot show', () => {
++  const d = new Date(Date.UTC(2000, 0, 1));
++  d.setUTCFullYear(10000, 0, 1);
++  assert.throws(() => formatIsoDate(d), { message: 'Year 10000 cannot be written as YYYY' });
++  d.setUTCFullYear(-1, 0, 1);
++  assert.throws(() => formatIsoDate(d), { message: 'Year -1 cannot be written as YYYY' });
++});
++
++test('formatIsoDate does not modify its input and returns a string', () => {
++  const d = utc(2024, 5, 5, 10);
++  assert.strictEqual(typeof formatIsoDate(d), 'string');
++  assert.strictEqual(d.getTime(), utc(2024, 5, 5, 10).getTime());
++});
++
++test('formatIsoDate throws for an invalid Date or a non-Date', () => {
++  assert.throws(() => formatIsoDate(new Date('nope')), { message: 'Expected a valid Date: Invalid Date' });
++  assert.throws(() => formatIsoDate('2024-01-10'), { message: 'Expected a valid Date: 2024-01-10' });
++  assert.throws(() => formatIsoDate(undefined), Error);
++});
++
++test('parseIsoDate returns midnight UTC on the named day', () => {
++  assert.strictEqual(parseIsoDate('2024-03-09').toISOString(), '2024-03-09T00:00:00.000Z');
++  assert.strictEqual(parseIsoDate('1999-12-31').toISOString(), '1999-12-31T00:00:00.000Z');
++});
++
++test('parseIsoDate accepts leap days in leap years and rejects them otherwise', () => {
++  assert.strictEqual(parseIsoDate('2024-02-29').toISOString(), '2024-02-29T00:00:00.000Z');
++  assert.strictEqual(parseIsoDate('2000-02-29').toISOString(), '2000-02-29T00:00:00.000Z');
++  assert.throws(() => parseIsoDate('2023-02-29'), { message: 'Invalid ISO date: 2023-02-29' });
++  assert.throws(() => parseIsoDate('1900-02-29'), { message: 'Invalid ISO date: 1900-02-29' });
++});
++
++test('parseIsoDate rejects impossible days and months', () => {
++  assert.throws(() => parseIsoDate('2026-02-30'), { message: 'Invalid ISO date: 2026-02-30' });
++  assert.throws(() => parseIsoDate('2024-04-31'), { message: 'Invalid ISO date: 2024-04-31' });
++  assert.throws(() => parseIsoDate('2024-13-01'), { message: 'Invalid ISO date: 2024-13-01' });
++  assert.throws(() => parseIsoDate('2024-00-10'), { message: 'Invalid ISO date: 2024-00-10' });
++  assert.throws(() => parseIsoDate('2024-01-00'), { message: 'Invalid ISO date: 2024-01-00' });
++});
++
++test('parseIsoDate rejects anything that is not exactly YYYY-MM-DD', () => {
++  for (const s of ['', '2024-1-5', '24-01-05', '2024/01/05', '20240105', ' 2024-01-05', '2024-01-05 ',
++    '2024-01-05T00:00:00Z', '+2024-01-05', '2024-01-05\n', 'Jan 5 2024']) {
++    assert.throws(() => parseIsoDate(s), { message: `Invalid ISO date: ${s}` }, JSON.stringify(s));
++  }
++});
++
++test('parseIsoDate throws when the input is not a string', () => {
++  assert.throws(() => parseIsoDate(20240105), { message: 'Expected a string: 20240105' });
++  assert.throws(() => parseIsoDate(null), { message: 'Expected a string: null' });
++});
++
++test('parseIsoDate handles years 0000 to 0099 without the Date.UTC two-digit mapping', () => {
++  assert.strictEqual(parseIsoDate('0050-06-15').getUTCFullYear(), 50);
++  assert.strictEqual(parseIsoDate('0000-01-01').getUTCFullYear(), 0);
++});
++
++test('parseIsoDate round-trips with formatIsoDate', () => {
++  for (const s of ['0001-01-01', '0099-12-31', '1970-01-01', '2024-02-29', '9999-12-31']) {
++    assert.strictEqual(formatIsoDate(parseIsoDate(s)), s);
++  }
++});
++
++test('ageOn counts whole years, going up on the birthday', () => {
++  assert.strictEqual(ageOn(utc(1990, 6, 15), utc(2024, 6, 14)), 33);
++  assert.strictEqual(ageOn(utc(1990, 6, 15), utc(2024, 6, 15)), 34);
++  assert.strictEqual(ageOn(utc(1990, 6, 15), utc(2024, 6, 16)), 34);
++});
++
++test('ageOn handles a birthday late in the year', () => {
++  assert.strictEqual(ageOn(utc(1990, 12, 31), utc(2024, 12, 30)), 33);
++  assert.strictEqual(ageOn(utc(1990, 12, 31), utc(2024, 12, 31)), 34);
++});
++
++test('ageOn is 0 on the day of birth and for a newborn within its first year', () => {
++  assert.strictEqual(ageOn(utc(2024, 1, 1), utc(2024, 1, 1)), 0);
++  assert.strictEqual(ageOn(utc(2024, 1, 1), utc(2024, 12, 31)), 0);
++});
++
++test('ageOn ignores the time of day', () => {
++  assert.strictEqual(ageOn(utc(1990, 6, 15, 23, 0), utc(2024, 6, 15, 1, 0)), 34);
++});
++
++test('ageOn counts a 29 February birthday as 1 March in years without one', () => {
++  const birth = utc(2000, 2, 29);
++  assert.strictEqual(ageOn(birth, utc(2023, 2, 28)), 22);
++  assert.strictEqual(ageOn(birth, utc(2023, 3, 1)), 23);
++});
++
++test('ageOn counts a 29 February birthday on 29 February in leap years', () => {
++  const birth = utc(2000, 2, 29);
++  assert.strictEqual(ageOn(birth, utc(2024, 2, 28)), 23);
++  assert.strictEqual(ageOn(birth, utc(2024, 2, 29)), 24);
++});
++
++test('ageOn throws when the date is before the birth date', () => {
++  assert.throws(() => ageOn(utc(2024, 1, 2), utc(2024, 1, 1)), { message: 'Date is before the birth date' });
++});
++
++test('ageOn throws for an invalid Date or a non-Date', () => {
++  assert.throws(() => ageOn(new Date('nope'), utc(2024, 1, 1)), { message: 'Expected a valid Date: Invalid Date' });
++  assert.throws(() => ageOn(utc(1990, 1, 1), '2024-01-01'), { message: 'Expected a valid Date: 2024-01-01' });
++  assert.throws(() => ageOn(undefined, utc(2024, 1, 1)), Error);
++});
++
++// A fixed reference time, so the phrases do not depend on when the tests run.
++const NOW = utc(2024, 2, 10, 12, 0, 0);
++const before = (ms) => new Date(NOW.getTime() - ms);
++const after = (ms) => new Date(NOW.getTime() + ms);
++const MIN = 60 * 1000;
++const HOUR = 60 * MIN;
++const DAY = 24 * HOUR;
++
++test('relativeTime says "ago" for past dates and "in" for future ones', () => {
++  assert.strictEqual(relativeTime(before(3 * MIN), NOW), '3 minutes ago');
++  assert.strictEqual(relativeTime(after(2 * DAY), NOW), 'in 2 days');
++  assert.strictEqual(relativeTime(after(HOUR), NOW), 'in 1 hour');
++});
++
++test('relativeTime uses the singular for a count of one', () => {
++  assert.strictEqual(relativeTime(before(MIN), NOW), '1 minute ago');
++  assert.strictEqual(relativeTime(before(DAY), NOW), '1 day ago');
++  assert.strictEqual(relativeTime(after(1000), NOW), 'in 1 second');
++});
++
++test('relativeTime reads differences under one second as "just now"', () => {
++  assert.strictEqual(relativeTime(NOW, NOW), 'just now');
++  assert.strictEqual(relativeTime(before(500), NOW), 'just now');
++  assert.strictEqual(relativeTime(after(999), NOW), 'just now');
++});
++
++test('relativeTime picks the largest unit that fits and rounds the count down', () => {
++  assert.strictEqual(relativeTime(before(59 * 1000 + 999), NOW), '59 seconds ago');
++  assert.strictEqual(relativeTime(before(60 * 1000), NOW), '1 minute ago');
++  assert.strictEqual(relativeTime(before(59 * MIN + 59 * 1000), NOW), '59 minutes ago');
++  assert.strictEqual(relativeTime(before(90 * MIN), NOW), '1 hour ago');
++  assert.strictEqual(relativeTime(before(23 * HOUR + 59 * MIN), NOW), '23 hours ago');
++});
++
++test('relativeTime uses days up to 30, then months, then years', () => {
++  assert.strictEqual(relativeTime(before(29 * DAY), NOW), '29 days ago');
++  assert.strictEqual(relativeTime(before(30 * DAY), NOW), '1 month ago');
++  assert.strictEqual(relativeTime(before(364 * DAY), NOW), '12 months ago');
++  assert.strictEqual(relativeTime(before(365 * DAY), NOW), '1 year ago');
++  assert.strictEqual(relativeTime(after(2 * 365 * DAY), NOW), 'in 2 years');
++});
++
++test('relativeTime uses the current time when no reference is given', () => {
++  assert.strictEqual(relativeTime(new Date(Date.now() - 3 * MIN)), '3 minutes ago');
++});
++
++test('relativeTime throws for an invalid Date or a non-Date', () => {
++  assert.throws(() => relativeTime(new Date('nope'), NOW), { message: 'Expected a valid Date: Invalid Date' });
++  assert.throws(() => relativeTime(NOW, '2024-03-10'), { message: 'Expected a valid Date: 2024-03-10' });
++  assert.throws(() => relativeTime(undefined, NOW), Error);
++});
++
++test('addDays throws when the result is outside the range of Date', () => {
++  assert.throws(() => addDays(new Date(2024, 0, 1), 1e8), { message: 'Result is outside the range of Date: 100000000 days' });
++});
+diff --git a/test/lib-numbers.test.js b/test/lib-numbers.test.js
+new file mode 100644
+index 0000000..e09e329
+--- /dev/null
++++ b/test/lib-numbers.test.js
+@@ -0,0 +1,443 @@
++const test = require('node:test');
++const assert = require('node:assert');
++const { clamp, roundTo, mean, median, percentile, formatBytes, isPrime, gcd, toRoman, fromRoman } = require('../src/lib/numbers.js');
++
++test('clamp returns x when it is already within the range', () => {
++  assert.strictEqual(clamp(5, 0, 10), 5);
++  assert.strictEqual(clamp(0.5, 0, 1), 0.5);
++});
++
++test('clamp raises x to lo when it is below the range', () => {
++  assert.strictEqual(clamp(-3, 0, 10), 0);
++});
++
++test('clamp lowers x to hi when it is above the range', () => {
++  assert.strictEqual(clamp(42, 0, 10), 10);
++});
++
++test('clamp returns the bounds themselves unchanged', () => {
++  assert.strictEqual(clamp(0, 0, 10), 0);
++  assert.strictEqual(clamp(10, 0, 10), 10);
++});
++
++test('clamp with lo equal to hi always returns that value', () => {
++  assert.strictEqual(clamp(-1, 3, 3), 3);
++  assert.strictEqual(clamp(3, 3, 3), 3);
++  assert.strictEqual(clamp(9, 3, 3), 3);
++});
++
++test('clamp accepts infinite bounds and values', () => {
++  assert.strictEqual(clamp(-Infinity, 0, 10), 0);
++  assert.strictEqual(clamp(Infinity, 0, 10), 10);
++  assert.strictEqual(clamp(5, -Infinity, Infinity), 5);
++  assert.strictEqual(clamp(5, 0, Infinity), 5);
++});
++
++test('clamp works with negative ranges', () => {
++  assert.strictEqual(clamp(-5, -10, -1), -5);
++  assert.strictEqual(clamp(0, -10, -1), -1);
++});
++
++test('clamp throws when lo is greater than hi', () => {
++  assert.throws(() => clamp(5, 10, 0), { message: 'Expected lo to be at most hi: 10 > 0' });
++});
++
++test('roundTo rounds to the given number of places', () => {
++  assert.strictEqual(roundTo(1.2345, 3), 1.235);
++  assert.strictEqual(roundTo(1.2344, 3), 1.234);
++  assert.strictEqual(roundTo(3.14159, 2), 3.14);
++});
++
++test('roundTo rounds halves away from zero', () => {
++  assert.strictEqual(roundTo(2.5, 0), 3);
++  assert.strictEqual(roundTo(-2.5, 0), -3);
++  assert.strictEqual(roundTo(0.125, 2), 0.13);
++  assert.strictEqual(roundTo(-0.125, 2), -0.13);
++});
++
++test('roundTo rounds decimal halves correctly despite binary floating point', () => {
++  assert.strictEqual(roundTo(1.005, 2), 1.01);
++  assert.strictEqual(roundTo(0.1 + 0.2, 1), 0.3);
++});
++
++test('roundTo with zero places rounds to a whole number', () => {
++  assert.strictEqual(roundTo(7.6, 0), 8);
++  assert.strictEqual(roundTo(-7.4, 0), -7);
++});
++
++test('roundTo with negative places rounds to tens, hundreds and so on', () => {
++  assert.strictEqual(roundTo(123.456, -1), 120);
++  assert.strictEqual(roundTo(-155, -1), -160);
++  assert.strictEqual(roundTo(1550, -3), 2000);
++});
++
++test('roundTo leaves a number unchanged when it has no more digits than places', () => {
++  assert.strictEqual(roundTo(5, 2), 5);
++  assert.strictEqual(roundTo(-0.25, 5), -0.25);
++});
++
++test('roundTo handles numbers written in exponent form', () => {
++  assert.strictEqual(roundTo(1.5e-7, 7), 2e-7);
++  assert.strictEqual(roundTo(1e-7, 3), 0);
++  assert.strictEqual(roundTo(1.23e21, 0), 1.23e21);
++});
++
++test('roundTo returns 0, not -0, for a negative value that rounds to zero', () => {
++  assert.strictEqual(Object.is(roundTo(-0.4, 0), 0), true);
++});
++
++test('roundTo throws for non-finite x or non-integer places', () => {
++  assert.throws(() => roundTo(NaN, 2), { message: 'Expected a finite number: NaN' });
++  assert.throws(() => roundTo(Infinity, 2), { message: 'Expected a finite number: Infinity' });
++  assert.throws(() => roundTo('1.5', 0), Error);
++  assert.throws(() => roundTo(1.5, 1.5), { message: 'Expected an integer number of places: 1.5' });
++});
++
++test('mean returns the arithmetic mean', () => {
++  assert.strictEqual(mean([1, 2, 3, 4]), 2.5);
++  assert.strictEqual(mean([2, 4, 6]), 4);
++  assert.strictEqual(mean([-1, 1]), 0);
++});
++
++test('mean of a single item is that item', () => {
++  assert.strictEqual(mean([7]), 7);
++});
++
++test('mean of an empty array is NaN', () => {
++  assert.strictEqual(Number.isNaN(mean([])), true);
++});
++
++test('mean follows the arithmetic for NaN and infinite items', () => {
++  assert.strictEqual(Number.isNaN(mean([1, NaN])), true);
++  assert.strictEqual(mean([1, Infinity]), Infinity);
++  assert.strictEqual(Number.isNaN(mean([Infinity, -Infinity])), true);
++});
++
++test('mean does not modify the input', () => {
++  const xs = [1, 2, 3];
++  mean(xs);
++  assert.deepStrictEqual(xs, [1, 2, 3]);
++});
++
++test('mean throws for a non-array or a non-number item', () => {
++  assert.throws(() => mean('123'), { message: 'Expected an array: 123' });
++  assert.throws(() => mean([1, '2']), { message: 'Expected a number item: 2' });
++  assert.throws(() => mean([1, null]), { message: 'Expected a number item: null' });
++});
++
++test('median of an odd count is the middle value', () => {
++  assert.strictEqual(median([1, 2, 3]), 2);
++  assert.strictEqual(median([5, 1, 3, 9, 7]), 5);
++});
++
++test('median of an even count is the average of the two middle values', () => {
++  assert.strictEqual(median([1, 2, 3, 4]), 2.5);
++  assert.strictEqual(median([4, 1, 3, 2]), 2.5);
++});
++
++test('median of a single item is that item', () => {
++  assert.strictEqual(median([7]), 7);
++});
++
++test('median handles duplicates and negative numbers', () => {
++  assert.strictEqual(median([2, 2, 2, 9]), 2);
++  assert.strictEqual(median([-5, -1, -3]), -3);
++  assert.strictEqual(median([-2, 2]), 0);
++});
++
++test('median sorts numerically, not as strings', () => {
++  assert.strictEqual(median([10, 9, 100]), 10);
++});
++
++test('median of an empty array is NaN', () => {
++  assert.strictEqual(Number.isNaN(median([])), true);
++});
++
++test('median is NaN when an item is NaN', () => {
++  assert.strictEqual(Number.isNaN(median([1, NaN, 3])), true);
++});
++
++test('median with infinite items orders them correctly', () => {
++  assert.strictEqual(median([Infinity, 1, -Infinity]), 1);
++});
++
++test('median does not overflow for two very large middle values', () => {
++  assert.strictEqual(median([Number.MAX_VALUE, Number.MAX_VALUE]), Number.MAX_VALUE);
++});
++
++test('median does not modify the input', () => {
++  const xs = [3, 1, 2];
++  median(xs);
++  assert.deepStrictEqual(xs, [3, 1, 2]);
++});
++
++test('median throws for a non-array or a non-number item', () => {
++  assert.throws(() => median('123'), { message: 'Expected an array: 123' });
++  assert.throws(() => median([1, '2']), { message: 'Expected a number item: 2' });
++});
++
++test('percentile interpolates linearly between the two nearest ranks', () => {
++  assert.strictEqual(percentile([1, 2, 3, 4], 50), 2.5);
++  assert.strictEqual(percentile([1, 2, 3, 4], 25), 1.75);
++  assert.strictEqual(percentile([10, 20, 30], 75), 25);
++});
++
++test('percentile 0 and 100 give the smallest and largest items', () => {
++  assert.strictEqual(percentile([3, 1, 4, 1, 5], 0), 1);
++  assert.strictEqual(percentile([3, 1, 4, 1, 5], 100), 5);
++});
++
++test('percentile returns an item exactly when the rank lands on it', () => {
++  assert.strictEqual(percentile([1, 2, 3, 4, 5], 50), 3);
++  assert.strictEqual(percentile([1, 2, 3, 4, 5], 25), 2);
++});
++
++test('percentile sorts numerically and does not modify the input', () => {
++  const xs = [10, 9, 100];
++  assert.strictEqual(percentile(xs, 50), 10);
++  assert.deepStrictEqual(xs, [10, 9, 100]);
++});
++
++test('percentile of a single item is that item for any p', () => {
++  assert.strictEqual(percentile([7], 0), 7);
++  assert.strictEqual(percentile([7], 37), 7);
++  assert.strictEqual(percentile([7], 100), 7);
++});
++
++test('percentile handles duplicates', () => {
++  assert.strictEqual(percentile([2, 2, 2, 9], 50), 2);
++});
++
++test('percentile with infinite items', () => {
++  assert.strictEqual(percentile([1, Infinity], 100), Infinity);
++  assert.strictEqual(percentile([1, Infinity], 0), 1);
++  assert.strictEqual(percentile([1, Infinity], 50), Infinity);
++});
++
++test('percentile of an empty array is NaN', () => {
++  assert.strictEqual(Number.isNaN(percentile([], 50)), true);
++});
++
++test('percentile is NaN when an item is NaN', () => {
++  assert.strictEqual(Number.isNaN(percentile([1, NaN], 50)), true);
++});
++
++test('percentile does not overflow for two very large neighbours', () => {
++  assert.strictEqual(percentile([Number.MAX_VALUE, Number.MAX_VALUE], 50), Number.MAX_VALUE);
++});
++
++test('percentile throws for bad arguments', () => {
++  assert.throws(() => percentile('123', 50), { message: 'Expected an array: 123' });
++  assert.throws(() => percentile([1, '2'], 50), { message: 'Expected a number item: 2' });
++  assert.throws(() => percentile([1], -1), { message: 'Expected p between 0 and 100: -1' });
++  assert.throws(() => percentile([1], 100.5), { message: 'Expected p between 0 and 100: 100.5' });
++  assert.throws(() => percentile([1], NaN), { message: 'Expected p between 0 and 100: NaN' });
++  assert.throws(() => percentile([1], '50'), Error);
++});
++
++test('formatBytes uses 1024 per unit with one decimal place', () => {
++  assert.strictEqual(formatBytes(1536), '1.5 KB');
++  assert.strictEqual(formatBytes(1.5 * 1024 * 1024), '1.5 MB');
++  assert.strictEqual(formatBytes(3 * 1024 ** 3), '3 GB');
++  assert.strictEqual(formatBytes(2.25 * 1024 ** 4), '2.3 TB');
++});
++
++test('formatBytes shows bytes below 1024 as whole bytes', () => {
++  assert.strictEqual(formatBytes(0), '0 B');
++  assert.strictEqual(formatBytes(1), '1 B');
++  assert.strictEqual(formatBytes(1023), '1023 B');
++  assert.strictEqual(formatBytes(512.5), '513 B');
++});
++
++test('formatBytes drops a trailing .0', () => {
++  assert.strictEqual(formatBytes(1024), '1 KB');
++  assert.strictEqual(formatBytes(1024 ** 2), '1 MB');
++});
++
++test('formatBytes moves up a unit when rounding would show 1024 of the smaller one', () => {
++  assert.strictEqual(formatBytes(1024 * 1024 - 10), '1 MB');
++  assert.strictEqual(formatBytes(1023.96 * 1024), '1 MB');
++});
++
++test('formatBytes stays in TB for very large values', () => {
++  assert.strictEqual(formatBytes(1024 ** 5), '1024 TB');
++});
++
++test('formatBytes throws for negative, non-finite or non-number input', () => {
++  assert.throws(() => formatBytes(-1), { message: 'Expected a non-negative finite number of bytes: -1' });
++  assert.throws(() => formatBytes(NaN), { message: 'Expected a non-negative finite number of bytes: NaN' });
++  assert.throws(() => formatBytes(Infinity), { message: 'Expected a non-negative finite number of bytes: Infinity' });
++  assert.throws(() => formatBytes('1024'), Error);
++});
++
++test('isPrime is true for small primes', () => {
++  assert.strictEqual(isPrime(2), true);
++  assert.strictEqual(isPrime(3), true);
++  assert.strictEqual(isPrime(5), true);
++  assert.strictEqual(isPrime(7), true);
++  assert.strictEqual(isPrime(97), true);
++});
++
++test('isPrime is false for 0, 1 and negative numbers', () => {
++  assert.strictEqual(isPrime(0), false);
++  assert.strictEqual(isPrime(1), false);
++  assert.strictEqual(isPrime(-7), false);
++  assert.strictEqual(isPrime(-2), false);
++});
++
++test('isPrime is false for composites, including squares and multiples of 2 and 3', () => {
++  assert.strictEqual(isPrime(4), false);
++  assert.strictEqual(isPrime(9), false);
++  assert.strictEqual(isPrime(25), false);
++  assert.strictEqual(isPrime(91), false);
++  assert.strictEqual(isPrime(1001), false);
++});
++
++test('isPrime finds the primes below 100', () => {
++  const primes = [];
++  for (let i = 0; i < 100; i++) if (isPrime(i)) primes.push(i);
++  assert.deepStrictEqual(primes.length, 25);
++  assert.strictEqual(primes[primes.length - 1], 97);
++});
++
++test('isPrime handles large primes and composites', () => {
++  assert.strictEqual(isPrime(7919), true);
++  assert.strictEqual(isPrime(1000000007), true);
++  assert.strictEqual(isPrime(2147483647), true);
++  assert.strictEqual(isPrime(1000000008), false);
++});
++
++test('isPrime is false for non-integers and infinity', () => {
++  assert.strictEqual(isPrime(2.5), false);
++  assert.strictEqual(isPrime(-Infinity), false);
++  assert.strictEqual(isPrime(Infinity), false);
++});
++
++test('isPrime throws for NaN, non-numbers and integers too large to be exact', () => {
++  assert.throws(() => isPrime(NaN), { message: 'Expected a number: NaN' });
++  assert.throws(() => isPrime('7'), { message: 'Expected a number: 7' });
++  assert.throws(() => isPrime(2 ** 53), { message: 'Expected an integer no larger than 2^53 - 1: 9007199254740992' });
++});
++
++test('gcd finds the greatest common divisor', () => {
++  assert.strictEqual(gcd(12, 18), 6);
++  assert.strictEqual(gcd(8, 15), 1);
++  assert.strictEqual(gcd(7, 7), 7);
++  assert.strictEqual(gcd(1, 999), 1);
++});
++
++test('gcd ignores signs and returns a positive result', () => {
++  assert.strictEqual(gcd(-12, 18), 6);
++  assert.strictEqual(gcd(12, -18), 6);
++  assert.strictEqual(gcd(-12, -18), 6);
++  assert.strictEqual(gcd(-7, -7), 7);
++});
++
++test('gcd with zero returns the absolute value of the other argument', () => {
++  assert.strictEqual(gcd(0, 5), 5);
++  assert.strictEqual(gcd(5, 0), 5);
++  assert.strictEqual(gcd(0, -5), 5);
++  assert.strictEqual(gcd(-5, 0), 5);
++});
++
++test('gcd of two zeros is zero, and -0 counts as zero', () => {
++  assert.strictEqual(gcd(0, 0), 0);
++  assert.strictEqual(Object.is(gcd(-0, 0), 0), true);
++});
++
++test('gcd is commutative and handles large safe integers', () => {
++  assert.strictEqual(gcd(1000000000000000, 10000000000), 10000000000);
++  assert.strictEqual(gcd(832040, 1346269), 1);
++  assert.strictEqual(gcd(15, 20), gcd(20, 15));
++});
++
++test('gcd throws for non-integers, NaN, infinity, non-numbers and unsafe integers', () => {
++  assert.throws(() => gcd(2.5, 5), { message: 'Expected a safe integer: 2.5' });
++  assert.throws(() => gcd(NaN, 5), { message: 'Expected a safe integer: NaN' });
++  assert.throws(() => gcd(4, Infinity), { message: 'Expected a safe integer: Infinity' });
++  assert.throws(() => gcd('12', 18), { message: 'Expected a safe integer: 12' });
++  assert.throws(() => gcd(4, undefined), Error);
++  assert.throws(() => gcd(2 ** 53, 2), { message: 'Expected a safe integer: 9007199254740992' });
++});
++
++test('toRoman converts small numbers, including the subtractive forms', () => {
++  assert.strictEqual(toRoman(1), 'I');
++  assert.strictEqual(toRoman(3), 'III');
++  assert.strictEqual(toRoman(4), 'IV');
++  assert.strictEqual(toRoman(9), 'IX');
++  assert.strictEqual(toRoman(14), 'XIV');
++  assert.strictEqual(toRoman(40), 'XL');
++  assert.strictEqual(toRoman(90), 'XC');
++  assert.strictEqual(toRoman(400), 'CD');
++  assert.strictEqual(toRoman(900), 'CM');
++});
++
++test('toRoman converts well-known years and the largest value', () => {
++  assert.strictEqual(toRoman(1994), 'MCMXCIV');
++  assert.strictEqual(toRoman(2024), 'MMXXIV');
++  assert.strictEqual(toRoman(3888), 'MMMDCCCLXXXVIII');
++  assert.strictEqual(toRoman(3999), 'MMMCMXCIX');
++});
++
++test('toRoman output matches the standard numeral pattern for every value from 1 to 3999', () => {
++  const pattern = /^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/;
++  for (let n = 1; n <= 3999; n++) assert.match(toRoman(n), pattern, `toRoman(${n})`);
++});
++
++test('toRoman throws outside 1 to 3999 and for non-integers', () => {
++  assert.throws(() => toRoman(0), { message: 'Expected an integer from 1 to 3999: 0' });
++  assert.throws(() => toRoman(-1), { message: 'Expected an integer from 1 to 3999: -1' });
++  assert.throws(() => toRoman(4000), { message: 'Expected an integer from 1 to 3999: 4000' });
++  assert.throws(() => toRoman(2.5), { message: 'Expected an integer from 1 to 3999: 2.5' });
++  assert.throws(() => toRoman(NaN), Error);
++  assert.throws(() => toRoman('5'), Error);
++  assert.throws(() => toRoman(undefined), Error);
++});
++
++test('fromRoman reads small numerals, including the subtractive forms', () => {
++  assert.strictEqual(fromRoman('I'), 1);
++  assert.strictEqual(fromRoman('III'), 3);
++  assert.strictEqual(fromRoman('IV'), 4);
++  assert.strictEqual(fromRoman('IX'), 9);
++  assert.strictEqual(fromRoman('XIV'), 14);
++  assert.strictEqual(fromRoman('XL'), 40);
++  assert.strictEqual(fromRoman('XC'), 90);
++  assert.strictEqual(fromRoman('CD'), 400);
++  assert.strictEqual(fromRoman('CM'), 900);
++});
++
++test('fromRoman reads well-known years and the largest value', () => {
++  assert.strictEqual(fromRoman('MCMXCIV'), 1994);
++  assert.strictEqual(fromRoman('MMXXIV'), 2024);
++  assert.strictEqual(fromRoman('MMMDCCCLXXXVIII'), 3888);
++  assert.strictEqual(fromRoman('MMMCMXCIX'), 3999);
++});
++
++test('fromRoman is the inverse of toRoman for every value from 1 to 3999', () => {
++  for (let n = 1; n <= 3999; n++) assert.strictEqual(fromRoman(toRoman(n)), n);
++});
++
++test('fromRoman rejects numerals that are not in standard form', () => {
++  for (const s of ['IIII', 'VV', 'IC', 'IM', 'XM', 'VX', 'LL', 'DD', 'MMMM', 'CMM', 'IVI', 'XXXX']) {
++    assert.throws(() => fromRoman(s), { message: `Invalid Roman numeral: ${s}` }, s);
++  }
++});
++
++test('fromRoman rejects empty, lower-case, padded and non-Roman strings', () => {
++  assert.throws(() => fromRoman(''), { message: 'Invalid Roman numeral: ' });
++  assert.throws(() => fromRoman('mcmxciv'), { message: 'Invalid Roman numeral: mcmxciv' });
++  assert.throws(() => fromRoman(' IV'), { message: 'Invalid Roman numeral:  IV' });
++  assert.throws(() => fromRoman('ABC'), { message: 'Invalid Roman numeral: ABC' });
++});
++
++test('fromRoman throws when the input is not a string', () => {
++  assert.throws(() => fromRoman(4), { message: 'Expected a string: 4' });
++  assert.throws(() => fromRoman(null), { message: 'Expected a string: null' });
++});
++
++test('clamp throws for NaN or a non-number argument', () => {
++  assert.throws(() => clamp(NaN, 0, 10), { message: 'Expected a number for x: NaN' });
++  assert.throws(() => clamp(5, NaN, 10), { message: 'Expected a number for lo: NaN' });
++  assert.throws(() => clamp(5, 0, undefined), { message: 'Expected a number for hi: undefined' });
++  assert.throws(() => clamp('5', 0, 10), Error);
++});
+diff --git a/test/lib-objects.test.js b/test/lib-objects.test.js
+new file mode 100644
+index 0000000..592126d
+--- /dev/null
++++ b/test/lib-objects.test.js
+@@ -0,0 +1,691 @@
++const test = require('node:test');
++const assert = require('node:assert');
++const { pick, omit, deepEqual, deepClone, getPath, setPath, mergeDeep, invert } = require('../src/lib/objects.js');
++
++test('pick keeps only the listed keys', () => {
++  assert.deepStrictEqual(pick({ a: 1, b: 2, c: 3 }, ['a', 'c']), { a: 1, c: 3 });
++});
++
++test('pick leaves out keys the object does not have, instead of setting them to undefined', () => {
++  const out = pick({ a: 1 }, ['a', 'missing']);
++  assert.deepStrictEqual(out, { a: 1 });
++  assert.strictEqual(Object.prototype.hasOwnProperty.call(out, 'missing'), false);
++});
++
++test('pick keeps a key whose own value is undefined or null', () => {
++  const out = pick({ a: undefined, b: null }, ['a', 'b']);
++  assert.strictEqual(Object.prototype.hasOwnProperty.call(out, 'a'), true);
++  assert.strictEqual(out.b, null);
++});
++
++test('pick copies only own properties, not inherited ones', () => {
++  const proto = { inherited: 1 };
++  const obj = Object.create(proto);
++  obj.own = 2;
++  assert.deepStrictEqual(pick(obj, ['inherited', 'own']), { own: 2 });
++});
++
++test('pick returns the keys in the order they were listed', () => {
++  const out = pick({ a: 1, b: 2, c: 3 }, ['c', 'a']);
++  assert.deepStrictEqual(Object.keys(out), ['c', 'a']);
++});
++
++test('pick returns an empty object for an empty key list or no matches', () => {
++  assert.deepStrictEqual(pick({ a: 1 }, []), {});
++  assert.deepStrictEqual(pick({ a: 1 }, ['x']), {});
++});
++
++test('pick copies values by reference and returns a new object', () => {
++  const inner = { deep: true };
++  const obj = { inner, other: 1 };
++  const out = pick(obj, ['inner']);
++  assert.strictEqual(out.inner, inner);
++  assert.notStrictEqual(out, obj);
++});
++
++test('pick does not modify the input', () => {
++  const obj = { a: 1, b: 2 };
++  pick(obj, ['a']);
++  assert.deepStrictEqual(obj, { a: 1, b: 2 });
++});
++
++test('pick works with a key named __proto__ as ordinary data', () => {
++  const obj = JSON.parse('{"__proto__": {"polluted": true}, "a": 1}');
++  const out = pick(obj, ['__proto__']);
++  assert.strictEqual(Object.getPrototypeOf(out), Object.prototype);
++  assert.deepStrictEqual(Object.keys(out), ['__proto__']);
++  assert.strictEqual({}.polluted, undefined);
++});
++
++test('pick works with symbol keys', () => {
++  const sym = Symbol('id');
++  assert.strictEqual(pick({ [sym]: 7, a: 1 }, [sym])[sym], 7);
++});
++
++test('pick works on an object with no prototype', () => {
++  const obj = Object.create(null);
++  obj.a = 1;
++  obj.b = 2;
++  assert.deepStrictEqual(pick(obj, ['a']), { a: 1 });
++});
++
++test('pick handles duplicate keys in the list', () => {
++  assert.deepStrictEqual(pick({ a: 1 }, ['a', 'a']), { a: 1 });
++});
++
++test('omit removes the listed keys and keeps the rest', () => {
++  assert.deepStrictEqual(omit({ a: 1, b: 2, c: 3 }, ['b']), { a: 1, c: 3 });
++  assert.deepStrictEqual(omit({ a: 1, b: 2, c: 3 }, ['a', 'c']), { b: 2 });
++});
++
++test('omit ignores listed keys the object does not have', () => {
++  assert.deepStrictEqual(omit({ a: 1 }, ['missing']), { a: 1 });
++});
++
++test('omit with an empty key list returns a copy of every own enumerable property', () => {
++  assert.deepStrictEqual(omit({ a: 1, b: undefined }, []), { a: 1, b: undefined });
++});
++
++test('omit returns an empty object when every key is removed', () => {
++  assert.deepStrictEqual(omit({ a: 1, b: 2 }, ['a', 'b']), {});
++});
++
++test('omit keeps the remaining keys in their original order', () => {
++  assert.deepStrictEqual(Object.keys(omit({ c: 1, a: 2, b: 3 }, ['a'])), ['c', 'b']);
++});
++
++test('omit copies only own enumerable properties, not inherited or hidden ones', () => {
++  const obj = Object.create({ inherited: 1 });
++  obj.own = 2;
++  Object.defineProperty(obj, 'hidden', { value: 3, enumerable: false });
++  assert.deepStrictEqual(omit(obj, []), { own: 2 });
++});
++
++test('omit copies symbol keys that are not listed', () => {
++  const sym = Symbol('id');
++  const out = omit({ [sym]: 7, a: 1 }, ['a']);
++  assert.strictEqual(out[sym], 7);
++  assert.strictEqual('a' in out, false);
++});
++
++test('omit copies values by reference and returns a new object', () => {
++  const inner = { deep: true };
++  const obj = { inner, other: 1 };
++  const out = omit(obj, ['other']);
++  assert.strictEqual(out.inner, inner);
++  assert.notStrictEqual(out, obj);
++});
++
++test('omit does not modify the input', () => {
++  const obj = { a: 1, b: 2 };
++  omit(obj, ['a']);
++  assert.deepStrictEqual(obj, { a: 1, b: 2 });
++});
++
++test('omit handles a key named __proto__ as ordinary data', () => {
++  const obj = JSON.parse('{"__proto__": {"polluted": true}, "a": 1}');
++  const out = omit(obj, ['a']);
++  assert.strictEqual(Object.getPrototypeOf(out), Object.prototype);
++  assert.deepStrictEqual(Object.keys(out), ['__proto__']);
++  assert.strictEqual({}.polluted, undefined);
++});
++
++test('omit throws for a non-object, a non-array key list, or a bad key', () => {
++  assert.throws(() => omit(null, ['a']), { message: 'Expected an object: null' });
++  assert.throws(() => omit({ a: 1 }, 'a'), { message: 'Expected an array of keys: a' });
++  assert.throws(() => omit({ a: 1 }, [1]), { message: 'Expected a string or symbol key: 1' });
++});
++
++test('deepEqual compares primitives by value', () => {
++  assert.strictEqual(deepEqual(1, 1), true);
++  assert.strictEqual(deepEqual(1, 2), false);
++  assert.strictEqual(deepEqual('a', 'a'), true);
++  assert.strictEqual(deepEqual('a', 'b'), false);
++  assert.strictEqual(deepEqual(true, true), true);
++  assert.strictEqual(deepEqual(true, false), false);
++  assert.strictEqual(deepEqual(null, null), true);
++  assert.strictEqual(deepEqual(undefined, undefined), true);
++});
++
++test('deepEqual treats values of different types as unequal', () => {
++  assert.strictEqual(deepEqual(1, '1'), false);
++  assert.strictEqual(deepEqual(0, false), false);
++  assert.strictEqual(deepEqual(null, undefined), false);
++  assert.strictEqual(deepEqual('', null), false);
++});
++
++test('deepEqual treats NaN as equal to NaN, and 0 as different from -0', () => {
++  assert.strictEqual(deepEqual(NaN, NaN), true);
++  assert.strictEqual(deepEqual(0, -0), false);
++});
++
++test('deepEqual compares arrays by length and position', () => {
++  assert.strictEqual(deepEqual([1, [2, 3]], [1, [2, 3]]), true);
++  assert.strictEqual(deepEqual([1, 2], [1, 2, 3]), false);
++  assert.strictEqual(deepEqual([1, 2], [2, 1]), false);
++  assert.strictEqual(deepEqual([], []), true);
++});
++
++test('deepEqual compares plain objects by keys and values, ignoring key order', () => {
++  assert.strictEqual(deepEqual({ a: 1, b: { c: [2] } }, { b: { c: [2] }, a: 1 }), true);
++  assert.strictEqual(deepEqual({ a: 1 }, { a: 2 }), false);
++  assert.strictEqual(deepEqual({ a: 1 }, { a: 1, b: 2 }), false);
++  assert.strictEqual(deepEqual({ a: 1, b: 2 }, { a: 1 }), false);
++  assert.strictEqual(deepEqual({}, {}), true);
++});
++
++test('deepEqual does not treat an undefined-valued key as absent', () => {
++  assert.strictEqual(deepEqual({ a: undefined }, {}), false);
++});
++
++test('deepEqual does not treat an array as equal to a plain object', () => {
++  assert.strictEqual(deepEqual([], {}), false);
++  assert.strictEqual(deepEqual({ 0: 'a' }, ['a']), false);
++  assert.strictEqual(deepEqual(null, {}), false);
++});
++
++test('deepEqual finds differences at any depth', () => {
++  assert.strictEqual(deepEqual({ a: [{ b: { c: [1, 2, 3] } }] }, { a: [{ b: { c: [1, 2, 4] } }] }), false);
++});
++
++test('deepEqual ignores symbol keys and non-enumerable properties', () => {
++  const withSymbol = { a: 1, [Symbol('x')]: 2 };
++  assert.strictEqual(deepEqual(withSymbol, { a: 1 }), true);
++});
++
++test('deepEqual compares an object with no prototype against a plain object', () => {
++  const bare = Object.create(null);
++  bare.a = 1;
++  assert.strictEqual(deepEqual(bare, { a: 1 }), true);
++});
++
++test('deepEqual supports cyclic structures', () => {
++  const a = { name: 'x' };
++  a.self = a;
++  const b = { name: 'x' };
++  b.self = b;
++  assert.strictEqual(deepEqual(a, b), true);
++  const c = { name: 'y' };
++  c.self = c;
++  assert.strictEqual(deepEqual(a, c), false);
++});
++
++test('deepEqual throws for values it cannot compare structurally', () => {
++  assert.throws(() => deepEqual(new Date(0), new Date(0)), { message: 'Cannot compare non-plain objects such as Date, Map or class instances' });
++  assert.throws(() => deepEqual(new Map(), new Map()), Error);
++  assert.throws(() => deepEqual(new (class Point {})(), {}), Error);
++  assert.throws(() => deepEqual(() => 1, () => 1), { message: 'Cannot compare function values' });
++  assert.throws(() => deepEqual(Symbol('a'), Symbol('b')), { message: 'Cannot compare symbol values' });
++  assert.throws(() => deepEqual(1n, 2n), { message: 'Cannot compare bigint values' });
++});
++
++test('deepEqual does not modify its inputs', () => {
++  const a = { x: [1, 2] };
++  const b = { x: [1, 2] };
++  deepEqual(a, b);
++  assert.deepStrictEqual(a, { x: [1, 2] });
++  assert.deepStrictEqual(b, { x: [1, 2] });
++});
++
++test('deepClone copies nested objects and arrays that are equal but not the same objects', () => {
++  const original = { a: { list: [1, { deep: true }] }, b: 'text' };
++  const copy = deepClone(original);
++  assert.strictEqual(deepEqual(copy, original), true);
++  assert.notStrictEqual(copy, original);
++  assert.notStrictEqual(copy.a, original.a);
++  assert.notStrictEqual(copy.a.list, original.a.list);
++  assert.notStrictEqual(copy.a.list[1], original.a.list[1]);
++});
++
++test('changing a deep clone does not change the original', () => {
++  const original = { a: { list: [1, 2] } };
++  const copy = deepClone(original);
++  copy.a.list.push(3);
++  copy.a.extra = true;
++  assert.deepStrictEqual(original, { a: { list: [1, 2] } });
++});
++
++test('deepClone returns primitives as they are', () => {
++  assert.strictEqual(deepClone(1), 1);
++  assert.strictEqual(deepClone('text'), 'text');
++  assert.strictEqual(deepClone(true), true);
++  assert.strictEqual(deepClone(null), null);
++  assert.strictEqual(deepClone(undefined), undefined);
++  const sym = Symbol('s');
++  assert.strictEqual(deepClone(sym), sym);
++  assert.strictEqual(deepClone(7n), 7n);
++});
++
++test('deepClone copies empty objects and arrays', () => {
++  const emptyArray = deepClone([]);
++  const emptyObject = deepClone({});
++  assert.deepStrictEqual(emptyArray, []);
++  assert.deepStrictEqual(emptyObject, {});
++  assert.strictEqual(Array.isArray(emptyArray), true);
++});
++
++test('deepClone keeps a shared reference shared in the copy', () => {
++  const shared = { n: 1 };
++  const copy = deepClone({ x: shared, y: shared });
++  assert.strictEqual(copy.x, copy.y);
++  assert.notStrictEqual(copy.x, shared);
++});
++
++test('deepClone keeps cycles, so the copy points at itself', () => {
++  const original = { name: 'loop' };
++  original.self = original;
++  const copy = deepClone(original);
++  assert.strictEqual(copy.self, copy);
++  assert.notStrictEqual(copy, original);
++});
++
++test('deepClone keeps holes in sparse arrays', () => {
++  const copy = deepClone([1, , 3]);
++  assert.strictEqual(copy.length, 3);
++  assert.strictEqual(Object.prototype.hasOwnProperty.call(copy, 1), false);
++  assert.strictEqual(copy[2], 3);
++});
++
++test('deepClone keeps a null prototype', () => {
++  const bare = Object.create(null);
++  bare.a = { b: 1 };
++  const copy = deepClone(bare);
++  assert.strictEqual(Object.getPrototypeOf(copy), null);
++  assert.strictEqual(Object.getPrototypeOf(copy.a), Object.prototype);
++});
++
++test('deepClone copies a key named __proto__ as ordinary data', () => {
++  const original = JSON.parse('{"__proto__": {"polluted": true}}');
++  const copy = deepClone(original);
++  assert.strictEqual(Object.getPrototypeOf(copy), Object.prototype);
++  assert.deepStrictEqual(Object.keys(copy), ['__proto__']);
++  assert.strictEqual({}.polluted, undefined);
++});
++
++test('deepClone copies only own enumerable string keys', () => {
++  const sym = Symbol('id');
++  const original = { a: 1, [sym]: 2 };
++  Object.defineProperty(original, 'hidden', { value: 3, enumerable: false });
++  const copy = deepClone(original);
++  assert.deepStrictEqual(copy, { a: 1 });
++  assert.strictEqual(sym in copy, false);
++});
++
++test('deepClone throws for functions and non-plain objects, even when nested', () => {
++  assert.throws(() => deepClone(() => 1), { message: 'Cannot clone function values' });
++  assert.throws(() => deepClone({ f: () => 1 }), { message: 'Cannot clone function values' });
++  assert.throws(() => deepClone(new Date(0)), { message: 'Cannot clone non-plain objects such as Date, Map or class instances' });
++  assert.throws(() => deepClone({ list: [new Map()] }), Error);
++  assert.throws(() => deepClone(new (class Point {})()), Error);
++});
++
++test('deepClone does not modify the original', () => {
++  const original = { a: [1, { b: 2 }] };
++  deepClone(original);
++  assert.deepStrictEqual(original, { a: [1, { b: 2 }] });
++});
++
++test('getPath reads nested objects and array indexes', () => {
++  const obj = { a: { b: [{ c: 'x' }] } };
++  assert.strictEqual(getPath(obj, 'a.b.0.c'), 'x');
++  assert.deepStrictEqual(getPath(obj, 'a.b'), [{ c: 'x' }]);
++  assert.strictEqual(getPath(obj, 'a'), obj.a);
++});
++
++test('getPath reads a top-level key', () => {
++  assert.strictEqual(getPath({ a: 1 }, 'a'), 1);
++});
++
++test('getPath returns the fallback for a missing path', () => {
++  assert.strictEqual(getPath({ a: { b: 1 } }, 'a.x.y', 'none'), 'none');
++  assert.strictEqual(getPath({ a: [1] }, 'a.5', 'none'), 'none');
++});
++
++test('getPath returns undefined when there is no fallback and the path is missing', () => {
++  assert.strictEqual(getPath({}, 'a.b'), undefined);
++});
++
++test('getPath returns the fallback when the value at the path is undefined', () => {
++  assert.strictEqual(getPath({ a: undefined }, 'a', 'default'), 'default');
++});
++
++test('getPath returns falsy values as they are, not the fallback', () => {
++  const obj = { zero: 0, empty: '', no: false, nothing: null };
++  assert.strictEqual(getPath(obj, 'zero', 9), 0);
++  assert.strictEqual(getPath(obj, 'empty', 9), '');
++  assert.strictEqual(getPath(obj, 'no', 9), false);
++  assert.strictEqual(getPath(obj, 'nothing', 9), null);
++});
++
++test('getPath returns the fallback when a step passes through null or a primitive', () => {
++  assert.strictEqual(getPath({ a: null }, 'a.b', 'none'), 'none');
++  assert.strictEqual(getPath({ a: 'text' }, 'a.length', 0), 0);
++  assert.strictEqual(getPath({ a: 5 }, 'a.b', 'none'), 'none');
++});
++
++test('getPath does not read inherited properties', () => {
++  assert.strictEqual(getPath({}, 'constructor', 'no'), 'no');
++  assert.strictEqual(getPath({}, 'toString', 'no'), 'no');
++  assert.strictEqual(getPath({ a: {} }, 'a.hasOwnProperty', 'no'), 'no');
++});
++
++test('getPath reads an own key named __proto__ as data', () => {
++  const obj = JSON.parse('{"__proto__": {"x": 1}}');
++  assert.strictEqual(getPath(obj, '__proto__.x'), 1);
++});
++
++test('getPath reads the empty key for an empty segment', () => {
++  assert.strictEqual(getPath({ '': 1 }, ''), 1);
++  assert.strictEqual(getPath({ a: { '': 2 } }, 'a..'), undefined);
++  assert.strictEqual(getPath({ a: { '': 2 } }, 'a.'), 2);
++});
++
++test('getPath cannot reach a key that contains a dot', () => {
++  assert.strictEqual(getPath({ 'a.b': 1 }, 'a.b', 'no'), 'no');
++});
++
++test('getPath returns the fallback for a null or primitive root', () => {
++  assert.strictEqual(getPath(null, 'a', 'none'), 'none');
++  assert.strictEqual(getPath(undefined, 'a', 'none'), 'none');
++  assert.strictEqual(getPath('abc', 'length', 'none'), 'none');
++});
++
++test('getPath throws when the path is not a string', () => {
++  assert.throws(() => getPath({}, ['a']), { message: 'Expected a string path: a' });
++  assert.throws(() => getPath({}, undefined), { message: 'Expected a string path: undefined' });
++});
++
++test('getPath does not modify the object', () => {
++  const obj = { a: { b: 1 } };
++  getPath(obj, 'a.b');
++  assert.deepStrictEqual(obj, { a: { b: 1 } });
++});
++
++test('setPath creates the levels it needs', () => {
++  assert.deepStrictEqual(setPath({}, 'a.b.c', 1), { a: { b: { c: 1 } } });
++  assert.deepStrictEqual(setPath({ a: undefined }, 'a.b', 1), { a: { b: 1 } });
++});
++
++test('setPath sets a top-level key', () => {
++  assert.deepStrictEqual(setPath({ a: 1 }, 'b', 2), { a: 1, b: 2 });
++});
++
++test('setPath replaces the value at the path and keeps its siblings', () => {
++  assert.deepStrictEqual(setPath({ a: { x: 1, b: 2 } }, 'a.b', 3), { a: { x: 1, b: 3 } });
++});
++
++test('setPath does not modify the input', () => {
++  const original = { a: { b: 1 } };
++  const result = setPath(original, 'a.b', 2);
++  assert.deepStrictEqual(original, { a: { b: 1 } });
++  assert.notStrictEqual(result, original);
++  assert.notStrictEqual(result.a, original.a);
++});
++
++test('setPath shares the branches it does not touch with the input', () => {
++  const original = { a: { x: {} }, b: {} };
++  const result = setPath(original, 'b.c', 1);
++  assert.strictEqual(result.a, original.a);
++  assert.deepStrictEqual(result.b, { c: 1 });
++});
++
++test('setPath stores any value, including null, undefined and objects', () => {
++  assert.deepStrictEqual(setPath({}, 'a', null), { a: null });
++  assert.strictEqual(Object.prototype.hasOwnProperty.call(setPath({}, 'a', undefined), 'a'), true);
++  const inner = { deep: true };
++  assert.strictEqual(setPath({}, 'a', inner).a, inner);
++});
++
++test('setPath writes array indexes into an existing array, copying it', () => {
++  const original = { list: [1, 2, 3] };
++  const result = setPath(original, 'list.1', 9);
++  assert.deepStrictEqual(result, { list: [1, 9, 3] });
++  assert.strictEqual(Array.isArray(result.list), true);
++  assert.deepStrictEqual(original, { list: [1, 2, 3] });
++});
++
++test('setPath past the end of an array leaves holes', () => {
++  const result = setPath({ list: [] }, 'list.2', 'x');
++  assert.strictEqual(result.list.length, 3);
++  assert.strictEqual(result.list[2], 'x');
++  assert.strictEqual(Object.prototype.hasOwnProperty.call(result.list, 0), false);
++});
++
++test('setPath creates a missing level as an object, even for a numeric segment', () => {
++  const result = setPath({}, 'a.0', 'x');
++  assert.strictEqual(Array.isArray(result.a), false);
++  assert.deepStrictEqual(result, { a: { 0: 'x' } });
++});
++
++test('setPath throws rather than overwrite a primitive, null or non-plain value on the path', () => {
++  assert.throws(() => setPath({ a: null }, 'a.b', 1), { message: 'Cannot set through "a": it is not a plain object or array' });
++  assert.throws(() => setPath({ a: 'text' }, 'a.b', 1), Error);
++  assert.throws(() => setPath({ a: 5 }, 'a.b', 1), Error);
++  assert.throws(() => setPath({ a: new Date(0) }, 'a.b', 1), Error);
++});
++
++test('setPath keeps a key named __proto__ as ordinary data', () => {
++  const result = setPath({}, '__proto__.x', 1);
++  assert.strictEqual(Object.getPrototypeOf(result), Object.prototype);
++  assert.deepStrictEqual(Object.keys(result), ['__proto__']);
++  assert.strictEqual(result.__proto__.x, 1);
++  assert.strictEqual({}.x, undefined);
++});
++
++test('setPath keeps the prototype of the objects it copies', () => {
++  const bare = Object.create(null);
++  bare.a = { b: 1 };
++  const result = setPath(bare, 'a.b', 2);
++  assert.strictEqual(Object.getPrototypeOf(result), null);
++  assert.strictEqual(Object.getPrototypeOf(result.a), Object.prototype);
++  assert.strictEqual(result.a.b, 2);
++});
++
++test('setPath keeps symbol keys on the objects it copies', () => {
++  const sym = Symbol('id');
++  const result = setPath({ [sym]: 7, a: { b: 1 } }, 'a.b', 2);
++  assert.strictEqual(result[sym], 7);
++});
++
++test('setPath works on a frozen input', () => {
++  const frozen = Object.freeze({ a: Object.freeze({ b: 1 }) });
++  const result = setPath(frozen, 'a.b', 2);
++  assert.strictEqual(result.a.b, 2);
++  assert.strictEqual(frozen.a.b, 1);
++});
++
++test('setPath uses empty segments as the key ""', () => {
++  assert.deepStrictEqual(setPath({}, 'a..b', 1), { a: { '': { b: 1 } } });
++});
++
++test('setPath and getPath agree', () => {
++  assert.strictEqual(getPath(setPath({}, 'x.y.z', 5), 'x.y.z'), 5);
++});
++
++test('setPath throws for a non-object root or a non-string path', () => {
++  assert.throws(() => setPath(null, 'a', 1), { message: 'Expected a plain object or array to set into' });
++  assert.throws(() => setPath(undefined, 'a', 1), Error);
++  assert.throws(() => setPath(new Date(0), 'a', 1), Error);
++  assert.throws(() => setPath({}, ['a'], 1), { message: 'Expected a string path: a' });
++});
++
++test('mergeDeep merges nested plain objects, keeping keys from both sides', () => {
++  const a = { a: { x: 1, y: { p: 1 } }, keep: true };
++  const b = { a: { y: { q: 2 }, z: 3 } };
++  assert.deepStrictEqual(mergeDeep(a, b), { a: { x: 1, y: { p: 1, q: 2 }, z: 3 }, keep: true });
++});
++
++test('mergeDeep lets b win on scalar conflicts', () => {
++  assert.deepStrictEqual(mergeDeep({ n: 1, s: 'a' }, { n: 2, s: 'b' }), { n: 2, s: 'b' });
++});
++
++test('mergeDeep replaces arrays rather than joining them', () => {
++  assert.deepStrictEqual(mergeDeep({ list: [1, 2, 3] }, { list: [9] }), { list: [9] });
++  assert.deepStrictEqual(mergeDeep({ list: [1] }, { list: [] }), { list: [] });
++});
++
++test('mergeDeep replaces a value when the two sides have different shapes', () => {
++  assert.deepStrictEqual(mergeDeep({ x: { a: 1 } }, { x: 5 }), { x: 5 });
++  assert.deepStrictEqual(mergeDeep({ x: 5 }, { x: { a: 1 } }), { x: { a: 1 } });
++  assert.deepStrictEqual(mergeDeep({ x: [1] }, { x: { a: 1 } }), { x: { a: 1 } });
++});
++
++test('mergeDeep lets null in b overwrite an object in a', () => {
++  assert.deepStrictEqual(mergeDeep({ a: { b: 1 } }, { a: null }), { a: null });
++});
++
++test('mergeDeep lets undefined in b overwrite a value, keeping the key', () => {
++  const result = mergeDeep({ a: 1 }, { a: undefined });
++  assert.strictEqual(Object.prototype.hasOwnProperty.call(result, 'a'), true);
++  assert.strictEqual(result.a, undefined);
++});
++
++test('mergeDeep adds keys that only b has and keeps keys that only a has', () => {
++  assert.deepStrictEqual(mergeDeep({ a: 1 }, { b: { c: 2 } }), { a: 1, b: { c: 2 } });
++});
++
++test('mergeDeep of two empty objects is empty, and an empty b leaves a unchanged', () => {
++  assert.deepStrictEqual(mergeDeep({}, {}), {});
++  assert.deepStrictEqual(mergeDeep({ a: { b: 1 } }, {}), { a: { b: 1 } });
++});
++
++test('mergeDeep does not modify either input', () => {
++  const a = { x: { y: 1 }, list: [1] };
++  const b = { x: { z: 2 }, list: [2] };
++  mergeDeep(a, b);
++  assert.deepStrictEqual(a, { x: { y: 1 }, list: [1] });
++  assert.deepStrictEqual(b, { x: { z: 2 }, list: [2] });
++});
++
++test('mergeDeep shares nothing with its inputs, so the result can be changed freely', () => {
++  const a = { inner: { v: 1 } };
++  const b = { list: [1, 2], other: { w: 1 } };
++  const result = mergeDeep(a, b);
++  result.inner.v = 99;
++  result.list.push(3);
++  result.other.w = 99;
++  assert.strictEqual(a.inner.v, 1);
++  assert.deepStrictEqual(b.list, [1, 2]);
++  assert.strictEqual(b.other.w, 1);
++});
++
++test('mergeDeep keeps the prototype of a', () => {
++  const bare = Object.create(null);
++  bare.x = 1;
++  assert.strictEqual(Object.getPrototypeOf(mergeDeep(bare, { y: 2 })), null);
++});
++
++test('mergeDeep copies a key named __proto__ as ordinary data', () => {
++  const b = JSON.parse('{"__proto__": {"polluted": true}}');
++  const result = mergeDeep({}, b);
++  assert.strictEqual(Object.getPrototypeOf(result), Object.prototype);
++  assert.deepStrictEqual(Object.keys(result), ['__proto__']);
++  assert.strictEqual({}.polluted, undefined);
++});
++
++test('mergeDeep handles cycles in b without looping', () => {
++  const b = { name: 'loop' };
++  b.self = b;
++  const result = mergeDeep({ name: 'old' }, b);
++  assert.strictEqual(result.name, 'loop');
++  assert.strictEqual(result.self.self, result.self);
++  assert.notStrictEqual(result.self, b);
++});
++
++test('mergeDeep handles cycles in both inputs without looping', () => {
++  const a = { name: 'a' };
++  a.self = a;
++  const b = { name: 'b' };
++  b.self = b;
++  const result = mergeDeep(a, b);
++  assert.strictEqual(result.name, 'b');
++  assert.strictEqual(result.self.name, 'b');
++});
++
++test('mergeDeep throws for non-plain inputs and for values deepClone cannot copy', () => {
++  assert.throws(() => mergeDeep([], {}), { message: 'Expected two plain objects to merge' });
++  assert.throws(() => mergeDeep(null, {}), { message: 'Expected two plain objects to merge' });
++  assert.throws(() => mergeDeep({}, 'text'), { message: 'Expected two plain objects to merge' });
++  assert.throws(() => mergeDeep({}, { d: new Date(0) }), Error);
++  assert.throws(() => mergeDeep({ f: () => 1 }, {}), Error);
++});
++
++test('invert swaps keys and values', () => {
++  assert.deepStrictEqual(invert({ a: 'x', b: 'y' }), { x: 'a', y: 'b' });
++});
++
++test('invert turns numbers, booleans and null into string keys', () => {
++  assert.deepStrictEqual(invert({ a: 1, b: true, c: null }), { '1': 'a', true: 'b', null: 'c' });
++});
++
++test('invert turns undefined into the key "undefined"', () => {
++  assert.deepStrictEqual(invert({ a: undefined }), { undefined: 'a' });
++});
++
++test('invert lets the later key win when two keys share a value', () => {
++  assert.deepStrictEqual(invert({ a: 1, b: 1, c: 2 }), { '1': 'b', '2': 'c' });
++});
++
++test('invert treats the number 1 and the string "1" as the same key', () => {
++  assert.deepStrictEqual(invert({ a: 1, b: '1' }), { '1': 'b' });
++});
++
++test('invert of an empty object is empty', () => {
++  assert.deepStrictEqual(invert({}), {});
++});
++
++test('invert keeps the order of the first occurrence of each key', () => {
++  assert.deepStrictEqual(Object.keys(invert({ c: 'x', a: 'y', b: 'x' })), ['x', 'y']);
++});
++
++test('invert round-trips when all values are distinct strings', () => {
++  const obj = { a: 'x', b: 'y', c: 'z' };
++  assert.deepStrictEqual(invert(invert(obj)), obj);
++});
++
++test('invert reads only own enumerable string keys', () => {
++  const sym = Symbol('s');
++  const obj = { a: 'x', [sym]: 'hidden-sym' };
++  Object.defineProperty(obj, 'hidden', { value: 'hidden-prop', enumerable: false });
++  assert.deepStrictEqual(invert(obj), { x: 'a' });
++  const child = Object.create({ inherited: 'y' });
++  child.own = 'z';
++  assert.deepStrictEqual(invert(child), { z: 'own' });
++});
++
++test('invert stores a value of "__proto__" as an ordinary key', () => {
++  const out = invert({ a: '__proto__' });
++  assert.strictEqual(Object.getPrototypeOf(out), Object.prototype);
++  assert.deepStrictEqual(Object.keys(out), ['__proto__']);
++  assert.strictEqual(out.__proto__, 'a');
++});
++
++test('invert does not modify the input', () => {
++  const obj = { a: 'x' };
++  invert(obj);
++  assert.deepStrictEqual(obj, { a: 'x' });
++});
++
++test('invert reads the indexes of an array', () => {
++  assert.deepStrictEqual(invert(['x', 'y']), { x: '0', y: '1' });
++});
++
++test('invert throws for a value that is an object, function or symbol', () => {
++  assert.throws(() => invert({ a: {} }), { message: 'Cannot invert key "a": its value is not a primitive' });
++  assert.throws(() => invert({ a: [] }), Error);
++  assert.throws(() => invert({ a: () => 1 }), Error);
++  assert.throws(() => invert({ a: Symbol('v') }), Error);
++});
++
++test('invert throws for a non-object', () => {
++  assert.throws(() => invert(null), { message: 'Expected an object: null' });
++  assert.throws(() => invert('abc'), { message: 'Expected an object: abc' });
++});
++
++test('pick throws for a non-object, a non-array key list, or a bad key', () => {
++  assert.throws(() => pick(null, ['a']), { message: 'Expected an object: null' });
++  assert.throws(() => pick('abc', ['a']), { message: 'Expected an object: abc' });
++  assert.throws(() => pick({ a: 1 }, 'a'), { message: 'Expected an array of keys: a' });
++  assert.throws(() => pick({ a: 1 }, [{}]), { message: 'Expected a string or symbol key: [object Object]' });
++  assert.throws(() => pick({ a: 1 }, [1]), { message: 'Expected a string or symbol key: 1' });
++});
+diff --git a/test/lib-strings.test.js b/test/lib-strings.test.js
+new file mode 100644
+index 0000000..f73302c
+--- /dev/null
++++ b/test/lib-strings.test.js
+@@ -0,0 +1,324 @@
++const test = require('node:test');
++const assert = require('node:assert');
++const { camelCase, kebabCase, truncate, padCenter, countWords, initials, reverseWords, isPalindrome, wrap, template } = require('../src/lib/strings.js');
++
++test('converts space, hyphen and underscore separated words', () => {
++  assert.strictEqual(camelCase('hello world'), 'helloWorld');
++  assert.strictEqual(camelCase('hello-world'), 'helloWorld');
++  assert.strictEqual(camelCase('hello_world'), 'helloWorld');
++});
++
++test('handles a single word and more than two words', () => {
++  assert.strictEqual(camelCase('hello'), 'hello');
++  assert.strictEqual(camelCase('the quick brown fox'), 'theQuickBrownFox');
++});
++
++test('ignores runs of separators and leading or trailing separators', () => {
++  assert.strictEqual(camelCase('hello__world'), 'helloWorld');
++  assert.strictEqual(camelCase('  hello - world  '), 'helloWorld');
++  assert.strictEqual(camelCase('-hello_world-'), 'helloWorld');
++});
++
++test('normalises letter case', () => {
++  assert.strictEqual(camelCase('HELLO WORLD'), 'helloWorld');
++  assert.strictEqual(camelCase('Hello World'), 'helloWorld');
++});
++
++test('returns an empty string for empty or separator-only input', () => {
++  assert.strictEqual(camelCase(''), '');
++  assert.strictEqual(camelCase(' _- '), '');
++});
++
++test('keeps digits', () => {
++  assert.strictEqual(camelCase('version 2 beta'), 'version2Beta');
++});
++
++test('throws when the input is not a string', () => {
++  assert.throws(() => camelCase(undefined), { message: 'Expected a string: undefined' });
++  assert.throws(() => camelCase(42), Error);
++});
++
++test('kebabCase converts camelCase and spaced text to hyphens', () => {
++  assert.strictEqual(kebabCase('helloWorld'), 'hello-world');
++  assert.strictEqual(kebabCase('Hello World'), 'hello-world');
++  assert.strictEqual(kebabCase('hello_world'), 'hello-world');
++  assert.strictEqual(kebabCase('hello-world'), 'hello-world');
++  assert.strictEqual(kebabCase('HelloWorld'), 'hello-world');
++});
++
++test('kebabCase keeps acronyms together', () => {
++  assert.strictEqual(kebabCase('XMLHttpRequest'), 'xml-http-request');
++  assert.strictEqual(kebabCase('parseHTML'), 'parse-html');
++  assert.strictEqual(kebabCase('HELLO WORLD'), 'hello-world');
++});
++
++test('kebabCase keeps digits attached to the word before them', () => {
++  assert.strictEqual(kebabCase('version2Beta'), 'version2-beta');
++  assert.strictEqual(kebabCase('version 2 beta'), 'version-2-beta');
++});
++
++test('kebabCase ignores repeated or surrounding separators', () => {
++  assert.strictEqual(kebabCase('  hello__world  '), 'hello-world');
++  assert.strictEqual(kebabCase('-helloWorld-'), 'hello-world');
++});
++
++test('kebabCase returns an empty string for empty or separator-only input', () => {
++  assert.strictEqual(kebabCase(''), '');
++  assert.strictEqual(kebabCase(' _- '), '');
++});
++
++test('kebabCase throws when the input is not a string', () => {
++  assert.throws(() => kebabCase(undefined), { message: 'Expected a string: undefined' });
++  assert.throws(() => kebabCase(42), Error);
++});
++
++test('truncate returns the string unchanged when it already fits', () => {
++  assert.strictEqual(truncate('hello', 5), 'hello');
++  assert.strictEqual(truncate('hello', 10), 'hello');
++  assert.strictEqual(truncate('', 0), '');
++  assert.strictEqual(truncate('', 3), '');
++});
++
++test('truncate shortens to n characters, ending in an ellipsis', () => {
++  assert.strictEqual(truncate('hello world', 8), 'hello w…');
++  assert.strictEqual(truncate('hello world', 8).length, 8);
++  assert.strictEqual(truncate('hello', 4), 'hel…');
++});
++
++test('truncate to 1 or 0 characters', () => {
++  assert.strictEqual(truncate('hello', 1), '…');
++  assert.strictEqual(truncate('hello', 0), '');
++});
++
++test('truncate counts emoji as one character and never splits them', () => {
++  assert.strictEqual(truncate('a😀b😀', 3), 'a😀…');
++  assert.strictEqual(truncate('😀😀😀', 2), '😀…');
++});
++
++test('padCenter pads both sides with spaces by default', () => {
++  assert.strictEqual(padCenter('hi', 6), '  hi  ');
++  assert.strictEqual(padCenter('', 3), '   ');
++});
++
++test('padCenter puts the extra character on the right when padding is odd', () => {
++  assert.strictEqual(padCenter('hi', 5), ' hi  ');
++  assert.strictEqual(padCenter('x', 4, '-'), '-x--');
++});
++
++test('padCenter uses the given character', () => {
++  assert.strictEqual(padCenter('title', 11, '*'), '***title***');
++  assert.strictEqual(padCenter('ab', 6, '·'), '··ab··');
++});
++
++test('padCenter returns the string unchanged when it is already wide enough', () => {
++  assert.strictEqual(padCenter('hello', 5), 'hello');
++  assert.strictEqual(padCenter('hello', 3), 'hello');
++  assert.strictEqual(padCenter('hello', 0), 'hello');
++});
++
++test('padCenter counts emoji as one character', () => {
++  assert.strictEqual(padCenter('😀', 3, '-'), '-😀-');
++});
++
++test('countWords counts runs of letters or digits', () => {
++  assert.strictEqual(countWords('hello world'), 2);
++  assert.strictEqual(countWords('the quick brown fox'), 4);
++  assert.strictEqual(countWords('version 2 beta'), 3);
++});
++
++test('countWords treats runs of whitespace and punctuation as separators', () => {
++  assert.strictEqual(countWords('  hello,   world!  '), 2);
++  assert.strictEqual(countWords('one-two_three'), 3);
++  assert.strictEqual(countWords('a.b.c'), 3);
++  assert.strictEqual(countWords('"Hi," she said.'), 3);
++});
++
++test('countWords splits contractions at the apostrophe', () => {
++  assert.strictEqual(countWords("don't stop"), 3);
++});
++
++test('countWords handles non-ASCII letters', () => {
++  assert.strictEqual(countWords('café naïve'), 2);
++  assert.strictEqual(countWords('版本 2'), 2);
++});
++
++test('countWords returns 0 for empty, blank or punctuation-only input', () => {
++  assert.strictEqual(countWords(''), 0);
++  assert.strictEqual(countWords('   \t\n'), 0);
++  assert.strictEqual(countWords('...!?'), 0);
++});
++
++test('countWords throws when the input is not a string', () => {
++  assert.throws(() => countWords(undefined), { message: 'Expected a string: undefined' });
++  assert.throws(() => countWords(42), Error);
++});
++
++test('initials takes the first letter of each word, uppercased', () => {
++  assert.strictEqual(initials('Ada King Lovelace'), 'AKL');
++  assert.strictEqual(initials('ada king lovelace'), 'AKL');
++  assert.strictEqual(initials('ada'), 'A');
++});
++
++test('initials splits words on whitespace and punctuation, as countWords does', () => {
++  assert.strictEqual(initials('  jean-luc   picard, '), 'JLP');
++  assert.strictEqual(initials("o'brien"), 'OB');
++});
++
++test('initials handles non-ASCII letters and digits', () => {
++  assert.strictEqual(initials('élodie émile'), 'ÉÉ');
++  assert.strictEqual(initials('2nd place'), '2P');
++});
++
++test('initials returns an empty string for empty or punctuation-only input', () => {
++  assert.strictEqual(initials(''), '');
++  assert.strictEqual(initials('   '), '');
++  assert.strictEqual(initials('...'), '');
++});
++
++test('initials throws when the input is not a string', () => {
++  assert.throws(() => initials(undefined), { message: 'Expected a string: undefined' });
++  assert.throws(() => initials(42), Error);
++});
++
++test('reverseWords reverses the order of the words', () => {
++  assert.strictEqual(reverseWords('the quick fox'), 'fox quick the');
++  assert.strictEqual(reverseWords('hello world'), 'world hello');
++});
++
++test('reverseWords returns a single word unchanged', () => {
++  assert.strictEqual(reverseWords('hello'), 'hello');
++});
++
++test('reverseWords keeps punctuation with its word', () => {
++  assert.strictEqual(reverseWords('Hello, world.'), 'world. Hello,');
++});
++
++test('reverseWords collapses extra whitespace to single spaces', () => {
++  assert.strictEqual(reverseWords('  one   two\tthree\n'), 'three two one');
++});
++
++test('reverseWords returns an empty string for empty or blank input', () => {
++  assert.strictEqual(reverseWords(''), '');
++  assert.strictEqual(reverseWords('   \t\n'), '');
++});
++
++test('reverseWords throws when the input is not a string', () => {
++  assert.throws(() => reverseWords(undefined), { message: 'Expected a string: undefined' });
++  assert.throws(() => reverseWords(42), Error);
++});
++
++test('isPalindrome is true for words and phrases that read the same backwards', () => {
++  assert.strictEqual(isPalindrome('racecar'), true);
++  assert.strictEqual(isPalindrome('A man, a plan, a canal: Panama'), true);
++  assert.strictEqual(isPalindrome('No lemon, no melon'), true);
++  assert.strictEqual(isPalindrome('12321'), true);
++});
++
++test('isPalindrome is false when the reversal differs', () => {
++  assert.strictEqual(isPalindrome('hello'), false);
++  assert.strictEqual(isPalindrome('ab'), false);
++  assert.strictEqual(isPalindrome('Ada Lovelace'), false);
++});
++
++test('isPalindrome treats empty, single-character and punctuation-only input as palindromes', () => {
++  assert.strictEqual(isPalindrome(''), true);
++  assert.strictEqual(isPalindrome('a'), true);
++  assert.strictEqual(isPalindrome('...'), true);
++});
++
++test('isPalindrome handles non-ASCII letters and combining marks', () => {
++  assert.strictEqual(isPalindrome('Élu par cette crapule'), false);
++  assert.strictEqual(isPalindrome('Elu par cette crapule'), true);
++  assert.strictEqual(isPalindrome('été'), true);
++  assert.strictEqual(isPalindrome('ée'), false);
++});
++
++test('isPalindrome throws when the input is not a string', () => {
++  assert.throws(() => isPalindrome(undefined), { message: 'Expected a string: undefined' });
++  assert.throws(() => isPalindrome(42), Error);
++});
++
++test('wrap breaks lines between words, greedily', () => {
++  assert.strictEqual(wrap('the quick brown fox', 10), 'the quick\nbrown fox');
++  assert.strictEqual(wrap('a bb ccc', 3), 'a\nbb\nccc');
++});
++
++test('wrap leaves text that already fits on one line', () => {
++  assert.strictEqual(wrap('hello world', 11), 'hello world');
++  assert.strictEqual(wrap('hello', 5), 'hello');
++});
++
++test('wrap never breaks inside a word, so a long word gets its own line', () => {
++  assert.strictEqual(wrap('supercalifragilistic is', 5), 'supercalifragilistic\nis');
++});
++
++test('wrap collapses whitespace, including line breaks in the input', () => {
++  assert.strictEqual(wrap('one   two\n\nthree', 20), 'one two three');
++});
++
++test('wrap with width 1 puts each word on its own line', () => {
++  assert.strictEqual(wrap('a b c', 1), 'a\nb\nc');
++});
++
++test('wrap returns an empty string for empty or blank text', () => {
++  assert.strictEqual(wrap('', 10), '');
++  assert.strictEqual(wrap('   \n\t', 10), '');
++});
++
++test('wrap counts emoji as one character', () => {
++  assert.strictEqual(wrap('😀 😀 😀', 3), '😀 😀\n😀');
++});
++
++test('wrap throws for bad arguments', () => {
++  assert.throws(() => wrap(undefined, 10), { message: 'Expected a string: undefined' });
++  assert.throws(() => wrap('hi', 0), { message: 'Expected a positive integer width: 0' });
++  assert.throws(() => wrap('hi', 2.5), Error);
++  assert.throws(() => wrap('hi', '10'), Error);
++});
++
++test('template fills placeholders from the variables', () => {
++  assert.strictEqual(template('Hi {name}', { name: 'Ada' }), 'Hi Ada');
++  assert.strictEqual(template('{a} and {b}, {a} again', { a: 'x', b: 'y' }), 'x and y, x again');
++});
++
++test('template leaves unknown placeholders as they are', () => {
++  assert.strictEqual(template('Hi {name}, {title}', { name: 'Ada' }), 'Hi Ada, {title}');
++  assert.strictEqual(template('Hi {name}'), 'Hi {name}');
++});
++
++test('template fills falsy values as strings', () => {
++  assert.strictEqual(template('{n}|{s}|{z}|{f}', { n: 0, s: '', z: null, f: false }), '0||null|false');
++});
++
++test('template ignores placeholders that are not plain word characters', () => {
++  assert.strictEqual(template('{first name} {} {a-b}', { 'first name': 'x', a: 'y' }), '{first name} {} {a-b}');
++});
++
++test('template does not fill inherited properties', () => {
++  assert.strictEqual(template('{constructor} {toString}', {}), '{constructor} {toString}');
++});
++
++test('template inserts values literally, so $ patterns are not expanded', () => {
++  assert.strictEqual(template('cost {p}', { p: '$&$1' }), 'cost $&$1');
++});
++
++test('template throws for bad arguments', () => {
++  assert.throws(() => template(undefined, {}), { message: 'Expected a string: undefined' });
++  assert.throws(() => template('Hi {name}', null), { message: 'Expected an object of variables: null' });
++  assert.throws(() => template('Hi {name}', 'Ada'), Error);
++});
++
++test('padCenter throws for bad arguments', () => {
++  assert.throws(() => padCenter(undefined, 5), { message: 'Expected a string: undefined' });
++  assert.throws(() => padCenter('hi', -1), { message: 'Expected a non-negative integer width: -1' });
++  assert.throws(() => padCenter('hi', 2.5), Error);
++  assert.throws(() => padCenter('hi', 5, ''), { message: 'Expected a single character: ' });
++  assert.throws(() => padCenter('hi', 5, 'ab'), { message: 'Expected a single character: ab' });
++});
++
++test('truncate throws for a non-string or a bad length', () => {
++  assert.throws(() => truncate(undefined, 3), { message: 'Expected a string: undefined' });
++  assert.throws(() => truncate('hello', -1), { message: 'Expected a non-negative integer length: -1' });
++  assert.throws(() => truncate('hello', 2.5), Error);
++  assert.throws(() => truncate('hello', '3'), Error);
++});
+diff --git a/test/lib-validate.test.js b/test/lib-validate.test.js
+new file mode 100644
+index 0000000..b5c8b1f
+--- /dev/null
++++ b/test/lib-validate.test.js
+@@ -0,0 +1,341 @@
++const test = require('node:test');
++const assert = require('node:assert');
++const { isEmail, isUuid, isStrongPassword, isUrl, isPostcodeUK, isIsoCurrency } = require('../src/lib/validate.js');
++
++test('isEmail accepts ordinary addresses', () => {
++  assert.strictEqual(isEmail('ada@example.com'), true);
++  assert.strictEqual(isEmail('a@b.io'), true);
++  assert.strictEqual(isEmail('first.last+tag@sub.example.co.uk'), true);
++  assert.strictEqual(isEmail("o'brien@example.org"), true);
++  assert.strictEqual(isEmail('x_y-z@my-domain.com'), true);
++});
++
++test('isEmail requires exactly one @', () => {
++  assert.strictEqual(isEmail('ada.example.com'), false);
++  assert.strictEqual(isEmail('a@b@example.com'), false);
++  assert.strictEqual(isEmail('@example.com'), false);
++  assert.strictEqual(isEmail('ada@'), false);
++  assert.strictEqual(isEmail('@'), false);
++});
++
++test('isEmail requires a dot in the domain, with a letters-only top-level domain of 2 or more', () => {
++  assert.strictEqual(isEmail('ada@example'), false);
++  assert.strictEqual(isEmail('ada@example.c'), false);
++  assert.strictEqual(isEmail('ada@example.123'), false);
++  assert.strictEqual(isEmail('ada@example.c0m'), false);
++});
++
++test('isEmail rejects spaces anywhere', () => {
++  assert.strictEqual(isEmail('ada smith@example.com'), false);
++  assert.strictEqual(isEmail(' ada@example.com'), false);
++  assert.strictEqual(isEmail('ada@example .com'), false);
++  assert.strictEqual(isEmail('ada@example.com '), false);
++});
++
++test('isEmail rejects line breaks and tabs', () => {
++  assert.strictEqual(isEmail('ada@example.com\n'), false);
++  assert.strictEqual(isEmail('ada\t@example.com'), false);
++});
++
++test('isEmail rejects leading, trailing and doubled dots in the local part', () => {
++  assert.strictEqual(isEmail('.ada@example.com'), false);
++  assert.strictEqual(isEmail('ada.@example.com'), false);
++  assert.strictEqual(isEmail('ada..x@example.com'), false);
++});
++
++test('isEmail rejects empty or malformed domain labels', () => {
++  assert.strictEqual(isEmail('ada@.example.com'), false);
++  assert.strictEqual(isEmail('ada@example..com'), false);
++  assert.strictEqual(isEmail('ada@-example.com'), false);
++  assert.strictEqual(isEmail('ada@example-.com'), false);
++  assert.strictEqual(isEmail('ada@ex_ample.com'), false);
++});
++
++test('isEmail limits the local part to 64 characters and each domain label to 63', () => {
++  assert.strictEqual(isEmail(`${'a'.repeat(64)}@example.com`), true);
++  assert.strictEqual(isEmail(`${'a'.repeat(65)}@example.com`), false);
++  assert.strictEqual(isEmail(`ada@${'a'.repeat(63)}.com`), true);
++  assert.strictEqual(isEmail(`ada@${'a'.repeat(64)}.com`), false);
++});
++
++test('isEmail limits the whole address to 254 characters', () => {
++  const longDomain = `${'a'.repeat(63)}.${'a'.repeat(63)}.${'a'.repeat(63)}.com`;
++  assert.strictEqual(isEmail(`${'a'.repeat(64)}@${longDomain}`), false);
++  // The domain is 195 characters, so a 58-character local part makes exactly 254 with the "@".
++  assert.strictEqual(isEmail(`${'a'.repeat(58)}@${longDomain}`), true);
++  assert.strictEqual(isEmail(`${'a'.repeat(59)}@${longDomain}`), false);
++});
++
++test('isEmail rejects non-ASCII letters', () => {
++  assert.strictEqual(isEmail('ádá@example.com'), false);
++  assert.strictEqual(isEmail('ada@exämple.com'), false);
++});
++
++test('isEmail rejects the empty string', () => {
++  assert.strictEqual(isEmail(''), false);
++});
++
++test('isUuid accepts UUIDs of versions 1 to 5', () => {
++  assert.strictEqual(isUuid('6ba7b810-9dad-11d1-80b4-00c04fd430c8'), true); // v1
++  assert.strictEqual(isUuid('000003e8-1234-2abc-8def-0123456789ab'), true); // v2
++  assert.strictEqual(isUuid('6fa459ea-ee8a-3ca4-894e-db77e160355e'), true); // v3
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-a716-446655440000'), true); // v4
++  assert.strictEqual(isUuid('886313e1-3b8a-5372-9b90-0c9aee199e5d'), true); // v5
++});
++
++test('isUuid accepts upper-case and mixed-case hex', () => {
++  assert.strictEqual(isUuid('550E8400-E29B-41D4-A716-446655440000'), true);
++  assert.strictEqual(isUuid('550e8400-E29B-41d4-A716-446655440000'), true);
++});
++
++test('isUuid rejects versions outside 1 to 5', () => {
++  assert.strictEqual(isUuid('550e8400-e29b-01d4-a716-446655440000'), false); // v0
++  assert.strictEqual(isUuid('1ec9414c-232a-6b00-b3c8-9e6bdeccc9d2'), false); // v6
++  assert.strictEqual(isUuid('017f22e2-79b0-7cc3-98c4-dc0c0c07398f'), false); // v7
++  assert.strictEqual(isUuid('550e8400-e29b-f1d4-a716-446655440000'), false); // v15
++});
++
++test('isUuid requires the RFC 4122 variant, 8, 9, a or b, in the first hex digit of the fourth group', () => {
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-8716-446655440000'), true);
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-b716-446655440000'), true);
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-c716-446655440000'), false);
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-0716-446655440000'), false);
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-7716-446655440000'), false);
++});
++
++test('isUuid rejects the nil and max UUIDs, which have no version', () => {
++  assert.strictEqual(isUuid('00000000-0000-0000-0000-000000000000'), false);
++  assert.strictEqual(isUuid('ffffffff-ffff-ffff-ffff-ffffffffffff'), false);
++});
++
++test('isUuid rejects wrong lengths, misplaced hyphens and non-hex characters', () => {
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-a716-44665544000'), false);
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-a716-4466554400000'), false);
++  assert.strictEqual(isUuid('550e840-0e29b-41d4-a716-446655440000'), false);
++  assert.strictEqual(isUuid('550e8400e29b41d4a716446655440000'), false);
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-a716-44665544000g'), false);
++});
++
++test('isUuid rejects braces, a urn prefix and surrounding whitespace', () => {
++  assert.strictEqual(isUuid('{550e8400-e29b-41d4-a716-446655440000}'), false);
++  assert.strictEqual(isUuid('urn:uuid:550e8400-e29b-41d4-a716-446655440000'), false);
++  assert.strictEqual(isUuid(' 550e8400-e29b-41d4-a716-446655440000'), false);
++  assert.strictEqual(isUuid('550e8400-e29b-41d4-a716-446655440000\n'), false);
++});
++
++test('isUuid rejects the empty string', () => {
++  assert.strictEqual(isUuid(''), false);
++});
++
++test('isUuid throws when the input is not a string', () => {
++  assert.throws(() => isUuid(null), { message: 'Expected a string: null' });
++  assert.throws(() => isUuid(12345), { message: 'Expected a string: 12345' });
++  assert.throws(() => isUuid(undefined), Error);
++});
++
++test('isStrongPassword accepts a password with all four kinds of character and 12 or more characters', () => {
++  assert.strictEqual(isStrongPassword('Abcdefghij1!'), true);
++  assert.strictEqual(isStrongPassword('Correct-Horse-9-Battery'), true);
++});
++
++test('isStrongPassword requires at least 12 characters', () => {
++  assert.strictEqual(isStrongPassword('Abcdefghi1!'), false); // 11
++  assert.strictEqual(isStrongPassword('Abcdefghij1!'), true); // 12
++});
++
++test('isStrongPassword requires a lower-case letter', () => {
++  assert.strictEqual(isStrongPassword('ABCDEFGHIJ1!'), false);
++});
++
++test('isStrongPassword requires an upper-case letter', () => {
++  assert.strictEqual(isStrongPassword('abcdefghij1!'), false);
++});
++
++test('isStrongPassword requires a digit', () => {
++  assert.strictEqual(isStrongPassword('Abcdefghijk!'), false);
++});
++
++test('isStrongPassword requires a symbol, and a space is not one', () => {
++  assert.strictEqual(isStrongPassword('Abcdefghijk1'), false);
++  assert.strictEqual(isStrongPassword('Abcdefghij 1'), false);
++  assert.strictEqual(isStrongPassword('Abcdefgh 12!'), true); // 12 characters, the space is just a character
++});
++
++test('isStrongPassword counts a space toward the length', () => {
++  assert.strictEqual(isStrongPassword('Abcdefgh 1!'), false); // 11
++});
++
++test('isStrongPassword counts code points, so an emoji is one character', () => {
++  assert.strictEqual(isStrongPassword('Abcdefgh1!😀'), false); // 11 characters, 12 UTF-16 units
++  assert.strictEqual(isStrongPassword('Abcdefghij1😀'), true); // 12 characters, emoji is the symbol
++});
++
++test('isStrongPassword checks letter case for non-ASCII letters', () => {
++  assert.strictEqual(isStrongPassword('Ärgerlich1!ok'), true);
++  assert.strictEqual(isStrongPassword('ärgerlich1!ok'), false);
++});
++
++test('isStrongPassword rejects the empty string and a short common password', () => {
++  assert.strictEqual(isStrongPassword(''), false);
++  assert.strictEqual(isStrongPassword('Password1!'), false);
++});
++
++test('isStrongPassword throws when the input is not a string', () => {
++  assert.throws(() => isStrongPassword(null), { message: 'Expected a string: null' });
++  assert.throws(() => isStrongPassword(123456789012), { message: 'Expected a string: 123456789012' });
++  assert.throws(() => isStrongPassword(undefined), Error);
++});
++
++test('isUrl accepts http and https URLs', () => {
++  assert.strictEqual(isUrl('https://example.com'), true);
++  assert.strictEqual(isUrl('http://example.com/path?query=1#frag'), true);
++  assert.strictEqual(isUrl('https://sub.example.co.uk:8080/a/b'), true);
++  assert.strictEqual(isUrl('http://localhost:3000'), true);
++  assert.strictEqual(isUrl('https://127.0.0.1/'), true);
++  assert.strictEqual(isUrl('http://[::1]/'), true);
++  assert.strictEqual(isUrl('https://user:pass@example.com/'), true);
++});
++
++test('isUrl accepts the scheme in any case, since URL lower-cases it', () => {
++  assert.strictEqual(isUrl('HTTPS://EXAMPLE.COM'), true);
++});
++
++test('isUrl rejects other schemes', () => {
++  assert.strictEqual(isUrl('ftp://example.com'), false);
++  assert.strictEqual(isUrl('mailto:ada@example.com'), false);
++  assert.strictEqual(isUrl('javascript:alert(1)'), false);
++  assert.strictEqual(isUrl('file:///etc/passwd'), false);
++});
++
++test('isUrl rejects relative references and text without a scheme', () => {
++  assert.strictEqual(isUrl('example.com'), false);
++  assert.strictEqual(isUrl('//example.com'), false);
++  assert.strictEqual(isUrl('/path/only'), false);
++});
++
++test('isUrl rejects a URL with no host', () => {
++  assert.strictEqual(isUrl('https://'), false);
++  assert.strictEqual(isUrl('http://'), false);
++});
++
++test('isUrl rejects spaces inside the URL', () => {
++  assert.strictEqual(isUrl('https://exa mple.com'), false);
++  assert.strictEqual(isUrl('https://example.com/a b'), false);
++});
++
++test('isUrl rejects leading, trailing and inner whitespace, including tabs and line breaks', () => {
++  assert.strictEqual(isUrl(' https://example.com'), false);
++  assert.strictEqual(isUrl('https://example.com '), false);
++  assert.strictEqual(isUrl('https://example.com\n'), false);
++  assert.strictEqual(isUrl('https://exam\tple.com'), false);
++  assert.strictEqual(isUrl('https://example.com/a\nb'), false);
++});
++
++test('isUrl rejects the empty string', () => {
++  assert.strictEqual(isUrl(''), false);
++});
++
++test('isUrl throws when the input is not a string', () => {
++  assert.throws(() => isUrl(null), { message: 'Expected a string: null' });
++  assert.throws(() => isUrl(42), { message: 'Expected a string: 42' });
++  assert.throws(() => isUrl(undefined), Error);
++  assert.throws(() => isUrl(new URL('https://example.com')), Error);
++});
++
++test('isPostcodeUK accepts postcodes in each common format', () => {
++  assert.strictEqual(isPostcodeUK('M1 1AA'), true); // A9 9AA
++  assert.strictEqual(isPostcodeUK('B33 8TH'), true); // A99 9AA
++  assert.strictEqual(isPostcodeUK('CR2 6XH'), true); // AA9 9AA
++  assert.strictEqual(isPostcodeUK('DN55 1PT'), true); // AA99 9AA
++  assert.strictEqual(isPostcodeUK('W1A 1HQ'), true); // A9A 9AA
++  assert.strictEqual(isPostcodeUK('EC1A 1BB'), true); // AA9A 9AA
++  assert.strictEqual(isPostcodeUK('SW1A 1AA'), true);
++});
++
++test('isPostcodeUK accepts the old Girobank code GIR 0AA', () => {
++  assert.strictEqual(isPostcodeUK('GIR 0AA'), true);
++  assert.strictEqual(isPostcodeUK('GIR0AA'), true);
++});
++
++test('isPostcodeUK accepts any case', () => {
++  assert.strictEqual(isPostcodeUK('sw1a 1aa'), true);
++  assert.strictEqual(isPostcodeUK('Sw1A 1Aa'), true);
++});
++
++test('isPostcodeUK makes the space optional, but allows only one', () => {
++  assert.strictEqual(isPostcodeUK('SW1A1AA'), true);
++  assert.strictEqual(isPostcodeUK('SW1A  1AA'), false);
++});
++
++test('isPostcodeUK rejects a postcode that is missing part of its shape', () => {
++  assert.strictEqual(isPostcodeUK('SW1A'), false);
++  assert.strictEqual(isPostcodeUK('SW1A 1'), false);
++  assert.strictEqual(isPostcodeUK('SW1A 1A'), false);
++  assert.strictEqual(isPostcodeUK('SW1A 1AAA'), false);
++});
++
++test('isPostcodeUK requires the inward code to be a digit then two letters', () => {
++  assert.strictEqual(isPostcodeUK('SW1A 1A1'), false);
++  assert.strictEqual(isPostcodeUK('SW1A 11A'), false);
++});
++
++test('isPostcodeUK rejects digits-only text, empty text and other punctuation', () => {
++  assert.strictEqual(isPostcodeUK('12345'), false);
++  assert.strictEqual(isPostcodeUK('123 456'), false);
++  assert.strictEqual(isPostcodeUK(''), false);
++  assert.strictEqual(isPostcodeUK('SW1A-1AA'), false);
++});
++
++test('isPostcodeUK rejects leading or trailing whitespace', () => {
++  assert.strictEqual(isPostcodeUK(' SW1A 1AA'), false);
++  assert.strictEqual(isPostcodeUK('SW1A 1AA '), false);
++  assert.strictEqual(isPostcodeUK('SW1A 1AA\n'), false);
++});
++
++test('isPostcodeUK throws when the input is not a string', () => {
++  assert.throws(() => isPostcodeUK(null), { message: 'Expected a string: null' });
++  assert.throws(() => isPostcodeUK(2000), { message: 'Expected a string: 2000' });
++  assert.throws(() => isPostcodeUK(undefined), Error);
++});
++
++test('isIsoCurrency accepts the common currency codes in its list', () => {
++  for (const code of ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'CNY', 'INR', 'BRL', 'PLN']) {
++    assert.strictEqual(isIsoCurrency(code), true, code);
++  }
++});
++
++test('isIsoCurrency rejects three-letter codes that are not in the list', () => {
++  assert.strictEqual(isIsoCurrency('XYZ'), false);
++  assert.strictEqual(isIsoCurrency('ABC'), false);
++  assert.strictEqual(isIsoCurrency('XXX'), false);
++});
++
++test('isIsoCurrency requires upper case', () => {
++  assert.strictEqual(isIsoCurrency('usd'), false);
++  assert.strictEqual(isIsoCurrency('Usd'), false);
++});
++
++test('isIsoCurrency rejects surrounding whitespace', () => {
++  assert.strictEqual(isIsoCurrency(' USD'), false);
++  assert.strictEqual(isIsoCurrency('USD '), false);
++  assert.strictEqual(isIsoCurrency('US D'), false);
++});
++
++test('isIsoCurrency rejects codes of the wrong length, numeric codes and empty text', () => {
++  assert.strictEqual(isIsoCurrency('US'), false);
++  assert.strictEqual(isIsoCurrency('USDD'), false);
++  assert.strictEqual(isIsoCurrency('840'), false);
++  assert.strictEqual(isIsoCurrency(''), false);
++});
++
++test('isIsoCurrency throws when the input is not a string', () => {
++  assert.throws(() => isIsoCurrency(null), { message: 'Expected a string: null' });
++  assert.throws(() => isIsoCurrency(840), { message: 'Expected a string: 840' });
++  assert.throws(() => isIsoCurrency(undefined), Error);
++});
++
++test('isEmail throws when the input is not a string', () => {
++  assert.throws(() => isEmail(null), { message: 'Expected a string: null' });
++  assert.throws(() => isEmail(42), { message: 'Expected a string: 42' });
++  assert.throws(() => isEmail(undefined), Error);
++});
+diff --git a/test/users.test.js b/test/users.test.js
+index bea7939..9732f9e 100644
+--- a/test/users.test.js
++++ b/test/users.test.js
+@@ -2,7 +2,8 @@ const test = require('node:test');
+ const assert = require('node:assert');
+ const { Db } = require('../src/db.js');
+ const { migrate } = require('../src/migrate.js');
+-const { createUser, getUser } = require('../src/api/users.js');
++const users = require('../src/api/users.js');
++const { createUser, getUser, getUserByEmail, listUsers, countUsers, recordLogin, updateUser, deleteUser, searchUsers } = users;
+ 
+ test('creates and reads back a user', () => {
+   const db = migrate(new Db());
+@@ -10,3 +11,163 @@ test('creates and reads back a user', () => {
+   assert.strictEqual(u.fullName, 'Ada Lovelace');
+   assert.deepStrictEqual(getUser(db, u.id), u);
+ });
++
++test('throws when the email has no "@"', () => {
++  const db = migrate(new Db());
++  assert.throws(() => createUser(db, { email: 'ada.example.com', fullName: 'Ada Lovelace' }), Error);
++  assert.strictEqual(getUser(db, 'missing'), null);
++});
++
++test('rejects a duplicate email regardless of case', () => {
++  const db = migrate(new Db());
++  createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  assert.throws(() => createUser(db, { email: 'ADA@Example.com', fullName: 'Ada Again' }), Error);
++  assert.strictEqual(listUsers(db).length, 1);
++});
++
++test('finds a user by email regardless of case', () => {
++  const db = migrate(new Db());
++  const u = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  assert.deepStrictEqual(getUserByEmail(db, 'ADA@Example.com'), u);
++  assert.deepStrictEqual(getUserByEmail(db, 'ada@example.com'), u);
++});
++
++test('returns null when no user has the email', () => {
++  const db = migrate(new Db());
++  createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  assert.strictEqual(getUserByEmail(db, 'alan@example.com'), null);
++});
++
++test('counts users', () => {
++  const db = migrate(new Db());
++  assert.strictEqual(countUsers(db), 0);
++  createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  createUser(db, { email: 'alan@example.com', fullName: 'Alan Turing' });
++  assert.strictEqual(countUsers(db), 2);
++});
++
++test('records a login time, defaulting to now', () => {
++  const db = migrate(new Db());
++  const u = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  assert.strictEqual(u.lastLogin, null);
++  const when = new Date('2024-05-01T12:00:00.000Z');
++  assert.strictEqual(recordLogin(db, u.id, when).lastLogin, '2024-05-01T12:00:00.000Z');
++  const before = Date.now();
++  const later = recordLogin(db, u.id);
++  assert.ok(Date.parse(later.lastLogin) >= before);
++  assert.strictEqual(countUsers(db), 1);
++});
++
++test('recording a login for an unknown user throws', () => {
++  const db = migrate(new Db());
++  assert.throws(() => recordLogin(db, 'missing'), Error);
++});
++
++test('updates only the fields given', () => {
++  const db = migrate(new Db());
++  const u = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  const renamed = updateUser(db, u.id, { fullName: 'Augusta Ada King' });
++  assert.deepStrictEqual(renamed, { ...u, fullName: 'Augusta Ada King' });
++  const moved = updateUser(db, u.id, { email: 'ada@new.example.com' });
++  assert.deepStrictEqual(moved, { ...renamed, email: 'ada@new.example.com' });
++  assert.deepStrictEqual(getUser(db, u.id), moved);
++});
++
++test('updateUser applies the same email rules as createUser', () => {
++  const db = migrate(new Db());
++  const ada = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  const alan = createUser(db, { email: 'alan@example.com', fullName: 'Alan Turing' });
++  assert.throws(() => updateUser(db, ada.id, { email: 'no-at-sign' }), Error);
++  assert.throws(() => updateUser(db, ada.id, { email: 'ALAN@example.com' }), Error);
++  assert.strictEqual(updateUser(db, ada.id, { email: 'ADA@example.com' }).email, 'ADA@example.com');
++  assert.strictEqual(getUser(db, alan.id).email, 'alan@example.com');
++});
++
++test('updating an unknown user throws', () => {
++  const db = migrate(new Db());
++  assert.throws(() => updateUser(db, 'missing', { fullName: 'Nobody' }), Error);
++});
++
++test('deletes a user and returns true', () => {
++  const db = migrate(new Db());
++  const ada = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  const alan = createUser(db, { email: 'alan@example.com', fullName: 'Alan Turing' });
++  assert.strictEqual(deleteUser(db, ada.id), true);
++  assert.strictEqual(getUser(db, ada.id), null);
++  assert.deepStrictEqual(listUsers(db), [alan]);
++});
++
++test('deleting an unknown user returns false', () => {
++  const db = migrate(new Db());
++  createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  assert.strictEqual(deleteUser(db, 'missing'), false);
++  assert.strictEqual(countUsers(db), 1);
++});
++
++test('searches fullName and email substrings, case-insensitively', () => {
++  const db = migrate(new Db());
++  const ada = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  const alan = createUser(db, { email: 'alan@turing.org', fullName: 'Alan Turing' });
++  assert.deepStrictEqual(searchUsers(db, 'LOVE'), [ada]);
++  assert.deepStrictEqual(searchUsers(db, 'turing.org'), [alan]);
++  assert.deepStrictEqual(searchUsers(db, 'a'), [ada, alan]);
++  assert.deepStrictEqual(searchUsers(db, 'nobody'), []);
++});
++
++test('pages through users with limit and offset', () => {
++  const db = migrate(new Db());
++  const ids = [];
++  for (let i = 0; i < 5; i++) {
++    ids.push(createUser(db, { email: `user${i}@example.com`, fullName: `User ${i}` }).id);
++    db.tables.users.rows[i].created_at = `2024-01-0${i + 1}T00:00:00.000Z`;
++  }
++  assert.deepStrictEqual(listUsers(db, { limit: 2 }).map((u) => u.id), ids.slice(0, 2));
++  assert.deepStrictEqual(listUsers(db, { limit: 2, offset: 2 }).map((u) => u.id), ids.slice(2, 4));
++  assert.deepStrictEqual(listUsers(db, { limit: 2, offset: 4 }).map((u) => u.id), ids.slice(4));
++  assert.strictEqual(listUsers(db).length, 5);
++});
++
++test('rejects a missing, blank or overlong fullName on create', () => {
++  const db = migrate(new Db());
++  assert.throws(() => createUser(db, { email: 'a@example.com', fullName: undefined }), Error);
++  assert.throws(() => createUser(db, { email: 'a@example.com', fullName: '   ' }), Error);
++  assert.throws(() => createUser(db, { email: 'a@example.com', fullName: 'x'.repeat(101) }), Error);
++  assert.strictEqual(countUsers(db), 0);
++  assert.strictEqual(createUser(db, { email: 'a@example.com', fullName: 'x'.repeat(100) }).fullName, 'x'.repeat(100));
++});
++
++test('rejects a blank or overlong fullName on update', () => {
++  const db = migrate(new Db());
++  const u = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  assert.throws(() => updateUser(db, u.id, { fullName: '' }), Error);
++  assert.throws(() => updateUser(db, u.id, { fullName: 'x'.repeat(101) }), Error);
++  assert.strictEqual(getUser(db, u.id).fullName, 'Ada Lovelace');
++});
++
++test('every function throws a clear error when db is missing', () => {
++  const calls = [
++    (db) => users.createUser(db, { email: 'a@example.com', fullName: 'A' }),
++    (db) => users.getUser(db, 'id'),
++    (db) => users.getUserByEmail(db, 'a@example.com'),
++    (db) => users.listUsers(db),
++    (db) => users.countUsers(db),
++    (db) => users.searchUsers(db, 'a'),
++    (db) => users.updateUser(db, 'id', { fullName: 'A' }),
++    (db) => users.deleteUser(db, 'id'),
++    (db) => users.recordLogin(db, 'id'),
++  ];
++  for (const call of calls) {
++    for (const db of [undefined, null]) {
++      assert.throws(() => call(db), { message: 'db is required' });
++    }
++  }
++});
++
++test('lists users oldest first', () => {
++  const db = migrate(new Db());
++  const first = createUser(db, { email: 'ada@example.com', fullName: 'Ada Lovelace' });
++  const second = createUser(db, { email: 'alan@example.com', fullName: 'Alan Turing' });
++  db.tables.users.rows[0].created_at = '2024-01-02T00:00:00.000Z';
++  db.tables.users.rows[1].created_at = '2024-01-01T00:00:00.000Z';
++  assert.deepStrictEqual(listUsers(db).map((u) => u.id), [second.id, first.id]);
++});
