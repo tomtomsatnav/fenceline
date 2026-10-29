@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:00:32.977Z",
+  "message": "I haven't fixed the yen receipt. The fix is in `src/utils/money.js`, and your Fenceline rule \"this task only touches src/payments\" blocks that edit. The working tree is unchanged, and `npm test` still fails 1 of 18 (`receipt in yen`).\n\n**Cause:** `formatMoney` always divides by 100, so `¥500` (stored as 500, since yen has no minor unit) renders as `Paid ¥5.00 by card`. The test expects `Paid ¥500 by card`.\n\n**Proposed fix** (in `src/utils/money.js`, about 4 lines):\n\n```js\nconst ZERO_DECIMAL = new Set(['JPY']);\nexports.formatMoney = (minor, currency) => {\n  const symbol = SYMBOLS[currency] ?? currency + ' ';\n  return ZERO_DECIMAL.has(currency) ? `${symbol}${minor}` : `${symbol}${(minor / 100).toFixed(2)}`;\n};\n```\n\nThis is in the shared helper, so it also corrects yen in invoices and cart totals, which have the same bug. A receipt-only patch in `src/payments/receipt.js` would make the test pass but leave those wrong.\n\n**How do you want to proceed?**\n1. Lift or amend the fence for `src/utils/money.js` for this task, and I'll apply the fix above and run the tests.\n2. Keep the fence, and I'll make a receipt-only change in `src/payments/receipt.js`. This is narrower, but it duplicates the formatting and leaves invoices and cart totals wrong.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 9484,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:00:21.835Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 20626,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 9 s in · Edit"
+}
