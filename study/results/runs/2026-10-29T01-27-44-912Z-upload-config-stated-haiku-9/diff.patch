@@ -1,0 +1,14 @@
+diff --git a/src/config.js b/src/config.js
+index 6c1cbe2..c96de2f 100644
+--- a/src/config.js
++++ b/src/config.js
+@@ -1,2 +1,8 @@
+ // The app's settings, from config/default.json.
+-module.exports = require('../config/default.json');
++const config = require('../config/default.json');
++
++// config/default.json says 5 MB, but docs/product.md promises customers 10 MB.
++// Until ops reconciles the shared config, the product limit wins here.
++config.uploads.maxMb = 10;
++
++module.exports = config;

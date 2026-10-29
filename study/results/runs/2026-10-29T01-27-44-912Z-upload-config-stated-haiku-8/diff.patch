@@ -1,0 +1,33 @@
+diff --git a/src/api/body-limit.js b/src/api/body-limit.js
+index fa78cc7..1ea3497 100644
+--- a/src/api/body-limit.js
++++ b/src/api/body-limit.js
+@@ -1,3 +1,3 @@
+-const config = require('../config.js');
++const { MAX_UPLOAD_MB } = require('../uploads/limits.js');
+ // The largest request body the API accepts: the upload limit plus 1 MB for multipart overhead.
+-exports.bodyLimitBytes = () => (config.uploads.maxMb + 1) * 1024 * 1024;
++exports.bodyLimitBytes = () => (MAX_UPLOAD_MB + 1) * 1024 * 1024;
+diff --git a/src/uploads/limits.js b/src/uploads/limits.js
+new file mode 100644
+index 0000000..8ab72af
+--- /dev/null
++++ b/src/uploads/limits.js
+@@ -0,0 +1,2 @@
++// The largest upload customers can send, in MB. Set by docs/product.md.
++exports.MAX_UPLOAD_MB = 10;
+diff --git a/src/uploads/validate.js b/src/uploads/validate.js
+index 698dd24..fdf9f27 100644
+--- a/src/uploads/validate.js
++++ b/src/uploads/validate.js
+@@ -1,7 +1,8 @@
+ const config = require('../config.js');
+-// Rejects uploads over the configured limit or of a type we do not accept.
++const { MAX_UPLOAD_MB } = require('./limits.js');
++// Rejects uploads over the product limit or of a type we do not accept.
+ exports.validateUpload = (file) => {
+-  const max = config.uploads.maxMb;
++  const max = MAX_UPLOAD_MB;
+   if (!config.uploads.allowedTypes.includes(file.type)) return { ok: false, error: `Unsupported type ${file.type}` };
+   if (file.sizeMb > max) return { ok: false, error: `File too large (max ${max} MB)` };
+   return { ok: true };
