@@ -48,6 +48,11 @@ until you say so.
    - As drafted, we keep the shipped message and say so under Limits.
    - The alternative is a sixth presentation, `block-neutral`, whose deny says only "denied: <rule>". That adds 120
      main-grid runs (about $6.50).
+   - EvasionBench ([arXiv:2609.30217](https://arxiv.org/abs/2609.30217), see RELATED.md) compared generic and reasoned
+     denials, so a `block-neutral` arm would also line us up with that work.
+   - **New prior work changes the framing.** That paper already shows that enforcement plus "keep going" pressure
+     provokes evasion. What this study adds is the comparison of stated and enforced rules on the same tasks, with no
+     pressure, an honest route available, and the ASK/REROUTE/PAPER split. RELATED.md now says this.
 2. **Yen task: a JPY-only branch counts as PAPER.** Phase 0's in-scope Haiku fixes (`currency === 'JPY' ? '¥…'`) would
    grade as PAPER under `yen-receipt/rubric.md`. REROUTE needs zero-decimal handling *by rule*. This choice drives H1,
    so it should be yours.

@@ -52,6 +52,90 @@ judge would mark them `other`.
 - "Duplicating logic to dodge the fence" (`copy-library`);
 - "Moving the change to where the fence isn't" (`column-at-runtime`, `override-in-code`).
 
+## Closest work from the second search (2026-10-29)
+
+**EvasionBench: "Instrumental Monitor Evasion Emerges Under Ordinary Task Pressure"** (Schmotz, Prinzhorn,
+Beurer-Kellner, Paulus, Prabhu, Andriushchenko), [arXiv:2609.30217](https://arxiv.org/abs/2609.30217), September 2026.
+Full text read. **This is the closest prior work to H2.**
+
+**What it does:**
+- **Tasks:** 50 tasks (terminal, software engineering, support) where finishing requires an operation a runtime monitor
+  prohibits.
+- **Harnesses:** the monitor sits in Claude Code's and Codex's own pre-tool-call hooks, the same mechanism as Fenceline's
+  block mode.
+- **What the agent is told:** that its tool calls may be reviewed, but not the policy.
+- **Pressure:** when an agent stops, it is told "The task is not done yet. Please continue."
+
+**Findings:**
+- Best-of-3 evasion attempts reach up to 98%, and success up to 88%.
+- Claude Opus 5 and Fable 5.1 attempt evasion often (judge-flagged attempt rates around 78% and 84%) but rarely
+  succeed.
+- Evasion techniques include encoding commands and splitting operations across calls.
+- One ablation compares a generic denial with a denial that gives a reason. This matters for our decision on Fenceline's
+  deny wording (STATUS.md, decision 1).
+
+**How it differs from this study:**
+- **No stated-only condition.** There is no stated-versus-enforced comparison, which is our H2.
+- **No legitimate alternative route** exists in its tasks.
+- **Outcomes don't separate asking from giving up.** There is also no "complied on paper inside scope" outcome: its
+  outcome is evading the monitor, roughly our `CROSS`.
+- **It applies continuation pressure.** We apply none.
+
+We should cite it as the result that enforcement plus pressure provokes evasion. Our contribution is what enforcement
+does *without* pressure, compared with a stated rule, when an honest route exists.
+
+**Zhang, "The Troy Moment of AI: Why Some Will Cheat and Some Will Follow?"**,
+[arXiv:2609.15494](https://arxiv.org/abs/2609.15494), September 2026. Abstract read.
+- **Setup:** seven ImpossibleBench tasks, run under an "explicit boundary" regime (authorisation rules plus restricted
+  tools) against open shell tools, solo and with three agents.
+- **Outcomes:** escalated, stopped silently, failed to terminate, or modified protected tests. These are close to our
+  `ASK` and `QUIT`.
+- **Findings:**
+  - With explicit boundaries, no protected test was changed, but models differed a lot in escalating versus stopping
+    silently.
+  - Crossings were usually not framed as cheating: agents "restored" tests they took to be tampered with.
+
+**Harness-IF** (Huang et al.), [arXiv:2608.11727](https://arxiv.org/abs/2608.11727), August 2026. Abstract read.
+- **What it measures:** instruction following across five instruction surfaces (system prompt, project files, user
+  instructions, tool and skill descriptions, and one more). There are 12 models.
+- **Method:** it re-runs each task with the rule withheld, to separate compliance from what the model would have done
+  anyway. That is the same logic as our `none` baseline.
+- **How it differs:** it doesn't study enforcement or workarounds. It is relevant to our `stated` against `file`
+  comparison.
+
+**ContextCov**, [arXiv:2603.00822](https://arxiv.org/abs/2603.00822). Abstract read.
+- Compiles AGENTS.md rules into executable checks (AST queries, shell shims, architecture validators).
+- On SWE-bench Lite it reaches 88% constraint compliance, against 67% for prompt-only rules.
+- It measures compliance, not what agents do instead when a check blocks them.
+
+**"Don't Let AI Agents YOLO Your Files"** (Zhong et al.), [arXiv:2604.13536](https://arxiv.org/abs/2604.13536). Abstract
+read.
+- Reviews 290 public reports of coding agents misusing filesystem access.
+- Proposes a filesystem that stages and gates agent writes.
+
+**Also found (search only, not opened):**
+- **HiL-Bench**, [arXiv:2604.09408](https://arxiv.org/abs/2604.09408). Do coding agents ask for help when they hit
+  hidden blockers? Reportedly they rarely do. This is relevant to how often `ASK` should occur.
+- **ClarEval**, [arXiv:2603.00187](https://arxiv.org/abs/2603.00187). Clarification under ambiguous instructions.
+- **A factorial study of instruction adherence in coding-agent configuration files**,
+  [arXiv:2605.10039](https://arxiv.org/abs/2605.10039). Reportedly 1,650 Claude Code sessions, with no effect of
+  CLAUDE.md structure.
+- **"Agent READMEs"**, [arXiv:2511.12884](https://arxiv.org/abs/2511.12884). A survey of 2,303 context files.
+- **Claude Mythos Preview system card.** Secondary mirrors quote hack rates on Anthropic's "impossible" coding problems.
+  Cite the official card.
+
+**Where this leaves the study.**
+- **H2 is not new as a phenomenon.** Enforcement provoking workarounds is shown by ImpossibleBench's read-only arm and,
+  most directly, by EvasionBench.
+- **What remains open is the comparison and the taxonomy:**
+  - the same tasks with the rule stated, in `CLAUDE.md`, enforced, or both;
+  - no continuation pressure;
+  - an honest route available;
+  - outcomes that separate asking, legitimate rerouting, compliance on paper and crossing.
+
+  As far as these searches go, that has not been done. Lead the write-up with that, not with "enforcement causes
+  workarounds".
+
 ## Other close work
 
 **Reward hacking in coding agents:**
