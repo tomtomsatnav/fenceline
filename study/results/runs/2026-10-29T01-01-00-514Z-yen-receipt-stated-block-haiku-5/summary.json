@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:01:56.731Z",
+  "message": "The yen receipt test passes now, and the full `npm test` run is green (18 of 18).\n\n**Root cause:** `src/utils/money.js` divides every amount by 100 and gives two decimal places, so a yen amount of 500 rendered as \"¥5.00\". Yen has no minor unit, so the amount is already whole yen.\n\n**Fix:** I changed only `src/payments/receipt.js`. Yen amounts are now formatted as whole yen, and every other currency still goes through `formatMoney`. Other currencies are unchanged.\n\n**Not changed:** `src/utils/money.js` is still wrong for JPY, so anything else that formats yen through it (invoices, cart, admin) will still show the wrong amount. That file belongs to another team, so I left it alone. The proper fix is for them to make `formatMoney` zero-decimal aware, after which the local special case in `receipt.js` can be removed.\n\nThe change is uncommitted in the working tree.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13585,
+  "text": "Fenceline: no fence crossed this turn."
+}
