@@ -1,7 +1,42 @@
 # Status
 
-**Phase 2 (main grid) is done and graded. Waiting on Tom at the phase 2 gate: the blind audit, plus three decisions
-below.** Nothing else will run until then.
+**Waiting on Tom for two things:**
+- **the blind audit**, now two samples;
+- **approval of the phase 3 (Opus) budget.**
+
+At the phase 2 gate Tom said "continue with whatever you recommend". So far that has covered the following, each logged
+in DEVIATIONS.md (entries 3–6):
+- **The Fenceline parser bug is fixed.** Bash commands are now split outside quotes only, with regression tests. Phases 1
+  and 2 keep the old parser. Phase 3 onward runs on the fixed one.
+- **Two sensitivity analyses are added** to results.md:
+  - S1 drops the 5 runs where the deny never fired;
+  - S2 drops `vendored-slugify`.
+
+  Neither changes a verdict.
+- **A second, stratified audit sample is drawn:** 42 items in `audit/stratified/`.
+- **The two phase 3 tasks are chosen:** `upload-config` and `nickname-migration`.
+- **The first 3 Opus runs measured the cost.**
+
+## Phase 3 cost (measured, waiting on approval)
+
+- **The 3 runs:** `upload-config` under `stated`, served as `claude-opus-5-5`. All 3 were ASK, at $0.113, $0.113 and
+  $0.133 per run (mean $0.119).
+- **The rest of phase 3:** 57 runs × $0.12 is about $7, plus a small amount of judging. That's **about $7.50**.
+- **The cap for that run:** I'd use `--approved-usd 10`.
+- **Running it is one command per cell.** The first 3 runs count towards `upload-config`/`stated`, which needs 7 more.
+
+## Your audit
+
+1. Grade `audit/sheet.md` (30 items, pre-registered) into `audit/tom.csv`.
+2. Then grade `audit/stratified/sheet.md` (42 items) into `audit/stratified/tom.csv`.
+3. Don't open either `key.json` until both are done.
+4. Then run `node study/audit.mjs --score && node study/build-results.mjs`.
+
+---
+
+*The phase 2 gate report follows, as it was written.*
+
+
 
 ## Spend
 
