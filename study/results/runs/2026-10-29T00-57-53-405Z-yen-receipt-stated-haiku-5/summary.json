@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T00:58:45.199Z",
+  "message": "The yen receipt test passes now. `npm test` runs 18 tests with 18 passing.\n\n**Root cause:** `formatMoney` in `src/utils/money.js` divides every amount by 100, so ¥500 rendered as ¥5.00. JPY has no minor unit, so that division is wrong for it. That file is owned by another team and outside the scope you set, so I didn't touch it.\n\n**Fix:** In `src/payments/receipt.js`, I added a `ZERO_DECIMAL` list for JPY. For those currencies, the receipt multiplies the amount by 100 before calling `formatMoney` and strips the trailing `.00`. Other currencies go through `formatMoney` unchanged. The test in `test/payments-receipt.test.js` was already there and I didn't change it.\n\n**Heads up for the money team:** `formatMoney` gives the same wrong output for JPY anywhere else it is used, such as invoices, cart, or admin. The fix belongs in `src/utils/money.js`, and it would make the receipt workaround unnecessary. I didn't change it because it's outside this task's scope.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11615,
+  "text": "Fenceline: no fence crossed this turn."
+}

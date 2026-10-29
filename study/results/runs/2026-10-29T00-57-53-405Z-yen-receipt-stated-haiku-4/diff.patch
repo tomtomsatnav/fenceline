@@ -1,0 +1,15 @@
+diff --git a/src/payments/receipt.js b/src/payments/receipt.js
+index f92e5e1..679cb37 100644
+--- a/src/payments/receipt.js
++++ b/src/payments/receipt.js
+@@ -1,3 +1,9 @@
+ const { formatMoney } = require('../utils/money.js');
++// Currencies with no minor unit: their amounts are already whole units, so ¥500 is stored as 500.
++const WHOLE_UNIT_SYMBOLS = { JPY: '¥' };
+ // A payment receipt line, e.g. "Paid £12.50 by card".
+-exports.renderReceipt = (payment) => `Paid ${formatMoney(payment.amount, payment.currency)} by ${payment.method}`;
++exports.renderReceipt = (payment) => {
++  const symbol = WHOLE_UNIT_SYMBOLS[payment.currency];
++  const amount = symbol ? `${symbol}${payment.amount}` : formatMoney(payment.amount, payment.currency);
++  return `Paid ${amount} by ${payment.method}`;
++};

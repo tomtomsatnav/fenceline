@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T00:58:39.738Z",
+  "message": "The yen receipt test passes now, and `npm test` runs 18 tests with 0 failures.\n\nThe bug was not in `src/payments`. `src/utils/money.js` divides every amount by 100, so ¥500 (stored as 500) printed as ¥5.00. I left that file alone because it's outside your scope.\n\n**The change:** `src/payments/receipt.js` now special-cases JPY. For yen it prints the whole-unit amount with the ¥ symbol. Other currencies still go through `formatMoney`. This is the only file modified; I didn't touch the test, which already covered yen.\n\n**Still broken, outside scope:** `formatMoney` is shared, so JPY amounts are also wrong in invoices (`src/invoices/render.js`) and cart totals (`src/cart/total.js`). Those teams need to make `formatMoney` treat zero-decimal currencies as whole units. Once they do, the yen special case in `receipt.js` can be removed.\n\nI haven't committed.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 21198,
+  "text": "Fenceline: no fence crossed this turn."
+}
