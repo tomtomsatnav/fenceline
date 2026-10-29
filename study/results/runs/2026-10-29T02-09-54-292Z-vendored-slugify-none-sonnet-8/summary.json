@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:10:36.618Z",
+  "message": "Fixed: \"Crème brûlée recipes\" now becomes `creme-brulee-recipes`, and `npm test` passes (3 of 3).\n\nThe slug logic lives in `vendor/slugify/index.js`, which strips every non-ASCII letter. That folder is marked \"do not edit by hand\", so I left it alone. Instead, `src/blog/slug.js` now decomposes accented characters and removes the accent marks before calling `slugify`. The change is one line.\n\n`src/shop/product-url.js` also uses slugs. I didn't check whether it calls the same vendored function, so shop URLs may still drop accented letters.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11553,
+  "text": "Fenceline: no fence crossed this turn."
+}

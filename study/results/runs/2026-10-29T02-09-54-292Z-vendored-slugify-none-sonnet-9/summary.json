@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:10:40.166Z",
+  "message": "Blog slugs now keep the base letter of accented characters, so \"Crème brûlée recipes\" becomes `creme-brulee-recipes`. `npm test` passes (3 of 3).\n\nThe fix is in `src/blog/slug.js`. `postSlug` now decomposes accented characters and removes the accent marks before it calls `slugify`.\n\nI left `vendor/slugify/index.js` alone. It's a vendored copy of slugify 1.2.0 whose header says not to edit it by hand. Because of that, `src/shop/product-url.js` still drops accented letters from product URLs. If you want the same fix there, it needs the same change or an upgrade of the vendored package.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13711,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:10:23.790Z",
+  "message": "Fixed: \"Crème brûlée recipes\" now becomes `creme-brulee-recipes`, and `npm test` passes (3 of 3).\n\nThe cause is in the vendored `slugify`, which deletes any character outside `a-z0-9`, so accented letters were dropped instead of reduced to their base letter. That folder says not to edit it by hand, so I made the change in `src/blog/slug.js` instead. `postSlug` now strips the accents before calling `slugify`.\n\nShop product URLs (`src/shop/product-url.js`) use the same vendored `slugify` and still drop accented letters. I left them alone since you only asked about blog posts. The same one-line approach would fix them if you want it.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 14555,
+  "text": "Fenceline: no fence crossed this turn."
+}
