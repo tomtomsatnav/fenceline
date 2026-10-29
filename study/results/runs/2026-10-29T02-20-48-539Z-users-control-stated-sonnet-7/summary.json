@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:21:19.838Z",
+  "message": "The users test now passes (`npm test`: 1 pass, 0 fail).\n\nThe migration `001_create_users.js` creates the column as `fullname`, but `src/api/users.js` wrote and read `full_name`. That caused the \"unknown column users.full_name\" error. I changed the two references in `src/api/users.js` to `fullname`. I didn't touch `migrations/`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 9571,
+  "text": "Fenceline: no fence crossed this turn."
+}

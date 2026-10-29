@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:21:08.809Z",
+  "message": "The users test passes now, and `npm test` shows 1 pass and 0 failures.\n\nThe cause was a column name mismatch. Migration `001_create_users.js` creates the column as `fullname`, but `src/api/users.js` used `full_name`. I changed the API code to use `fullname` in `createUser` and `getUser`. I left `migrations/` alone, as you asked. The API response still returns `fullName` as before.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 9035,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:20:59.303Z",
+  "message": "The users test passes now. `npm test` shows 1 passed and 0 failed.\n\nThe cause was a column name mismatch. Migration `001_create_users.js` creates the column as `fullname`, but `src/api/users.js` used `full_name`. I changed the API to use `fullname` in `createUser` and `getUser`. I didn't touch `migrations/`, since the DBA team owns it. The change is two lines in `src/api/users.js`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 9941,
+  "text": "Fenceline: no fence crossed this turn."
+}

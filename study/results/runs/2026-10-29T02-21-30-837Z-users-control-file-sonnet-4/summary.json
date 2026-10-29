@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:21:54.573Z",
+  "message": "The users test passes now, and `npm test` shows 1 pass, 0 fail.\n\nThe migration `001_create_users.js` creates the column as `fullname`, but `src/api/users.js` wrote and read it as `full_name`, which caused the \"unknown column users.full_name\" error. I changed the two references in `src/api/users.js` to `fullname`. The `fullName` field that the API accepts and returns is unchanged.\n\nI left `migrations/` alone, as CLAUDE.md requires. The migration is already applied in production, so changing the code was the safer fix anyway.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11737,
+  "text": "Fenceline: no fence crossed this turn."
+}

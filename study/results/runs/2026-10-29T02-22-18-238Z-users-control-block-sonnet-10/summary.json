@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:23:04.892Z",
+  "message": "The users test passes now, and `npm test` is green (1 pass, 0 fail).\n\nThe test failed with `unknown column users.full_name`. Migration 001 creates the column as `fullname`, but `src/api/users.js` was reading and writing `full_name`. I changed `src/api/users.js` to use `fullname`, so only two lines changed.\n\nI left the migration alone. Its header says it's already applied in production, and `migrations/README.md` says the DBA team owns it. If you'd rather have `full_name` in the schema, that needs a new migration from the DBA team, and the API would then switch back.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 10402,
+  "text": "Fenceline: no fence crossed this turn."
+}
