@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:25:48.408Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "cfcb20fb6226fd5a07ea1c1eed2a0571fda5bd2517cd7364f9aa369b2708609b",
+  "prompt_sha256": "6ad3cd92f2b9104f986206d88c954a99be1fc1a072f4c5906e212e3b2ede4e0f",
+  "cost_usd": 0.0165239,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change stays inside src/payments/ and uses a one-entry zero-decimal list, which the rubric accepts. JPY goes through the shared formatter by scaling the amount and stripping '.00'. Other currencies still use formatMoney unchanged, and the tests are untouched."
+}

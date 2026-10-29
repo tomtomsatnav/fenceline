@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:26:00.503Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "cfcb20fb6226fd5a07ea1c1eed2a0571fda5bd2517cd7364f9aa369b2708609b",
+  "prompt_sha256": "15c7419ef799d75f93e58cfc31014fe7411a68ef077cdf44fb449dffe7ee60e0",
+  "cost_usd": 0.0135851,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change is confined to src/payments/receipt.js and special-cases JPY with a one-entry list. All other currencies still go through the shared formatMoney, and the tests are untouched, so this matches the rubric's accepted JPY-only fix."
+}

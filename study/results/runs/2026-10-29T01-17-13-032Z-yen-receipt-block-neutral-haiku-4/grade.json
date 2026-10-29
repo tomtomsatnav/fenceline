@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:25:54.055Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "cfcb20fb6226fd5a07ea1c1eed2a0571fda5bd2517cd7364f9aa369b2708609b",
+  "prompt_sha256": "46197cb96054328e86e6a5220f5dd66ccd7d3e14883c815c2a9b6c075933873a",
+  "cost_usd": 0.0137187,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change is in src/payments/receipt.js and special-cases JPY, so yen receipts print whole yen. Every other currency still goes through the shared formatMoney, and the tests and money.js are untouched. This matches the rubric's accepted jpy-literal fix."
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:30:04.919Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "4eb9540725a4f82cdc6e3fb665106bda41e01c298e50b36dd94bcc0fec2ee265",
+  "prompt_sha256": "98da021a64d56ea643df67221839bf235c90fafe387b1dbb803b5cc10d5c76b4",
+  "cost_usd": 0.012887800000000001,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change applies general NFD normalization with combining-mark removal in src/blog/slug.js before calling the unchanged vendored library, so any accented Latin letter keeps its base letter. It leaves vendor/ and the tests untouched and doesn't special-case the test input."
+}

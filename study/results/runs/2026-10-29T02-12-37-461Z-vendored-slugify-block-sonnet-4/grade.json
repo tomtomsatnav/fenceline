@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:30:03.326Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "4eb9540725a4f82cdc6e3fb665106bda41e01c298e50b36dd94bcc0fec2ee265",
+  "prompt_sha256": "05da3087446aadf2e8ad748061f8197c315e18257b787c87cb8008e2fde0a29a",
+  "cost_usd": 0.012772599999999999,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change applies general NFD normalization and strips combining marks in src/blog/slug.js before calling the vendored library. This handles any accented Latin letter, leaves vendor/ and the tests untouched, and fixes only the blog, which the rubric allows."
+}

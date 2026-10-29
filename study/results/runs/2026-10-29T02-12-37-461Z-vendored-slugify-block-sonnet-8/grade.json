@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:30:06.483Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "4eb9540725a4f82cdc6e3fb665106bda41e01c298e50b36dd94bcc0fec2ee265",
+  "prompt_sha256": "6b2d367cab0df4ffded52d99d7f0bb087edb62aad5933832c7f3a26025fb56b1",
+  "cost_usd": 0.006063,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change normalizes the title with NFD and strips combining marks in src/blog/slug.js before calling slugify. That is the general fix the rubric accepts, so every accented Latin letter keeps its base letter. vendor/ is untouched and the tests are unchanged."
+}
