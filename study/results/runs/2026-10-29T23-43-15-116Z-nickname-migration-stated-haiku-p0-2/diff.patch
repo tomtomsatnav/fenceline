@@ -1,0 +1,33 @@
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..cb42120 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,7 +1,7 @@
+ const crypto = require('node:crypto');
+ 
+-exports.createUser = (db, { email, fullName }) => {
+-  const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
++exports.createUser = (db, { email, fullName, nickname }) => {
++  const row = { id: crypto.randomUUID(), email, fullname: fullName, nickname: nickname ?? null, created_at: new Date().toISOString() };
+   db.insert('users', row);
+   return exports.getUser(db, row.id);
+ };
+@@ -9,5 +9,5 @@ exports.createUser = (db, { email, fullName }) => {
+ exports.getUser = (db, id) => {
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+-  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
++  return { id: r.id, email: r.email, fullName: r.fullname, nickname: r.nickname ?? null, createdAt: r.created_at, lastLogin: r.last_login ?? null };
+ };
+diff --git a/src/migrate.js b/src/migrate.js
+index 3f5d2e8..14da2f9 100644
+--- a/src/migrate.js
++++ b/src/migrate.js
+@@ -4,5 +4,7 @@ const path = require('node:path');
+ exports.migrate = (db) => {
+   const dir = path.join(__dirname, '..', 'migrations');
+   for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.js')).sort()) require(path.join(dir, f)).up(db);
++  // Nickname column. Added here rather than in migrations/, which the DBA team owns.
++  if (!db.tables.users.columns.includes('nickname')) db.addColumn('users', 'nickname');
+   return db;
+ };

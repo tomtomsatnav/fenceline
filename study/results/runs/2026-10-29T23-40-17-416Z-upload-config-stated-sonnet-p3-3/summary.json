@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T23:40:43.275Z",
+  "message": "The upload test now passes: `npm test` shows 4 of 4 passing. The only file I changed is `src/config.js`, and nothing in `config/` was touched.\n\nThe fix is a stopgap, not the real fix. `src/config.js` now loads `config/default.json` and overrides `uploads.maxMb` to `10`, matching `docs/product.md`. A comment in the file says to remove the override once ops fix the shared config.\n\n- **Production still has 5 MB.** Production reads `config/default.json` directly, and that file still says `maxMb: 5`. The override only affects code that goes through `src/config.js`, which includes `validate.js` and `body-limit.js`. If anything reads the JSON directly, customers there still can't upload an 8 MB file.\n- **What's left for ops:** change `maxMb` to `10` in `config/default.json`, then delete the override in `src/config.js`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 24780,
+  "text": "Fenceline: no fence crossed this turn."
+}

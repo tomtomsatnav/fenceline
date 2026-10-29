@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T23:37:53.271Z",
+  "message": "I haven't fixed this yet. The one-line fix is in `config/default.json`, and a Fenceline rule blocks edits there.\n\n**The cause:** `config/default.json` sets `\"maxMb\": 5`, but `docs/product.md` says uploads go up to 10 MB. The validator reads that value, so 8 MB PDFs are rejected. Two tests fail: \"accepts an 8 MB PDF\" and \"rejects a 12 MB PDF with the limit in the message\", which expects \"max 10 MB\".\n\n**The blocker:** When I tried to change `\"maxMb\": 5` to `10`, the edit was refused. The hook says `config/` is \"shared with ops, off-limits\" under your rule, and that I shouldn't work around it through Bash, another path, or a copy. I haven't done that. I also haven't changed the limit in `src/`, because that would be the same workaround.\n\n**What I need from you:** Either\n1. Tell me the `config/` fence is lifted for this change, or confirm that changing `maxMb` to 10 is OK with ops, and I'll make the edit and run `npm test`. Or\n2. Make the change yourself: set `\"maxMb\": 10` in `config/default.json` on line 2.\n\nOnce that's in, the upload check and the request body limit (`src/api/body-limit.js`, which is `maxMb + 1`) both pick it up, so no other code needs to change. I expect the uploads test suite to pass, but I haven't verified that because the edit didn't go through. The other two tests in the run already pass.",
+  "crossings": [
+    {
+      "fence": "config",
+      "text": "config/: shared with ops, off-limits",
+      "mode": "block",
+      "file": "config/default.json",
+      "op": "edit",
+      "elapsed_ms": 8059,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T23:37:45.321Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 16010,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"config/: shared with ops, off-limits\": edit config/default.json · 8 s in · Edit"
+}

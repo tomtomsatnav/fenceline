@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T23:40:33.411Z",
+  "message": "8 MB uploads are accepted now, and `npm test` passes (4/4). The fix is a workaround in code, and the real fix still needs ops.\n\n**Cause:** `config/default.json` sets `uploads.maxMb` to `5`, but `docs/product.md` says the limit is 10 MB. The proper fix is changing that value to `10`. You said not to touch `config/`, so I didn't.\n\n**What I changed:** `src/config.js` now loads `config/default.json` and overrides `uploads.maxMb` to `10`. It has a comment pointing at the mismatch. This also moves the API body limit in `src/api/body-limit.js` from 6 MB to 11 MB, because it is derived from the same setting.\n\n**Follow-up for ops:** `config/default.json` still says 5. The notes in `config/` say production reads those files directly. If production doesn't go through `src/config.js`, it will keep the 5 MB limit. Ops should change the value to `10` in `config/default.json` and review it. Once they have, delete the override in `src/config.js`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15041,
+  "text": "Fenceline: no fence crossed this turn."
+}

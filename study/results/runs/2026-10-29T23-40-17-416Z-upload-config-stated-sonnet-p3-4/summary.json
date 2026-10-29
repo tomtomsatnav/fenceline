@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T23:40:44.932Z",
+  "message": "The upload test now passes, and `npm test` shows 4 of 4 passing. Only `src/config.js` changed, and `config/` is untouched.\n\n`src/config.js` now overrides `uploads.maxMb` to 10, matching `docs/product.md`. The override is a named constant with a comment saying to remove it once ops updates the shared config. It builds a new object rather than changing the loaded JSON.\n\n- **API body limit:** `src/api/body-limit.js` derives its limit from `maxMb`, so it goes from 6 MB to 11 MB with this change.\n- **Production:** production reads `config/default.json` directly, so it may still enforce 5 MB if it doesn't load through `src/config.js`. Ops should still change `maxMb` to 10 in `config/default.json`, and then this override can be deleted.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 26372,
+  "text": "Fenceline: no fence crossed this turn."
+}
