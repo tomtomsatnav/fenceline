@@ -4,6 +4,7 @@
 // from git. What changes per trial is the task and how the constraint is presented (lib/presentation.mjs).
 //   node study/run.mjs --phase pilot|main|opus|long --task yen-receipt --presentation none|stated|file|block|stated+block|block-neutral
 //                      --model haiku|sonnet|opus --k 5 [--parallel 2] [--timeout-min 15] [--max-budget-usd 2]
+//   phase 4: --phase long --length long [--warmup-min 30]; the cap's --max-budget-usd and --timeout-min apply per turn
 // Every trial is kept (crashes and timeouts too) in study/results/runs/<batch>-<t>/ with machine paths redacted, and
 // listed in study/results/<batch>.json. Phases 1 and 2 stop before a trial once their shared spend reaches $35; phases 3
 // and 4 need --approved-usd (the budget Tom approved for that phase).
@@ -14,12 +15,13 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { getTask } from './tasks/index.mjs';
 import { build, PRESENTATIONS } from './lib/presentation.mjs';
-import { seedRepo, git, testChecks } from './lib/repo.mjs';
+import { seedRepo, git, testChecks, writeTree } from './lib/repo.mjs';
 import { categorise } from './lib/categorise.mjs';
 import { runClaude, claudeVersion } from './lib/claude.mjs';
 import { loadBatches, spend, PHASES, SHARED_CAP_PHASES, SHARED_CAP_USD } from './lib/runs.mjs';
 import { validateFences, crossingsFor } from '../src/fences.mjs';
 import { mentioned } from '../src/trail.mjs';
+import { WARMUP, WARMUP_MIN } from './lib/long.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -31,7 +33,9 @@ if (!(phase in PHASES)) throw new Error(`--phase ${Object.keys(PHASES).join('|')
 if (!(presentation in PRESENTATIONS)) throw new Error(`--presentation ${Object.keys(PRESENTATIONS).join('|')}`);
 if (!['haiku', 'sonnet', 'opus'].includes(model)) throw new Error('--model haiku|sonnet|opus');
 if (model === 'opus' && phase !== 'opus') throw new Error('opus runs only in phase 3 (--phase opus)');
-if (length !== 'short') throw new Error('long sessions are phase 4 and not built yet (see study/STATUS.md)');
+if (!['short', 'long'].includes(length)) throw new Error('--length short|long');
+if ((length === 'long') !== (phase === 'long')) throw new Error('long sessions are phase 4 (--phase long --length long), and phase 4 runs only long sessions');
+const warmupMin = Number(opt('warmup-min', WARMUP_MIN));
 if (!Number.isInteger(k) || k < 1) throw new Error('--k must be a positive integer');
 const task = getTask(opt('task'));
 const outDir = path.resolve(opt('out', path.join(root, 'study', 'results')));
@@ -41,6 +45,7 @@ if (!Number.isFinite(cap)) throw new Error(`phase ${phase} needs Tom's approval:
 if (SHARED_CAP_PHASES.includes(phase) && cap > SHARED_CAP_USD) throw new Error(`phases 1-2 are capped at $${SHARED_CAP_USD}`);
 
 const { prompt, files, fences: rawFences, mode, denyStyle } = build(task, presentation);
+if (length === 'long' && !(task.longSession && ['stated', 'file'].includes(presentation))) throw new Error('phase 4 runs the task that defines longSession, under stated or file (PHASE4.md)');
 const fences = validateFences({ fences: rawFences }).fences;
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const batch = `${stamp}-${task.id}-${presentation.replace('+', '-')}-${model}`;
@@ -55,18 +60,45 @@ const isInfraError = (j) => j?.is_error && /api error|overloaded|rate.?limit|aut
 
 async function trial(t) {
   const repo = path.join(tmpRoot, String(t), 'repo'); fs.mkdirSync(path.dirname(repo), { recursive: true });
-  seedRepo(repo, files);
+  // a long session seeds without the task's own new test, so the warm-up never sees it fail; it is committed just before
+  // the last turn (PHASE4.md)
+  const held = length === 'long' ? task.longSession.heldBack : [];
+  seedRepo(repo, Object.fromEntries(Object.entries(files).filter(([rel]) => !held.includes(rel))));
   const sessionId = crypto.randomUUID();
   const env = { ...process.env, FENCELINE_HOME: home }; delete env.CLAUDE_CODE_SESSION_ID; delete env.FENCELINE_DISABLE; delete env.NODE_TEST_CONTEXT;
   if (denyStyle === 'neutral') env.FENCELINE_DENY_STYLE = 'neutral'; else delete env.FENCELINE_DENY_STYLE;
-  const r = await runClaude(['-p', prompt, '--model', model, '--plugin-dir', root, '--session-id', sessionId, '--setting-sources', 'project',
+  const call = (p, resume) => runClaude(['-p', p, '--model', model, '--plugin-dir', root, resume ? '--resume' : '--session-id', sessionId, '--setting-sources', 'project',
     '--permission-mode', 'acceptEdits', '--allowedTools', 'Bash Edit Write Read Glob Grep', '--output-format', 'json', '--max-budget-usd', String(maxBudget)],
   { cwd: repo, env, timeoutMs: timeoutMin * 60000 });
+  const turns = []; let r; const modelsUsed = new Set();
+  const t0 = Date.now();
+  const turn = async (kind, p) => {
+    const started_ms = Date.now() - t0;
+    r = await call(p, turns.length > 0);
+    for (const m of Object.keys(r.json?.modelUsage ?? {})) modelsUsed.add(m);
+    turns.push({ n: turns.length + 1, kind, started_ms, wall_s: r.wall_s, cost_usd: r.json?.total_cost_usd ?? null, num_turns: r.json?.num_turns ?? null, claude_exit: r.code, timed_out: r.timed_out, subtype: r.json?.subtype ?? null, is_error: r.json?.is_error ?? null });
+    return r.code === 0 && r.json && !r.json.is_error;
+  };
+  let warmupShort = false;
+  if (length === 'long') {
+    // warm-up turns, in the fixed order, until the session has run warmupMin minutes; the rule (stated) rides on turn 1 only
+    let ok = true;
+    for (const [i, w] of WARMUP.entries()) {
+      ok = await turn('warmup', i === 0 && presentation === 'stated' ? `${task.rule}\n\n${w}` : w);
+      if (!ok || Date.now() - t0 >= warmupMin * 60000) break;
+    }
+    warmupShort = Date.now() - t0 < warmupMin * 60000;
+    if (ok) {
+      writeTree(repo, Object.fromEntries(held.map((rel) => [rel, files[rel]])));
+      git(repo, ['add', '--', ...held]); git(repo, ['-c', 'user.email=study@fenceline', '-c', 'user.name=study', 'commit', '-qm', 'task test', '--', ...held]);
+      await turn('task', task.prompt);
+    }
+  } else await turn('task', prompt);
   // ground truth from git, independent of the hooks
   git(repo, ['add', '-A']);
   const changed = git(repo, ['-c', 'core.quotepath=off', 'diff', '--cached', '--name-status', 'HEAD']).split('\n').filter(Boolean).map((l) => { const [s, ...f] = l.split('\t'); return { status: s, file: f.at(-1) }; });
   const gitCrossed = [...new Set(changed.flatMap((c) => crossingsFor(fences, c.file, OP[c.status[0]] || 'edit')).map((c) => `${c.fence}:${c.file}`))].sort();
-  const checks = testChecks(repo, files, task.hidden);
+  const checks = testChecks(repo, files, task.hidden, { onlySeedTests: length === 'long' });
   const sdir = path.join(home, 'sessions', sessionId);
   const events = fs.existsSync(path.join(sdir, 'events.jsonl')) ? fs.readFileSync(path.join(sdir, 'events.jsonl'), 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
   const finalMessage = r.json?.result ?? '';
@@ -74,10 +106,15 @@ async function trial(t) {
   const crossedFiles = [...new Set(gitCrossed.map((x) => x.split(':').slice(1).join(':')))];
   const invalid = !events.length ? 'Fenceline hooks did not run (no events.jsonl)'
     : (!r.json && !r.timed_out) ? `claude exited ${r.code} without a JSON result`
-      : isInfraError(r.json) ? `infrastructure error: ${String(r.json.result).slice(0, 200)}` : null;
+      : isInfraError(r.json) ? `infrastructure error: ${String(r.json.result).slice(0, 200)}`
+        : turns.at(-1).kind !== 'task' ? `session ended during the warm-up (turn ${turns.length}: exit ${r.code}${r.timed_out ? ', timed out' : ''}), so the task was never given` : null;
+  const sum = (f) => (turns.some((x) => x[f] == null) && f === 'cost_usd' ? null : turns.reduce((a, x) => a + (x[f] ?? 0), 0));
   const row = { schema: 'fenceline.study.run/1', phase, task: task.id, task_kind: task.kind, presentation, mode, deny_style: denyStyle, model, length, trial: t, session_id: sessionId,
-    invalid, claude_exit: r.code, timed_out: r.timed_out, result_subtype: r.json?.subtype ?? null, models_used: Object.keys(r.json?.modelUsage ?? {}),
-    wall_s: r.wall_s, cost_usd: r.json?.total_cost_usd ?? null, max_budget_usd: maxBudget, turns: r.json?.num_turns ?? null,
+    invalid, claude_exit: r.code, timed_out: r.timed_out, result_subtype: r.json?.subtype ?? null, models_used: [...new Set([...modelsUsed])],
+    wall_s: sum('wall_s'), cost_usd: sum('cost_usd'), max_budget_usd: maxBudget * turns.length, turns: sum('num_turns'),
+    ...(length === 'long' ? { session_turns: turns, warmup_turns: turns.filter((x) => x.kind === 'warmup').length, warmup_min: (turns.find((x) => x.kind === 'task')?.started_ms ?? Date.now() - t0) / 60000, warmup_short: warmupShort,
+      // which turn the first landed crossing happened in (event time against turn start times; both from session start)
+      first_crossing_turn: (() => { const c = events.flatMap((e) => (e.crossings || []).filter((x) => !x.prevented && x.op !== 'read').map((x) => x.elapsed_ms))[0]; return c == null ? null : turns.filter((x) => x.started_ms <= c).length || 1; })() } : {}),
     changed, git_crossed: gitCrossed, hook_crossed: hookCrossed,
     // hook log vs git: every crossing git sees must be in the hook log; what the log has and git does not was reverted
     hook_covers_git: gitCrossed.every((x) => hookCrossed.includes(x)), hook_reverted: hookCrossed.filter((x) => !gitCrossed.includes(x)),
@@ -94,7 +131,7 @@ async function trial(t) {
   for (const f of ['meta.json', 'events.jsonl', 'summary.json']) if (fs.existsSync(path.join(sdir, f))) fs.writeFileSync(path.join(dest, f), redact(fs.readFileSync(path.join(sdir, f), 'utf8')));
   fs.writeFileSync(path.join(dest, 'diff.patch'), redact(git(repo, ['diff', '--cached', 'HEAD'])));
   fs.writeFileSync(path.join(dest, 'row.json'), redact(JSON.stringify(row, null, 2)));
-  console.log(`${task.id} ${presentation} ${model} ${t}/${k}: ${row.category ?? 'needs judge'}${invalid ? ` INVALID (${invalid})` : ''} crossed=${gitCrossed.join(',') || '-'} denied=${row.denied_count} tests=${row.tests_pass} seed=${row.seed_tests_pass} hidden=${row.hidden_pass} $${(row.cost_usd ?? 0).toFixed(4)} ${r.wall_s.toFixed(0)}s`);
+  console.log(`${task.id} ${presentation} ${model} ${t}/${k}: ${row.category ?? 'needs judge'}${invalid ? ` INVALID (${invalid})` : ''} crossed=${gitCrossed.join(',') || '-'} denied=${row.denied_count} tests=${row.tests_pass} seed=${row.seed_tests_pass} hidden=${row.hidden_pass} $${(row.cost_usd ?? 0).toFixed(4)} ${row.wall_s.toFixed(0)}s${length === 'long' ? ` (${row.warmup_turns} warm-up turns, ${row.warmup_min.toFixed(0)} min)` : ''}`);
 }
 
 const writeBatch = (stopped) => {

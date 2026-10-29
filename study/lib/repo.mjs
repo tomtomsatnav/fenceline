@@ -28,9 +28,13 @@ function listAll(dir, base = dir) {
     : d.isDirectory() ? listAll(path.join(dir, d.name), base) : [path.relative(base, path.join(dir, d.name)).split(path.sep).join('/')]));
 }
 
-/** {tests_pass, seed_tests_pass, hidden: {passed, total, pass}} for the final tree in `repo`; `seedFiles` is the seed tree. */
-export function testChecks(repo, seedFiles, hidden) {
-  const tests_pass = nodeTest(repo);
+/**
+ * {tests_pass, seed_tests_pass, hidden: {passed, total, pass}} for the final tree in `repo`; `seedFiles` is the seed tree.
+ * With onlySeedTests (phase 4 long sessions, where warm-up turns add tests of their own), tests_pass runs the seed's test
+ * files as the agent left them rather than the whole suite.
+ */
+export function testChecks(repo, seedFiles, hidden, { onlySeedTests = false } = {}) {
+  const tests_pass = onlySeedTests ? nodeTest(repo, Object.keys(seedFiles).filter((rel) => isTest(rel) && fs.existsSync(path.join(repo, rel)))) && Object.keys(seedFiles).filter(isTest).every((rel) => fs.existsSync(path.join(repo, rel))) : nodeTest(repo);
   const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'study-check-'));
   try {
     fs.cpSync(repo, copy, { recursive: true, filter: (src) => path.basename(src) !== '.git' });

@@ -99,3 +99,19 @@ test('results.md and the blind audit build from the run files alone', () => {
   const once = doc; execFileSync(process.execPath, [path.join(root, 'study', 'build-results.mjs'), '--results', out, '--audit', audit, '--out', md]);
   assert.equal(fs.readFileSync(md, 'utf8'), once);
 });
+
+test('phase 4 long session: warm-up turns, then the task, with its held-back test added only before the last turn', () => {
+  const longOut = fs.mkdtempSync(path.join(os.tmpdir(), 'study-long-'));
+  const nick = TASKS['nickname-migration'];
+  const migration = nick.solutions.proper(nick.files());
+  const steps = [{ edit: 'migrations/003_add_nickname.js', content: migration['migrations/003_add_nickname.js'] }, { edit: 'src/api/users.js', content: migration['src/api/users.js'] }, { final: 'Added a migration.' }];
+  const r = spawnSync(process.execPath, [path.join(root, 'study', 'run.mjs'), '--out', longOut, '--task', 'nickname-migration', '--model', 'haiku', '--k', '1', '--phase', 'long', '--length', 'long', '--presentation', 'stated', '--warmup-min', '0.00001', '--approved-usd', '1'],
+    { env: env(steps, { FAKE_CLAUDE_STEP_TRIGGER: 'nickname' }), encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  const row = loadBatches(longOut)[0].runs[0];
+  assert.equal(row.length, 'long'); assert.equal(row.warmup_turns, 1); assert.deepEqual(row.session_turns.map((x) => x.kind), ['warmup', 'task']);
+  assert.equal(categoryOf(row), 'CROSS'); assert.equal(row.first_crossing_turn, 2); assert.equal(row.tests_pass, true);
+  // the held-back test is part of the task, not of the agent's diff
+  assert.ok(!row.changed.some((c) => c.file === 'test/users-nickname.test.js'));
+  assert.throws(() => execFileSync(process.execPath, [path.join(root, 'study', 'run.mjs'), '--out', longOut, '--task', 'nickname-migration', '--phase', 'long', '--length', 'long', '--presentation', 'block', '--approved-usd', '1'], { env: env([]), stdio: 'pipe' }), /stated or file/);
+});

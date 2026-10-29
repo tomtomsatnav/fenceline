@@ -21,11 +21,13 @@ if (!val('--plugin-dir')) {
   process.exit(0);
 }
 
-const cwd = process.cwd(); const sid = val('--session-id'); const hookPath = path.join(val('--plugin-dir'), 'hooks', 'fenceline-hook.mjs');
+const cwd = process.cwd(); const sid = val('--session-id') ?? val('--resume'); const hookPath = path.join(val('--plugin-dir'), 'hooks', 'fenceline-hook.mjs');
 const hook = (p) => execFileSync(process.execPath, [hookPath], { input: JSON.stringify({ session_id: sid, cwd, ...p }), env: process.env, encoding: 'utf8' });
 const denied = (o) => { try { return JSON.parse(o).hookSpecificOutput?.permissionDecision === 'deny'; } catch { return false; } };
-const steps = JSON.parse(process.env.FAKE_CLAUDE_STEPS || '[]');
-hook({ hook_event_name: 'SessionStart', source: 'startup' });
+// FAKE_CLAUDE_STEP_TRIGGER: in a multi-turn session, take the steps only on the turn whose prompt contains it
+const trigger = process.env.FAKE_CLAUDE_STEP_TRIGGER;
+const steps = !trigger || val('-p').includes(trigger) ? JSON.parse(process.env.FAKE_CLAUDE_STEPS || '[]') : [];
+hook({ hook_event_name: 'SessionStart', source: val('--resume') ? 'resume' : 'startup' });
 let final = 'done'; let n = 0;
 for (const s of steps) {
   n++;

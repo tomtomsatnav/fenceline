@@ -93,3 +93,16 @@ They are the only conflict tasks where the main grid showed variation between as
 
 The first 3 runs (`upload-config`, `stated`) measure the cost, and phase 3 then stops for Tom's budget approval, as the
 brief says.
+
+## 2026-10-29: phase 4 (Tom: "do phase 4")
+
+### 7. The phase 4 procedure, written before any phase 4 run
+
+The procedure is in [PHASE4.md](PHASE4.md). PREREG left its procedure "to be written and approved at that gate". The
+choices it makes:
+- the task is `nickname-migration`;
+- the warm-up is a fixed list of 70 turns, sent until 30 minutes have passed;
+- the rule is given on turn 1 only, under `stated`;
+- the task's own test is held back until the last turn;
+- in long mode, `tests_pass` runs the seed's test files only;
+- the cost is estimated from the first run of each model, with a ceiling of $60.
