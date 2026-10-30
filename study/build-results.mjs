@@ -10,7 +10,7 @@ import { TASKS, CONFLICT } from './tasks/index.mjs';
 import { CATEGORIES } from './lib/categorise.mjs';
 import { PRESENTATIONS } from './lib/presentation.mjs';
 import { loadBatches, spend, runCost, PHASES, SHARED_CAP_PHASES, SHARED_CAP_USD } from './lib/runs.mjs';
-import { categoryOf, cells, h1, h2, h3, valid, MARGIN, sensitivity, pressureExt } from './lib/analysis.mjs';
+import { categoryOf, cells, h1, h2, h3, valid, MARGIN, sensitivity, pressureExt, confirm } from './lib/analysis.mjs';
 import { wilson, mde, fmtRate, fmtDiff, pct } from './lib/stats.mjs';
 import { score } from './audit.mjs';
 
@@ -58,6 +58,18 @@ P('## Extension: continue-pressure, fences hidden (EXTENSION.md)', '', 'Pre-regi
 table(['presentation', 'model', 'pressure: deviated', 'no pressure: deviated', 'difference (pressure - none)', 'verdict', 'pressured runs: stopped after turn 1, then deviated'],
   pressureExt(runs).map((x) => [x.presentation, x.model, fmtRate(x.a), fmtRate(x.b), fmtDiff(x.d), x.verdict, x.stoppedFirst ? `${x.flipped}/${x.stoppedFirst}` : '-']));
 P('The block, haiku+sonnet row is the extension\'s pre-registered test; the rest are secondary.', '');
+
+// ---- the confirmatory follow-up
+const cf = confirm(runs);
+P('## Confirmatory follow-up (CONFIRM.md)', '', cf.n ? `Pre-registered in CONFIRM.md before its runs; ${cf.n} valid runs, never pooled with the extension. Deviation = PAPER, CROSS or CROSS_REVERT; fences hidden; both tasks and models pooled.` : '_Pre-registered in CONFIRM.md; not run yet (it waits for the blind audit)._', '');
+if (cf.n) {
+  table(['test', 'comparison', 'rate A', 'rate B', 'difference (A - B)', 'verdict'], [
+    ['C1 (primary)', 'stated: pressure (A) vs none (B)', fmtRate(cf.c1.a), fmtRate(cf.c1.b), fmtDiff(cf.c1.d), cf.c1.verdict],
+    ['C2', 'stated + pressure: of the runs stopped after turn 1, deviated after the nudges', fmtRate(cf.c2.w), '-', '-', cf.c2.verdict],
+    ['C3', 'pressure: block (A) vs stated (B), predicted lower', fmtRate(cf.c3.a), fmtRate(cf.c3.b), fmtDiff(cf.c3.d), cf.c3.verdict],
+    ['C4', 'pressure: block-neutral (A) vs block (B), two-sided', fmtRate(cf.c4.a), fmtRate(cf.c4.b), fmtDiff(cf.c4.d), cf.c4.verdict]]);
+  table(['model', 'C1 difference', 'C3 difference', 'C4 difference'], cf.byModel.map((m) => [m.model, fmtDiff(m.c1.d), fmtDiff(m.c3.d), fmtDiff(m.c4.d)]));
+}
 
 // ---- sensitivity analyses (added after the main grid; DEVIATIONS.md)
 P('## Sensitivity analyses (not pre-registered)', '', 'Added at the phase 2 gate and logged in DEVIATIONS.md. They re-run H2 and H1 with one group of runs removed; the pre-registered figures above stand.', '');

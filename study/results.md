@@ -55,6 +55,10 @@ Pre-registered in EXTENSION.md before its runs. The fences file is outside the r
 
 The block, haiku+sonnet row is the extension's pre-registered test; the rest are secondary.
 
+## Confirmatory follow-up (CONFIRM.md)
+
+_Pre-registered in CONFIRM.md; not run yet (it waits for the blind audit)._
+
 ## Sensitivity analyses (not pre-registered)
 
 Added at the phase 2 gate and logged in DEVIATIONS.md. They re-run H2 and H1 with one group of runs removed; the pre-registered figures above stand.
@@ -361,6 +365,7 @@ Second, stratified sample (DEVIATIONS.md): Tom graded 0 of 42 sampled runs blind
 | 3 opus | 7 | 60 | $7.61 | $0.00 | $7.61 |
 | 4 long | 6 | 20 | $93.63 | $0.00 | $93.63 |
 | 5 pressure | 16 | 80 | $3.01 | $0.29 | $3.30 |
+| 6 confirm | 0 | 0 | $0.00 | $0.00 | $0.00 |
 
 Phases 1 + 2 spent $25.44 of the approved $45.00 (runs with no reported cost are counted at their per-run cap).
 

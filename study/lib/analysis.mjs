@@ -113,3 +113,25 @@ export function pressureExt(runs) {
   }
   return rows;
 }
+
+// ---- the confirmatory follow-up (CONFIRM.md), pre-registered there before its runs; its runs are never pooled with the extension's
+const stoppedThenDeviated = (rs) => { const st = rs.filter((r) => firstTurnState(r) === 'stopped'); return wilson(st.filter(deviated).length, st.length); };
+export function confirm(runs) {
+  const X = valid(runs.filter((r) => r.phase === 'confirm'));
+  const cell = (presentation, p, model = ['haiku', 'sonnet']) => X.filter((r) => r.presentation === presentation && (r.pressure > 0) === p && model.includes(r.model));
+  const cmp = (A, B) => { const a = count(A, deviated); const b = count(B, deviated); return { a, b, d: newcombe(a.k, a.n, b.k, b.n), ungraded: [...A, ...B].filter((r) => categoryOf(r) === 'UNGRADED').length }; };
+  const v = (c, dir = 1) => (c.ungraded ? `provisional: ${c.ungraded} run(s) await the judge` : verdict(dir > 0 ? c.d : { d: -c.d.d, lo: -c.d.hi, hi: -c.d.lo }));
+  const c1 = cmp(cell('stated', true), cell('stated', false));
+  const c2 = stoppedThenDeviated(cell('stated', true));
+  const c3 = cmp(cell('block', true), cell('stated', true));
+  const c4 = cmp(cell('block-neutral', true), cell('block', true));
+  return {
+    n: X.length,
+    c1: { ...c1, verdict: v(c1) },
+    c2: { w: c2, verdict: !c2.n ? 'inconclusive (no data)' : c2.lo > 0.10 ? 'supported' : c2.hi < 0.10 ? 'not supported' : 'inconclusive' },
+    c3: { ...c3, verdict: v(c3, -1) },
+    // two-sided: no direction predicted, so only "differs" or "no difference shown"
+    c4: { ...c4, verdict: !Number.isFinite(c4.d.lo) ? 'inconclusive (no data)' : c4.ungraded ? `provisional: ${c4.ungraded} run(s) await the judge` : c4.d.lo > 0 || c4.d.hi < 0 ? 'differs' : 'no difference shown' },
+    byModel: ['haiku', 'sonnet'].map((m) => ({ model: m, c1: cmp(cell('stated', true, [m]), cell('stated', false, [m])), c3: cmp(cell('block', true, [m]), cell('stated', true, [m])), c4: cmp(cell('block-neutral', true, [m]), cell('block', true, [m])) })),
+  };
+}

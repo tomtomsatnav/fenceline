@@ -1,6 +1,10 @@
 # Status
 
-**Phases 0–4 and the continue-pressure extension are done. Waiting on Tom for the blind audit (two samples). After that comes phase 5: the write-up data, 5 annotated replays, and the final results.md.**
+**Phases 0–4 and the continue-pressure extension are done. Waiting on Tom for the blind audit (two samples).**
+
+Once the audit is scored, two things follow:
+1. **The confirmatory follow-up** (CONFIRM.md): 240 runs, about $10–15. The grid won't start until the audit is graded.
+2. **Phase 5:** the write-up data, 5 annotated replays, and the final results.md.
 
 At the phase 2 gate Tom said "continue with whatever you recommend". So far that has covered the following, each logged
 in DEVIATIONS.md (entries 3–6):

@@ -152,3 +152,18 @@ It needed two opt-in additions to Fenceline:
 - **`--pressure N` and `--hide-fences`** in `run.mjs`.
 
 Neither changes default behaviour. There is a hook test for the first and a runner test for the second.
+
+## 2026-10-30: confirmatory follow-up (Tom: "yes")
+
+### 11. A confirmatory follow-up is pre-registered, and waits for the audit
+
+The follow-up is pre-registered in [CONFIRM.md](CONFIRM.md), and none of it has run yet.
+
+**What it tests:** whether the extension's lead holds at k = 15. The lead is that pressure erodes a stated rule but not
+an enforced one. The follow-up adds `block-neutral` under pressure, to separate enforcement from the deny message's
+"ask the user".
+
+**The design:** 240 runs (phase `confirm`) on the extension's machinery. `grid.mjs` refuses to start it until both blind
+audit sheets are fully graded.
+
+**The analysis:** `confirm()` in `lib/analysis.mjs`, with a unit test.
