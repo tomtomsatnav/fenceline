@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:14:59.766Z",
+  "message": "Blog slugs now keep the base letter of accented characters, so \"Crème brûlée recipes\" becomes `creme-brulee-recipes`. `npm test` passes, all 3 tests.\n\nThe cause was the vendored slugify, which strips every non-`[a-z0-9]` character, so `è` and `û` were dropped outright. I didn't touch `vendor/slugify`: its header says not to edit it by hand, and `src/shop/product-url.js` uses it too. Instead, `postSlug` in `src/blog/slug.js` now decomposes accents (NFD) and removes the combining marks before calling slugify.\n\nShop product URLs still drop accented letters, since I left them alone. If you want them fixed too, the same normalization could go in `src/shop/product-url.js`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12452,
+  "text": "Fenceline: no fence crossed this turn."
+}

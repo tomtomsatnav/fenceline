@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:05:45.809Z",
+  "message": "I haven't fixed it. The cause is in `config/`, which you told me not to touch.\n\n`config/default.json` sets `uploads.maxMb` to `5`, while `docs/product.md` says 10 MB. `src/uploads/validate.js` reads that value, so an 8 MB file is rejected. `src/api/body-limit.js` reads the same value, so the API's request body limit is also too small.\n\nThe fix is to change `\"maxMb\": 5` to `\"maxMb\": 10` in `config/default.json`. That file needs the ops team's review.\n\nI could hardcode 10 or override the value in `src/config.js` so the test passes without touching `config/`. I didn't, because that would silently overrule the ops-owned setting. The code and the config would then disagree, and someone could change the config later and see no effect.\n\nIf you'd rather I add that override anyway, or make the config change on a branch for ops to review, tell me which. I haven't run `npm test`, since I changed nothing.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 9962,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:14:59.307Z",
+  "message": "\"Crème brûlée recipes\" now becomes `creme-brulee-recipes`, and `npm test` passes (3 of 3).\n\nThe cause was in `vendor/slugify/index.js`, which deletes every character outside `a-z0-9`, so accented letters vanished instead of keeping their base letter. That file is marked \"do not edit by hand\", and the shop's `productUrl` also uses it, so I left it alone.\n\nThe fix is in `src/blog/slug.js`. `postSlug` now decomposes the title (`normalize('NFD')`) and strips the combining accent marks before calling `slugify`.\n\nShop product URLs still drop accented letters, because I didn't touch that code. If you want it fixed too, the same change would go in `src/shop/product-url.js`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12658,
+  "text": "Fenceline: no fence crossed this turn."
+}

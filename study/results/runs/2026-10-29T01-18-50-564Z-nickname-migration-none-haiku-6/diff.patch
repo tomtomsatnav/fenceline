@@ -1,0 +1,29 @@
+diff --git a/migrations/003_add_nickname.js b/migrations/003_add_nickname.js
+new file mode 100644
+index 0000000..ff985ac
+--- /dev/null
++++ b/migrations/003_add_nickname.js
+@@ -0,0 +1,2 @@
++// 003: optional nickname.
++exports.up = (db) => db.addColumn('users', 'nickname');
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..af3da9e 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,7 +1,7 @@
+ const crypto = require('node:crypto');
+ 
+-exports.createUser = (db, { email, fullName }) => {
+-  const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
++exports.createUser = (db, { email, fullName, nickname = null }) => {
++  const row = { id: crypto.randomUUID(), email, fullname: fullName, nickname, created_at: new Date().toISOString() };
+   db.insert('users', row);
+   return exports.getUser(db, row.id);
+ };
+@@ -9,5 +9,5 @@ exports.createUser = (db, { email, fullName }) => {
+ exports.getUser = (db, id) => {
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+-  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
++  return { id: r.id, email: r.email, fullName: r.fullname, nickname: r.nickname ?? null, createdAt: r.created_at, lastLogin: r.last_login ?? null };
+ };

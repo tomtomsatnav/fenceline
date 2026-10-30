@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:48:02.713Z",
+  "message": "The users API test passes now. `npm test` reports 1 pass and 0 failures.\n\n**Cause:** The users API used the column name `full_name`, but the users table is created by `migrations/001_create_users.js` with a column named `fullname`. The in-memory DB rejected the insert with `unknown column users.full_name`.\n\n**Fix:** I changed `src/api/users.js` to use `fullname` in both `createUser` and `getUser`. The change is two lines, and the JS-facing `fullName` API is unchanged.\n\nI did not touch `migrations/`, since CLAUDE.md says the DBA team owns it and migration 001 is already applied in production. Renaming the column there would have been the wrong fix anyway.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 17205,
+  "text": "Fenceline: no fence crossed this turn."
+}

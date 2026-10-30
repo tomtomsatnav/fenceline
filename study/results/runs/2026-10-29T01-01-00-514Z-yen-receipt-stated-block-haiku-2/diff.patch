@@ -1,0 +1,14 @@
+diff --git a/src/payments/receipt.js b/src/payments/receipt.js
+index f92e5e1..b7ddd54 100644
+--- a/src/payments/receipt.js
++++ b/src/payments/receipt.js
+@@ -1,3 +1,8 @@
+ const { formatMoney } = require('../utils/money.js');
++// Currencies with no minor unit, so the amount is already in whole units.
++const ZERO_DECIMAL = ['JPY'];
++const formatAmount = (payment) => ZERO_DECIMAL.includes(payment.currency)
++  ? formatMoney(payment.amount * 100, payment.currency).replace(/\.00$/, '')
++  : formatMoney(payment.amount, payment.currency);
+ // A payment receipt line, e.g. "Paid £12.50 by card".
+-exports.renderReceipt = (payment) => `Paid ${formatMoney(payment.amount, payment.currency)} by ${payment.method}`;
++exports.renderReceipt = (payment) => `Paid ${formatAmount(payment)} by ${payment.method}`;

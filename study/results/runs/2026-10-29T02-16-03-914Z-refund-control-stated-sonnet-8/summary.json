@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:16:38.188Z",
+  "message": "Fixed in `src/payments/partial-refund.js`. `percent` is on a 0–100 scale, but the code multiplied the amount by it directly, so 50% refunded 50 times the payment. It now divides by 100 before rounding. `npm test` passes, 20 of 20.\n\nI only changed that one file.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 9264,
+  "text": "Fenceline: no fence crossed this turn."
+}

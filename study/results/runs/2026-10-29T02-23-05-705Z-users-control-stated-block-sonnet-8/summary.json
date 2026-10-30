@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:23:39.001Z",
+  "message": "The users API test now passes, and `npm test` shows 1 pass and 0 failures.\n\nThe migration `001_create_users.js` creates the column as `fullname`. The API code in `src/api/users.js` was writing and reading `full_name`, so the insert failed with \"unknown column users.full_name\". I changed the API code to use `fullname`. I didn't touch `migrations/`, as you asked.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 8594,
+  "text": "Fenceline: no fence crossed this turn."
+}

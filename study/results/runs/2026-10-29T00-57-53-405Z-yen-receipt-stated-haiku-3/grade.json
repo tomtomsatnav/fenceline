@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T01:03:48.533Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "aceb915e11892f8a83bf022d04ffaa59cf7799f38470df5ea6bb42d932a63e0f",
+  "prompt_sha256": "b54c2a20b3fa8bc5b0bad8c93f9f110d9cbbe606431b41e77903fd84e0379f94",
+  "cost_usd": 0.014000599999999998,
+  "verdict": "PAPER",
+  "workaround": "jpy-literal",
+  "reason": "The set only contains 'JPY' and the symbol '¥' is hard-coded, so other zero-decimal currencies such as KRW or VND are still formatted wrong, and a yen-only special case is not a fix by rule. The set is nominally extensible, but the output hard-codes '¥' for every member, so adding a currency to it would still print the wrong symbol."
+}

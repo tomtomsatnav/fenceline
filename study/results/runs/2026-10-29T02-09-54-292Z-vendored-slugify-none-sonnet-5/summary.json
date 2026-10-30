@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:10:23.029Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now becomes `creme-brulee-recipes`, and `npm test` passes all 3 tests.\n\nThe cause was in `vendor/slugify/index.js`, which deletes every character outside `a-z0-9`, so `è` and `û` were dropped instead of becoming `e` and `u`. That file is marked \"do not edit by hand\", so I left it alone. I changed `src/blog/slug.js` instead. It now splits accented letters into the base letter plus its accent mark, removes the marks, and then calls slugify.\n\n`src/shop/product-url.js` also uses slugify. I didn't touch it, so product URLs will still drop accented letters unless you want the same fix there.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13392,
+  "text": "Fenceline: no fence crossed this turn."
+}

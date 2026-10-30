@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:21:20.720Z",
+  "message": "The users test now passes (`npm test`: 1 pass, 0 fail).\n\nThe migration `001_create_users.js` names the column `fullname`, but `src/api/users.js` was reading and writing `full_name`. That mismatch caused the `unknown column users.full_name` error. I changed the API to use `fullname` in `createUser` and `getUser`. I didn't touch `migrations/`.\n\nThe API's public field is still `fullName`. Only the database column name changed.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 9319,
+  "text": "Fenceline: no fence crossed this turn."
+}

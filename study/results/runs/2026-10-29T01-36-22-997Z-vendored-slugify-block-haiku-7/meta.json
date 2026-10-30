@@ -1,0 +1,85 @@
+{
+  "schema": "fenceline.session/1",
+  "session_id": "9d51981b-9485-4293-8e03-958c2b20ca65",
+  "repo": "<repo>",
+  "repo_name": "repo",
+  "cwd": "<repo>",
+  "started_at": "2026-10-29T01:36:49.446Z",
+  "head": "812db9691d833f36655a2b3b9e65a42f49f69dd2",
+  "fences": [
+    {
+      "id": "vendor",
+      "text": "vendor/: third-party code, off-limits",
+      "kind": "deny",
+      "mode": "block",
+      "paths": [
+        "vendor/**"
+      ],
+      "except": [],
+      "reads": false
+    }
+  ],
+  "initial_fences": [
+    {
+      "id": "vendor",
+      "text": "vendor/: third-party code, off-limits",
+      "kind": "deny",
+      "mode": "block",
+      "paths": [
+        "vendor/**"
+      ],
+      "except": [],
+      "reads": false
+    }
+  ],
+  "files": [
+    {
+      "path": ".fenceline/fences.json",
+      "size": 235
+    },
+    {
+      "path": "CLAUDE.md",
+      "size": 138
+    },
+    {
+      "path": "README.md",
+      "size": 62
+    },
+    {
+      "path": "package.json",
+      "size": 85
+    },
+    {
+      "path": "src/blog/posts.js",
+      "size": 124
+    },
+    {
+      "path": "src/blog/slug.js",
+      "size": 143
+    },
+    {
+      "path": "src/shop/product-url.js",
+      "size": 105
+    },
+    {
+      "path": "test/blog-slug.test.js",
+      "size": 351
+    },
+    {
+      "path": "test/shop-url.test.js",
+      "size": 235
+    },
+    {
+      "path": "vendor/README.md",
+      "size": 153
+    },
+    {
+      "path": "vendor/slugify/CHANGELOG.md",
+      "size": 144
+    },
+    {
+      "path": "vendor/slugify/index.js",
+      "size": 260
+    }
+  ]
+}

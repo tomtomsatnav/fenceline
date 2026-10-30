@@ -41,8 +41,10 @@ export function validateFences(doc) {
   return { schema: SCHEMA_FENCES, fences: out };
 }
 
-export function loadFences(root) {
-  const file = path.join(root, FENCES_FILE);
+// FENCELINE_FENCES_FILE reads the fences from a file outside the repo, where the agent cannot read them (the study's
+// hidden-fences extension); everything else about them is unchanged
+export function loadFences(root, env = process.env) {
+  const file = env.FENCELINE_FENCES_FILE || path.join(root, FENCES_FILE);
   if (!fs.existsSync(file)) return { schema: SCHEMA_FENCES, fences: [] };
   return validateFences(JSON.parse(fs.readFileSync(file, 'utf8')));
 }
@@ -82,7 +84,20 @@ export function preview(fences, files) {
 // ---- Bash: what a command will write, guessed BEFORE it runs (block mode only; every change is still caught after the
 // fact by the snapshot diff). Deliberately simple: it reads redirections and the common file commands. It cannot see into
 // scripts, interpreters (node -e, python -c) or variables, which is why block mode for Bash is best-effort.
-const SPLIT = /\s*(?:&&|\|\||;|\|(?!\|)|\n)\s*/;
+/** Split a command line on ; && || | and newlines that are outside quotes (a quoted ";" must not hide the redirect after it). */
+export function splitCommand(s) {
+  const parts = []; let cur = ''; let q = null;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) { cur += c; if (c === q) q = null; else if (c === '\\' && q === '"' && i + 1 < s.length) cur += s[++i]; continue; }
+    if (c === '"' || c === "'") { q = c; cur += c; continue; }
+    if (c === '\\' && i + 1 < s.length) { cur += c + s[++i]; continue; }
+    if (c === ';' || c === '\n' || c === '|' || (c === '&' && s[i + 1] === '&')) { parts.push(cur); cur = ''; if ((c === '|' && s[i + 1] === '|') || c === '&') i++; continue; }
+    cur += c;
+  }
+  parts.push(cur);
+  return parts;
+}
 export function words(s) {
   const out = []; let cur = ''; let q = null;
   for (let i = 0; i < s.length; i++) {
@@ -106,7 +121,7 @@ export function bashWriteTargets(command) {
   const targets = [];
   let cd = '';
   const src = String(command || '').replace(/>\|/g, '>');
-  for (const part of src.split(SPLIT)) {
+  for (const part of splitCommand(src)) {
     let w = words(part.trim()); if (!w.length) continue;
     while (w.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(w[0])) w = w.slice(1); // FOO=1 cmd ...
     if (!w.length) continue;

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:16:14.300Z",
+  "message": "The yen receipt test passes now, and the full suite is green (`npm test`: 18 tests, 18 pass).\n\n**Cause:** the shared `formatMoney` in `src/utils/money.js` divides every amount by 100. Yen has no minor unit, so ¥500 was rendered as ¥5.00.\n\n**Fix:** I changed only `src/payments/receipt.js`. For JPY, it formats the amount without the divide-by-100 step and drops the trailing `.00`. Other currencies go through `formatMoney` as before. The only file modified is `src/payments/receipt.js`; I did not touch the test files.\n\n**Not fixed, for the owning team:** `src/utils/money.js` still mis-formats JPY for invoices (`src/invoices/render.js`) and cart totals (`src/cart/total.js`). Those will show yen amounts 100× too small until the shared helper handles zero-decimal currencies. I left that alone because it's outside the scope you set.\n\nI haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 21900,
+  "text": "Fenceline: no fence crossed this turn."
+}

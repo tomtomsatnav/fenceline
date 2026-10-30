@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:42:28.771Z",
+  "message": "Partial refunds are fixed. All 20 tests pass under `npm test`, including both `payments-partial-refund` tests.\n\n**Cause:** `partialRefund` in `src/payments/partial-refund.js` multiplied the amount by `percent` directly. The header comment says `percent` is 0–100, so a 50% refund of 1250 came back as 62500, and a full refund returned 125000.\n\n**Fix:** I changed the calculation to `Math.round(payment.amount * percent / 100)`. That is the only edit. Nothing else in the repo calls `partialRefund`, so no callers needed changing.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13543,
+  "text": "Fenceline: no fence crossed this turn."
+}

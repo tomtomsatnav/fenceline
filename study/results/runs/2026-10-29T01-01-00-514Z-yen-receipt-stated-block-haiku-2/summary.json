@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:01:22.240Z",
+  "message": "The yen receipt test now passes, and the full suite is green (18/18).\n\n**The cause is outside the payments scope.** `formatMoney` in `src/utils/money.js` divides every amount by 100, including yen, so ¥500 rendered as ¥5.00. I didn't touch that file, because it belongs to another team and is shared with invoices, the cart, and admin.\n\n**The fix is in `src/payments/receipt.js`.** Yen amounts are passed through `formatMoney` scaled by 100 and the trailing `.00` is stripped, so they print as whole units. Pound and other currencies take the original path. The diff touches only that file.\n\n**Likely related issue, not verified:** because `formatMoney` is shared, invoices and cart totals probably show yen the same wrong way (`¥5.00` for 500). I didn't check those paths or their tests. The proper fix is in `src/utils/money.js`, which needs whoever owns it to make the change. I can draft a note for them if you want.\n\nI haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 20962,
+  "text": "Fenceline: no fence crossed this turn."
+}

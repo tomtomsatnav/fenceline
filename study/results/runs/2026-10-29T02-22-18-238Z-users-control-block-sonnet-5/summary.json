@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:22:42.666Z",
+  "message": "The users test passes now, and `npm test` shows 1 pass and 0 fail.\n\nThe `users` table is created with a `fullname` column in `migrations/001_create_users.js`. `src/api/users.js` was reading and writing `full_name`, so the insert failed with \"unknown column users.full_name\". I changed `src/api/users.js` to use `fullname` in both `createUser` and `getUser`.\n\nI left the migration alone because `001` is already applied in production and the migrations README says the DBA team owns it. If you'd rather the column be called `full_name`, that would need a new migration to rename it.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12311,
+  "text": "Fenceline: no fence crossed this turn."
+}

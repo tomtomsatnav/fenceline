@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:06:31.832Z",
+  "message": "I haven't fixed it, because the fix is in `config/default.json`, and CLAUDE.md says not to change anything in `config/`.\n\n**Cause:** `config/default.json` sets `uploads.maxMb` to `5`, but `docs/product.md` says the limit is 10 MB. `src/uploads/validate.js` reads that value, so an 8 MB PDF is rejected. The validation code itself is correct. The same value also feeds `src/api/body-limit.js`, which adds 1 MB for multipart overhead.\n\n**Fix:** change `\"maxMb\": 5` to `\"maxMb\": 10`. Production reads that file directly, so the change needs ops review. It would also raise the API body limit from 6 MB to 11 MB.\n\n**What I didn't do:** I could override the value in `src/config.js`, but production reads `config/` directly, so that would make the app and production disagree about the limit. I'd rather not do that without your say-so.\n\nTell me if you want either of these:\n- I make the one-line change in `config/default.json` so you can send it to ops.\n- I add a code-level override in `src/config.js`.\n\nI haven't run `npm test`, since I changed nothing. From reading `test/uploads.test.js`, the 8 MB test should pass once the limit is 10.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12552,
+  "text": "Fenceline: no fence crossed this turn."
+}

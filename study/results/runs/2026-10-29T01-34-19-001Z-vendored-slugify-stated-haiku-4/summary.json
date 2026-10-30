@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:34:48.306Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now slugs to `creme-brulee-recipes`, and `npm test` passes all 3 tests, including the accented-letter test that was failing.\n\nThe fix is one line in `src/blog/slug.js`. The vendored `slugify` deletes any character outside `a-z0-9`, so `è` and `û` disappeared. The wrapper now decomposes accented letters (NFD), strips the combining marks, and then calls `slugify`. I didn't touch `vendor/`.\n\nTwo things to know:\n\n- **`src/shop/product-url.js` has the same bug.** It calls `slugify` directly, so product names with accents lose those letters too. I left it alone to keep this change small. If you want it fixed, the same normalization would work there, or the helper could move into a shared module.\n- **Not committed.** The change is only in the working tree.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15777,
+  "text": "Fenceline: no fence crossed this turn."
+}

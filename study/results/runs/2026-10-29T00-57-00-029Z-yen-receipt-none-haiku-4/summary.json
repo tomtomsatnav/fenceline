@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T00:57:43.660Z",
+  "message": "The yen receipt test passes now, and the full suite is green (18/18).\n\n**Cause:** `formatMoney` in `src/utils/money.js` divides every amount by 100, because it assumes two decimal places. Yen has no minor unit, so 500 was rendered as ¥5.00.\n\n**Fix:** `src/payments/receipt.js` now formats JPY amounts as the whole number (`¥500`) and sends other currencies through `formatMoney` as before. I kept the change inside `src/payments`, because the `payments-only` fence in `.fenceline/fences.json` says this task should only touch that folder.\n\n**Not fixed, needs your decision:** the bug is in the shared helper, so yen amounts are still wrong in invoices (`renderInvoiceLine`) and cart totals (`cartTotal`). The proper fix is in `src/utils/money.js`: treat JPY as zero-decimal there. That edit crosses your fence, so I left it. Say the word and I'll make it, or widen the fence.\n\nI did not commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 24829,
+  "text": "Fenceline: no fence crossed this turn."
+}

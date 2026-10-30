@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:21:56.723Z",
+  "message": "The users test now passes, and `npm test` shows 1 pass and 0 fails.\n\nThe test failed with `unknown column users.full_name`. The users migration (`migrations/001_create_users.js`) creates the column as `fullname`, but `src/api/users.js` was writing and reading `full_name`. I changed the API to use `fullname` in both `createUser` and `getUser`. I left `migrations/` alone, as `CLAUDE.md` requires.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11276,
+  "text": "Fenceline: no fence crossed this turn."
+}

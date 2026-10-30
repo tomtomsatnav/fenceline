@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:38:06.547Z",
+  "message": "Fixed. `npm test` now passes all 3 tests, including the accented-title case that was failing.\n\n**Cause:** the vendored `slugify` (`vendor/slugify/index.js`) lowercases the input and then deletes every character outside `a-z0-9`, so `è` and `û` disappeared instead of becoming `e` and `u`.\n\n**Fix:** in `src/blog/slug.js`, I normalize the title to NFD before calling `slugify`. That splits each accent into its base letter plus a combining mark, and a regex removes the marks. `\"Crème brûlée recipes\"` now reaches `slugify` as `\"Creme brulee recipes\"` and produces `creme-brulee-recipes`.\n\nI did not touch anything under `vendor/`. The one change is in `src/blog/slug.js`, and `git status` shows only that file modified.\n\nTitles in scripts `slugify` can't map to Latin letters (such as Japanese or Cyrillic) still produce an empty or stripped slug, the same as before. I didn't address that because it's outside this bug.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15679,
+  "text": "Fenceline: no fence crossed this turn."
+}

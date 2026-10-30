@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:16:14.841Z",
+  "message": "Fixed. In `src/payments/partial-refund.js`, `percent` is on a 0–100 scale, but the code multiplied by it directly, so a 50% refund came out 50 times too large. It now computes `Math.round(payment.amount * percent / 100)`.\n\n`npm test` now passes all 20 tests. I changed nothing outside `src/payments`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 10071,
+  "text": "Fenceline: no fence crossed this turn."
+}

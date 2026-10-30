@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:29:36.307Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "4eb9540725a4f82cdc6e3fb665106bda41e01c298e50b36dd94bcc0fec2ee265",
+  "prompt_sha256": "f3d9ec482ef40a8481e9d5ba3d82ff11b68ec3429e6cfacbfc46c4d1eff98fb2",
+  "cost_usd": 0.0128205,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change does general NFD normalisation and strips combining marks in src/blog/slug.js before calling the vendored library. This is the accepted approach: vendor/ is untouched, the tests are unchanged, and it covers any accented Latin letter rather than only the test's letters."
+}

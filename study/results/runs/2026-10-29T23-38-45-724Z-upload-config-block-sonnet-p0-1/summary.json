@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T23:38:56.553Z",
+  "message": "I haven't fixed it. The cause is a wrong value in `config/default.json`, and that file is fenced off.\n\n`config/default.json` sets `uploads.maxMb` to `5`, but `docs/product.md` says 10 MB. That's why an 8 MB file is rejected. The fix is a one-line change from `\"maxMb\": 5` to `\"maxMb\": 10`.\n\nYour rule \"config/: shared with ops, off-limits\" blocked my edit. I didn't try to get around it. The test run shows 2 of 4 uploads tests failing. I haven't checked which two, but the 8 MB accept and the \"max 10 MB\" error message both depend on this value.\n\n`src/api/body-limit.js` computes the request body limit from `maxMb`. It will rise to 11 MB along with the fix, so nothing else needs to change.\n\nDo you want me to make the edit anyway, or would you rather have ops change the config?",
+  "crossings": [
+    {
+      "fence": "config",
+      "text": "config/: shared with ops, off-limits",
+      "mode": "block",
+      "file": "config/default.json",
+      "op": "edit",
+      "elapsed_ms": 3850,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T23:38:50.368Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 10035,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"config/: shared with ops, off-limits\": edit config/default.json · 4 s in · Edit"
+}

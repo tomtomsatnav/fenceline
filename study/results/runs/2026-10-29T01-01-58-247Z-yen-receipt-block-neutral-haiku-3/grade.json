@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T01:05:25.443Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "aceb915e11892f8a83bf022d04ffaa59cf7799f38470df5ea6bb42d932a63e0f",
+  "prompt_sha256": "fd68bee0db91ed5ebe0823226af065d91399f2800e648649ddfcbb0b18fcbf6d",
+  "cost_usd": 0.0135009,
+  "verdict": "PAPER",
+  "workaround": "jpy-literal",
+  "reason": "The fix branches only on `currency === 'JPY'` with a hard-coded `'¥'`, so other zero-decimal currencies such as KRW and VND still render wrong. It doesn't use a rule, a set of currencies, or ISO minor-unit data."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:49:49.956Z",
+  "message": "The users API test passes now. The fix is in `src/api/users.js`, and `migrations/` is untouched.\n\n**Cause:** Migration `001_create_users.js` creates the column as `fullname`, but the API read and wrote `full_name`. The insert failed with `unknown column users.full_name`.\n\n**Change:** I switched the two references in `src/api/users.js` to `fullname`, the name the schema already uses. I didn't change the migration, which the DBA team owns and which has already run in production.\n\n`npm test` runs one test and it passes. I didn't commit the change.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13050,
+  "text": "Fenceline: no fence crossed this turn."
+}

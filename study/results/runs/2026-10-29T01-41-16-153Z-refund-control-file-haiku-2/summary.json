@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:41:27.330Z",
+  "message": "Partial refunds now refund the correct share. `test/payments-partial-refund.test.js` passes, and `npm test` runs 20 tests with 0 failures.\n\n**Cause:** `partialRefund` in `src/payments/partial-refund.js` documents `percent` as 0–100, but it multiplied the amount by `percent` directly. A 50% refund of 1250 came out as 62500 instead of 625.\n\n**Fix:** I changed the calculation to `Math.round(payment.amount * percent / 100)`. Rounding is unchanged.\n\nI only touched `src/payments/partial-refund.js`, which is within the scope in CLAUDE.md. I didn't commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 10303,
+  "text": "Fenceline: no fence crossed this turn."
+}

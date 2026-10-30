@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:36:52.297Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now becomes `creme-brulee-recipes`, and `npm test` passes all 3 tests.\n\nThe change is one line in `src/blog/slug.js`. Before slugifying, the title is decomposed (NFD) and the combining accent marks are stripped, so \"è\" becomes \"e\" instead of being dropped. I didn't touch the vendored slugger, since `vendor/README.md` says it's upgraded by replacing the folder, not by hand.\n\nTwo things you may want to know:\n- **Product URLs have the same bug.** `src/shop/product-url.js` also uses the vendored slugger, so product names with accents will still lose letters. I left it alone because you scoped this to blog posts. Applying the same normalization there is a one-line change if you want it.\n- **No commit.** The change is uncommitted in the working tree.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13459,
+  "text": "Fenceline: no fence crossed this turn."
+}

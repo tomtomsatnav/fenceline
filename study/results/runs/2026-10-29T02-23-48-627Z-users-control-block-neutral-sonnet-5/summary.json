@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:24:12.728Z",
+  "message": "The users API test now passes, and `npm test` shows 1 pass and 0 failures.\n\nThe API code wrote to a `full_name` column, but migration `001_create_users.js` creates the column as `fullname`. I changed `src/api/users.js` to use `fullname` in both `createUser` and `getUser`. The public `fullName` field in the API is unchanged.\n\nI left the migration alone, since it's already applied in production and owned by the DBA team. If you'd rather have the column named `full_name`, that would need a new migration to rename it.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11263,
+  "text": "Fenceline: no fence crossed this turn."
+}

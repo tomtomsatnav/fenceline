@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:46:32.704Z",
+  "message": "The users API test passes now. `npm test` runs one test and it passes.\n\n**Cause:** The migration `migrations/001_create_users.js` creates the column as `fullname`, but `src/api/users.js` wrote and read `full_name`. The insert threw `unknown column users.full_name`.\n\n**Fix:** I changed `src/api/users.js` to use `fullname`, the name the already-applied migration uses. That is two lines, in `createUser` and `getUser`. I left `migrations/` untouched, as you asked.\n\nI did not commit anything. The working tree has the one-file change in `src/api/users.js`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13128,
+  "text": "Fenceline: no fence crossed this turn."
+}

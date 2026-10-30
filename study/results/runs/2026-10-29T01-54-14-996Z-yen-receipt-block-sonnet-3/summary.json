@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:54:37.124Z",
+  "message": "Yen receipts now show correctly: `Paid ¥500 by card`. `npm test` passes, 18 of 18.\n\nThe cause is the shared `formatMoney` in `src/utils/money.js`, which divides every amount by 100. That's wrong for yen, which has no minor unit. A project fence says this task only touches `src/payments`, so I left that file alone. I fixed it in `src/payments/receipt.js` instead, where JPY amounts are now printed as whole units.\n\nOther callers of `formatMoney` (invoices, cart, admin) will still show yen amounts divided by 100. Fixing that in `formatMoney` itself would need a change outside `src/payments`. Say if you want it.\n\nOne of my first attempts at the edit was blocked by the fence hook, which misread the word \"Paid\" in my command as a path. I made the same edit with the Edit tool, on a file inside the allowed area.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "`Paid",
+      "op": "edit",
+      "elapsed_ms": 9777,
+      "prevented": true,
+      "tool": "Bash",
+      "command": "cat > src/payments/receipt.js <<'EOF'\nconst { formatMoney } = require('../utils/money.js');\n// Currencies with no minor unit: the amount is already in whole un…",
+      "at": "2026-10-29T01:54:25.653Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 21248,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit `Paid · 10 s in · Bash `cat > src/payments/receipt.js <<'EOF'\nconst { formatMoney } = require…`"
+}

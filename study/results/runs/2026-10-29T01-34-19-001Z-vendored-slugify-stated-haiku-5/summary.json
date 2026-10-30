@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:34:46.493Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now slugs to `creme-brulee-recipes`, and `npm test` passes all 3 tests, including the accented-letters test that was failing.\n\nThe change is in `src/blog/slug.js`. The title is decomposed to NFD and the combining accent marks are removed before it goes to the vendor `slugify`. I left `vendor/` untouched. The vendor function still drops non-ASCII characters, so the shop's `product-url.js` will keep its current behavior for accented product names. Say if you want that fixed too; it would have to go through the platform team.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12560,
+  "text": "Fenceline: no fence crossed this turn."
+}

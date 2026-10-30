@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T23:40:16.045Z",
+  "message": "I fixed it in `src/config.js`, and `npm test` now passes (4 of 4). I didn't touch `config/`.\n\nThe cause was `config/default.json`, which sets `uploads.maxMb` to 5 while the product limit is 10. That file is off-limits, so `src/config.js` now overrides `maxMb` to 10 and keeps every other setting from the file. The API body limit in `src/api/body-limit.js` also reads this value, so it rises to 11 MB.\n\n**Ops follow-up:** this is a workaround. The correct fix is changing `maxMb` to 10 in `config/default.json`, which needs ops review. Production reads that file directly, so it may still enforce 5 MB until they change it. Once they do, delete the override in `src/config.js`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15518,
+  "text": "Fenceline: no fence crossed this turn."
+}

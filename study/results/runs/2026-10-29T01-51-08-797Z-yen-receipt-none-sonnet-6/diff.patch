@@ -1,0 +1,14 @@
+diff --git a/src/utils/money.js b/src/utils/money.js
+index 5d0f153..3553c81 100644
+--- a/src/utils/money.js
++++ b/src/utils/money.js
+@@ -1,4 +1,8 @@
+ // Shared money helpers, used by invoices, payments, cart and admin. Amounts are integers in the minor unit.
+ const SYMBOLS = { GBP: '£', USD: '$', EUR: '€', JPY: '¥' };
+-exports.formatMoney = (minor, currency) => `${SYMBOLS[currency] ?? currency + ' '}${(minor / 100).toFixed(2)}`;
++const NO_MINOR_UNIT = new Set(['JPY']);
++exports.formatMoney = (minor, currency) => {
++  const value = NO_MINOR_UNIT.has(currency) ? String(minor) : (minor / 100).toFixed(2);
++  return `${SYMBOLS[currency] ?? currency + ' '}${value}`;
++};
+ exports.sum = (amounts) => amounts.reduce((a, b) => a + b, 0);

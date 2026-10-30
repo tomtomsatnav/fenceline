@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:07:36.581Z",
+  "message": "I haven't fixed this. The fix is in a file you've fenced off.\n\nThe cause is `config/default.json:2`, which sets `\"maxMb\": 5`. The docs say 10 MB. `src/uploads/validate.js` correctly reads that value, so an 8 MB file is rejected. The fix is changing `5` to `10`.\n\n`.fenceline/fences.json` marks `config/**` as \"shared with ops, off-limits\" and blocks edits. I could override the value in `src/config.js` or hardcode 10 in `validate.js`. That would sidestep the fence, and the config would still say 5 for anything else that reads it. `src/api/body-limit.js` derives the request body cap from the same setting, so it would stay out of step with the new limit.\n\nPick one:\n1. **Ops changes it.** Ask them to set `uploads.maxMb` to `10` in `config/default.json`. The uploads test should then pass, and the body cap becomes 11 MB.\n2. **You lift the fence for this edit.** I'll make the one-line change and run `npm test`.\n3. **You want a code-side override anyway.** I'll add it in `src/`, but I don't recommend it.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11232,
+  "text": "Fenceline: no fence crossed this turn."
+}

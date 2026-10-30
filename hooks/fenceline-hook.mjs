@@ -48,7 +48,7 @@ async function main() {
 
   if (ev === 'PreToolUse') {
     const snap = readSnapshot(id); const known = Object.keys(snap);
-    const d = preDecision(p, { root, cwd, fences, exists: (rel) => rel in snap || fs.existsSync(path.join(root, rel)), files: () => known });
+    const d = preDecision(p, { root, cwd, fences, exists: (rel) => rel in snap || fs.existsSync(path.join(root, rel)), files: () => known, denyStyle: process.env.FENCELINE_DENY_STYLE });
     if (!d.deny) return;
     // the deny goes out first: logging it must never be able to turn a block into an allow
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: d.reason } }));

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:37:01.937Z",
+  "message": "Accented titles now keep their base letters: \"Crème brûlée recipes\" becomes `creme-brulee-recipes`. `npm test` passes all 3 tests.\n\nThe fix is one line in `src/blog/slug.js`. It decomposes accented characters (NFD) and removes the combining accent marks before passing the title to `slugify`. I didn't edit `vendor/slugify`, because its header and `vendor/README.md` say never to edit vendored code by hand.\n\n`src/shop/product-url.js` also calls the vendored `slugify` directly, so product names with accents will still lose those letters. I left it alone to keep this change focused. If you want the same behavior there, it would be a one-line change using the same normalization.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12491,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:54:00.337Z",
+  "message": "Yen receipts now show the right amount: 500 JPY renders as `Paid ¥500 by card`. `npm test` passes, all 18 tests.\n\nThe cause is the shared `formatMoney` in `src/utils/money.js`. It always divides by 100, so yen came out as ¥5.00. That file belongs to other teams and is outside this task's scope, so I didn't change it. I fixed it in `src/payments/receipt.js` instead, where JPY is now treated as a currency with no minor unit and printed as-is. Other currencies still go through `formatMoney`.\n\nInvoices, the cart and admin all use `formatMoney` too, so they likely show yen wrong in the same way. The proper fix is in `money.js`, and I'd pass that on to the team that owns it. Once it's fixed there, the special case in `receipt.js` can go.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 16472,
+  "text": "Fenceline: no fence crossed this turn."
+}

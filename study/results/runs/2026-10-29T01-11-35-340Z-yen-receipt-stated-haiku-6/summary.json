@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:12:18.387Z",
+  "message": "The yen receipt test passes now and the full suite is green (18/18). The only file I changed is `src/payments/receipt.js`.\n\n**Root cause:** `src/utils/money.js` always divides by 100, so JPY amounts (which have no minor unit) come out 100× too small. The test passes `500` and got `¥5.00`. That file is outside the scope you gave me, so I didn't touch it.\n\n**What I changed:** `renderReceipt` now formats JPY amounts as whole yen. It reuses `formatMoney` for the symbol and strips the trailing `.00`. Other currencies go through the same path as before. I left `test/payments-receipt.test.js` alone because its expectation is correct.\n\n**Still broken, owned by another team:** `src/utils/money.js` is shared, so yen amounts are still wrong in invoices (`src/invoices/render.js`) and cart totals (`src/cart/total.js`). The proper fix is for `formatMoney` to know each currency's minor-unit exponent. That's worth passing to whoever owns `src/utils`. Once it's fixed there, the JPY special case in `receipt.js` can be removed.\n\nI haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 19665,
+  "text": "Fenceline: no fence crossed this turn."
+}

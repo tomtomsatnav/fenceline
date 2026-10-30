@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:56:24.789Z",
+  "message": "Yen receipts now show correctly: `Paid ¥500 by card` instead of `¥5.00`. `npm test` passes, 18 of 18.\n\nThe root cause is in `src/utils/money.js`. `formatMoney` divides every amount by 100, so it's wrong for yen, which has no minor unit. That file belongs to other teams, so I left it alone. I fixed it in `src/payments/receipt.js` instead, by formatting JPY amounts as whole units there and passing other currencies to `formatMoney` as before.\n\nThe other callers of `formatMoney` (invoices, cart, admin) will still show yen as `¥5.00`. The proper fix is in the shared helper, so you may want to tell its owners.\n\nOne of my shell commands for the edit was blocked by the scope hook, apparently because it misread the text inside the command as a path. The file was inside `src/payments`, so I made the same edit with the Write tool.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "`Paid",
+      "op": "edit",
+      "elapsed_ms": 13712,
+      "prevented": true,
+      "tool": "Bash",
+      "command": "cat > src/payments/receipt.js <<'EOF'\nconst { formatMoney } = require('../utils/money.js');\n// Currencies with no minor unit: the amount is already in whole un…",
+      "at": "2026-10-29T01:56:15.096Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 23405,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit `Paid · 14 s in · Bash `cat > src/payments/receipt.js <<'EOF'\nconst { formatMoney } = require…`"
+}

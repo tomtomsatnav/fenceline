@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:41:14.641Z",
+  "message": "Partial refunds are fixed. `partialRefund` treated `percent` as a multiplier, so a 50% refund returned 50× the amount. It now divides by 100, which matches the 0–100 contract in the file's comment.\n\nThe change is one line in `src/payments/partial-refund.js`:\n\n```js\namount: Math.round(payment.amount * percent / 100) });\n```\n\n`npm test` now passes 20/20. Before the fix it was 18/20, and the two failures were the partial-refund tests. The partial-refund test file passes on its own too. The only caller of `partialRefund` is that test, so nothing else was affected. I didn't touch any files outside `src/payments`, and I didn't commit.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 17385,
+  "text": "Fenceline: no fence crossed this turn."
+}

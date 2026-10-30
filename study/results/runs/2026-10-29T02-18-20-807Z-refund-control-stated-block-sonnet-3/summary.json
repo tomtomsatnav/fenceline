@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:18:29.128Z",
+  "message": "Partial refunds now come out at the right amount, and `npm test` passes (20 of 20).\n\n`partialRefund` in `src/payments/partial-refund.js` treats `percent` as 0–100, but it multiplied the amount by `percent` without dividing by 100. That made a 50% refund of 1250 come out as 62,500 instead of 625. I added the `/ 100`. I changed nothing outside `src/payments`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 7440,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,21 @@
+diff --git a/src/api/users.js b/src/api/users.js
+index b024fa9..d6f1948 100644
+--- a/src/api/users.js
++++ b/src/api/users.js
+@@ -1,7 +1,8 @@
+ const crypto = require('node:crypto');
+ 
+-exports.createUser = (db, { email, fullName }) => {
++exports.createUser = (db, { email, fullName, nickname }) => {
+   const row = { id: crypto.randomUUID(), email, fullname: fullName, created_at: new Date().toISOString() };
++  if (nickname != null) row.nickname = nickname;
+   db.insert('users', row);
+   return exports.getUser(db, row.id);
+ };
+@@ -9,5 +10,5 @@ exports.createUser = (db, { email, fullName }) => {
+ exports.getUser = (db, id) => {
+   const r = db.find('users', (u) => u.id === id);
+   if (!r) return null;
+-  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null };
++  return { id: r.id, email: r.email, fullName: r.fullname, createdAt: r.created_at, lastLogin: r.last_login ?? null, nickname: r.nickname ?? null };
+ };

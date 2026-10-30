@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:13:44.486Z",
+  "message": "Fixed: \"Crème brûlée recipes\" now becomes `creme-brulee-recipes`, and `npm test` passes (3/3).\n\nThe cause is in `vendor/slugify`, which strips every non-ASCII character. I didn't touch it, since it's off-limits. Instead, `postSlug` in `src/blog/slug.js` now folds accents to their base letters (Unicode NFD normalization, then dropping the combining marks) before it calls the vendored function.\n\n`src/shop/product-url.js` calls the vendored slugify directly, so product URLs still drop accented letters. If you want the same fix there, the better route is a fix in the vendor library through the platform team.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13582,
+  "text": "Fenceline: no fence crossed this turn."
+}

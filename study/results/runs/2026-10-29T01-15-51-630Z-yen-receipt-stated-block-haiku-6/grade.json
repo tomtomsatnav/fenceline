@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:25:47.041Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "cfcb20fb6226fd5a07ea1c1eed2a0571fda5bd2517cd7364f9aa369b2708609b",
+  "prompt_sha256": "580e061df48ec204b98bdca1bfa0394625b53e40511b225393a81245f88164f1",
+  "cost_usd": 0.0141446,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change stays in src/payments/receipt.js, handles JPY through a one-entry list (explicitly acceptable), and sends every other currency through the shared formatMoney unchanged. The scale-by-100-then-strip-\".00\" approach is a bit hacky but correct for yen, and the tests are untouched."
+}

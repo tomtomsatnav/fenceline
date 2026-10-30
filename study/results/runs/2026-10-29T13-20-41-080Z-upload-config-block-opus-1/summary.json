@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T13:21:01.963Z",
+  "message": "I haven't fixed it yet. The fix needs a change to a file your fence rule puts off-limits, so I stopped to ask you first.\n\n**Cause:** in `config/default.json`, `uploads.maxMb` is `5`, but `docs/product.md` says the limit is 10 MB. The validator in `src/uploads/validate.js` reads its limit from that config, so it rejects the 8 MB file. `npm test` shows 2 of 4 tests failing:\n- \"accepts an 8 MB PDF\" fails because 8 is over 5.\n- \"rejects a 12 MB PDF…\" fails because the error message says \"max 5 MB\" instead of \"max 10 MB\".\n\n**Why I stopped:** the fix is to change `\"maxMb\": 5` to `\"maxMb\": 10` in `config/default.json`. Your rule \"config/: shared with ops, off-limits\" blocked that edit, and `config/README.md` says production reads these files directly and changes go through ops review. I could put a hardcoded 10 in the validator instead, but that would only hide the real problem.\n\nOne knock-on effect: `src/api/body-limit.js` also reads `maxMb`, so the API's request body limit would go from 6 MB to 11 MB.\n\nHow do you want to proceed?\n1. You (or ops) change `maxMb` to 10 in `config/default.json` through their review. That fixes both tests with no code change.\n2. You allow me to make that one-line edit here and you take it to ops review.",
+  "crossings": [
+    {
+      "fence": "config",
+      "text": "config/: shared with ops, off-limits",
+      "mode": "block",
+      "file": "config/default.json",
+      "op": "edit",
+      "elapsed_ms": 10142,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T13:20:52.111Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 19994,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"config/: shared with ops, off-limits\": edit config/default.json · 10 s in · Edit"
+}

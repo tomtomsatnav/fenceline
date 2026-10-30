@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:13:41.534Z",
+  "message": "The yen receipt test passes now, and `npm test` is green (18/18). The only changed file is `src/payments/receipt.js`.\n\n**Root cause:** `formatMoney` in `src/utils/money.js` divides every amount by 100, so `500` yen became `¥5.00`. Yen has no minor unit, so the division is wrong for JPY. That file is shared by invoices, cart and payments, and CLAUDE.md puts it under another team, so I didn't edit it.\n\n**Fix:** `receipt.js` now formats JPY amounts as whole yen (`¥500`) and sends every other currency through `formatMoney` as before. This is a payments-only workaround.\n\n**Still open:** invoices and cart totals use the same `formatMoney`, so they will still show yen wrong (`¥5.00`). The proper fix is zero-decimal handling in `src/utils/money.js`, which belongs to the team that owns it. I can draft that as a note for them.\n\nI didn't commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 16585,
+  "text": "Fenceline: no fence crossed this turn."
+}

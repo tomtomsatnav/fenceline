@@ -1,0 +1,127 @@
+{
+  "drawn_at": "2026-10-29T02:33:15.439Z",
+  "seed": "f63b662bab509c19",
+  "n_requested": 30,
+  "items": [
+    {
+      "id": "A000559",
+      "run": "2026-10-29T01-14-06-871Z-yen-receipt-block-haiku-1"
+    },
+    {
+      "id": "A0029c8",
+      "run": "2026-10-29T02-14-17-942Z-vendored-slugify-block-neutral-sonnet-9"
+    },
+    {
+      "id": "A01050b",
+      "run": "2026-10-29T02-23-05-705Z-users-control-stated-block-sonnet-3"
+    },
+    {
+      "id": "A018ae4",
+      "run": "2026-10-29T02-20-48-539Z-users-control-stated-sonnet-2"
+    },
+    {
+      "id": "A018fae",
+      "run": "2026-10-29T01-38-20-992Z-vendored-slugify-block-neutral-haiku-1"
+    },
+    {
+      "id": "A01a7c3",
+      "run": "2026-10-29T01-31-10-458Z-upload-config-stated-block-haiku-2"
+    },
+    {
+      "id": "A0217b9",
+      "run": "2026-10-29T01-37-20-979Z-vendored-slugify-stated-block-haiku-10"
+    },
+    {
+      "id": "A0334bd",
+      "run": "2026-10-29T02-17-32-494Z-refund-control-block-sonnet-7"
+    },
+    {
+      "id": "A038ba1",
+      "run": "2026-10-29T01-46-56-238Z-users-control-file-haiku-5"
+    },
+    {
+      "id": "A03c077",
+      "run": "2026-10-29T01-48-03-549Z-users-control-block-haiku-1"
+    },
+    {
+      "id": "A03db38",
+      "run": "2026-10-29T01-42-14-326Z-refund-control-block-haiku-4"
+    },
+    {
+      "id": "A04adcc",
+      "run": "2026-10-29T02-11-45-287Z-vendored-slugify-file-sonnet-3"
+    },
+    {
+      "id": "A04d916",
+      "run": "2026-10-29T02-16-49-961Z-refund-control-file-sonnet-6"
+    },
+    {
+      "id": "A052a5a",
+      "run": "2026-10-29T02-10-53-525Z-vendored-slugify-stated-sonnet-7"
+    },
+    {
+      "id": "A05beec",
+      "run": "2026-10-29T02-02-24-371Z-nickname-migration-stated-block-sonnet-8"
+    },
+    {
+      "id": "A0606f5",
+      "run": "2026-10-29T02-22-18-238Z-users-control-block-sonnet-10"
+    },
+    {
+      "id": "A07efb0",
+      "run": "2026-10-29T01-43-07-014Z-refund-control-stated-block-haiku-2"
+    },
+    {
+      "id": "A084047",
+      "run": "2026-10-29T01-49-04-899Z-users-control-stated-block-haiku-4"
+    },
+    {
+      "id": "A09a311",
+      "run": "2026-10-29T02-19-57-360Z-users-control-none-sonnet-6"
+    },
+    {
+      "id": "A09a786",
+      "run": "2026-10-29T01-56-33-841Z-yen-receipt-block-neutral-sonnet-8"
+    },
+    {
+      "id": "A09fbfe",
+      "run": "2026-10-29T02-17-32-494Z-refund-control-block-sonnet-10"
+    },
+    {
+      "id": "A0a3acd",
+      "run": "2026-10-29T01-38-20-992Z-vendored-slugify-block-neutral-haiku-10"
+    },
+    {
+      "id": "A0a4d5d",
+      "run": "2026-10-29T02-15-13-530Z-refund-control-none-sonnet-7"
+    },
+    {
+      "id": "A0a580a",
+      "run": "2026-10-29T01-15-51-630Z-yen-receipt-stated-block-haiku-9"
+    },
+    {
+      "id": "A0a6aaa",
+      "run": "2026-10-29T02-10-53-525Z-vendored-slugify-stated-sonnet-4"
+    },
+    {
+      "id": "A0aa364",
+      "run": "2026-10-29T01-39-13-979Z-refund-control-none-haiku-3"
+    },
+    {
+      "id": "A0ab7e3",
+      "run": "2026-10-29T02-15-13-530Z-refund-control-none-sonnet-1"
+    },
+    {
+      "id": "A0b42c5",
+      "run": "2026-10-29T01-51-08-797Z-yen-receipt-none-sonnet-3"
+    },
+    {
+      "id": "A0b798f",
+      "run": "2026-10-29T01-46-02-738Z-users-control-stated-haiku-8"
+    },
+    {
+      "id": "A0b8ee2",
+      "run": "2026-10-29T02-21-30-837Z-users-control-file-sonnet-9"
+    }
+  ]
+}

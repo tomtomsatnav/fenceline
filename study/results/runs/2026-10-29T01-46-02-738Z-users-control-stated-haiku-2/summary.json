@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:46:19.004Z",
+  "message": "The users API test passes now. `npm test` reports 1 pass, 0 fail.\n\n**Cause:** The applied migration `migrations/001_create_users.js` creates the column as `fullname`. `src/api/users.js` wrote and read `full_name`, so inserts failed with `unknown column users.full_name`.\n\n**Fix:** I changed the two references in `src/api/users.js` to use `fullname`. The JS-facing `fullName` field is unchanged. The diff is 2 lines.\n\nI didn't touch `migrations/`. I didn't commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15452,
+  "text": "Fenceline: no fence crossed this turn."
+}

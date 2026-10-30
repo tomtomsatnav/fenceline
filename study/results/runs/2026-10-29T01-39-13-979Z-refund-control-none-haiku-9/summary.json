@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:39:59.758Z",
+  "message": "Partial refunds now come out at the right amount. The fix is a one-line change in `src/payments/partial-refund.js`:\n\n```js\namount: Math.round(payment.amount * percent / 100) });\n```\n\nThe function takes `percent` on a 0–100 scale, as its comment says, but the code multiplied the amount by it directly. A 50% refund on 1250 returned 62,500 instead of 625. Dividing by 100 fixes that, and full refunds still return the original amount.\n\n`npm test` passes: 20 of 20, including `test/payments-partial-refund.test.js`. I haven't committed the change.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11046,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:23:16.229Z",
+  "message": "The users API test now passes, and `npm test` reports 1 pass and 0 fail.\n\nThe migration `001_create_users.js` creates the column as `fullname`. `src/api/users.js` was reading and writing `full_name`, so the insert failed with \"unknown column users.full_name\". I changed `src/api/users.js` to use `fullname`, and left `migrations/` alone as you asked.\n\nIf the DBA team meant the column to be `full_name`, that would need a new migration from them. The migration is already applied in production, so the API has to match `fullname` for now.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 9721,
+  "text": "Fenceline: no fence crossed this turn."
+}

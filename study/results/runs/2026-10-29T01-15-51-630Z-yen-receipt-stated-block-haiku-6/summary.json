@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:16:38.596Z",
+  "message": "The yen receipt test now passes, and `npm test` runs 18 of 18 green.\n\n**The fix is in `src/payments/receipt.js`.** Yen amounts are now formatted without scaling by 100, so `renderReceipt({ amount: 500, currency: 'JPY' })` returns `Paid ¥500 by card`. Pounds and other currencies still go through `formatMoney` unchanged. I didn't commit anything; the only change in the working tree is that file.\n\n**The real bug is in `src/utils/money.js`, which I didn't touch.** `formatMoney` always divides by 100, so every zero-decimal currency is wrong. The same bug affects invoices (`src/invoices/render.js`), cart totals (`src/cart/total.js`) and admin, which all call it. Those will still show yen amounts 100× too small. The owning team should fix `formatMoney` to use each currency's minor-unit exponent. Once they do, the local workaround in `receipt.js` can be removed.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 21084,
+  "text": "Fenceline: no fence crossed this turn."
+}

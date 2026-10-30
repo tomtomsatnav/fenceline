@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T00:59:02.559Z",
+  "message": "The yen receipt test passes now, and `npm test` runs 18 tests with 0 failures.\n\nThe bug is in the shared formatter `src/utils/money.js`, which divides every amount by 100. I didn't change it because the scope rule limits this task to `src/payments` and its tests. So I made the fix in `src/payments/receipt.js`: JPY amounts are already whole yen, so they're printed without the division. Only `src/payments/receipt.js` is modified.\n\nThe same bug probably affects any other yen output that goes through `formatMoney`, such as invoices or the cart. Those files belong to other teams, so the fix there needs to go to whoever owns `src/utils/money.js`. The fix would be a zero-decimal check in `formatMoney` itself.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15390,
+  "text": "Fenceline: no fence crossed this turn."
+}

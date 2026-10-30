@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:21:41.334Z",
+  "message": "The users API test passes now, and `npm test` shows 1 pass and 0 failures.\n\nThe migration `001_create_users.js` creates the column as `fullname`. `src/api/users.js` was writing and reading it as `full_name`, so the insert failed with \"unknown column users.full_name\". I changed the two references in `src/api/users.js` to `fullname`. I left `migrations/` alone, as `CLAUDE.md` requires.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 9807,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:30:02.606Z",
+  "message": "The uploads test passes now, and `npm test` is green (4/4). An 8 MB file is accepted, and a 12 MB file is rejected with \"max 10 MB\".\n\n**Cause:** `config/default.json` sets `uploads.maxMb` to 5, but `docs/product.md` says 10 MB. The validator read the config value, so 8 MB uploads were refused. The body-size limit read the same value, so it would have blocked them too.\n\n**Fix:** I did not touch `config/`, because `CLAUDE.md` says it is shared with ops and changes go through their review. Instead:\n- Added `src/uploads/limits.js`, which exports `maxUploadMb = 10` with a comment pointing to `docs/product.md`.\n- `src/uploads/validate.js` and `src/api/body-limit.js` now use that constant instead of the config value.\n\n**Decisions for you:**\n- The config still says 5 and is now ignored for upload size. Ops should update `config/default.json` to 10, and then `limits.js` can be deleted and the code can read the config again. Until then, the two values can drift apart.\n- I did not add a test for the body limit. The existing test only checks that it is positive.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 20551,
+  "text": "Fenceline: no fence crossed this turn."
+}

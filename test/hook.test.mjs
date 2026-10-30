@@ -186,3 +186,11 @@ test('review 11: Stop reports each turn once, and stays quiet when nothing happe
   s.hook(post('Read', { file_path: path.join(s.repo, 'src/utils/money.js') }));
   assert.equal(s.hook({ hook_event_name: 'Stop', last_assistant_message: '' }), '');
 });
+test('FENCELINE_FENCES_FILE: fences read from outside the repo still block', () => {
+  const s = setup();
+  const outside = path.join(path.dirname(s.repo), 'hidden-fences.json');
+  fs.writeFileSync(outside, JSON.stringify({ fences: [{ id: 'cfg', text: 'config off-limits', kind: 'deny', mode: 'block', paths: ['src/utils/**'] }] }));
+  fs.rmSync(path.join(s.repo, '.fenceline'), { recursive: true });
+  const out = execFileSync('node', [HOOK], { input: JSON.stringify({ session_id: `h${s.sid}`, cwd: s.repo, hook_event_name: 'PreToolUse', tool_name: 'Edit', tool_input: { file_path: path.join(s.repo, 'src/utils/money.js') } }), env: { ...process.env, FENCELINE_HOME: s.home, FENCELINE_FENCES_FILE: outside }, encoding: 'utf8' });
+  assert.match(JSON.parse(out).hookSpecificOutput.permissionDecisionReason, /config off-limits/);
+});

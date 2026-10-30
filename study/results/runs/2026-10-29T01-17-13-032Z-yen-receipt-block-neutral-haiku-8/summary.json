@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:18:31.609Z",
+  "message": "The yen receipt test passes now, and `npm test` runs 18 tests with 18 passing.\n\nThe bug is that `formatMoney` in `src/utils/money.js` divides every amount by 100 and prints two decimals. That is right for pounds but wrong for yen, which has no minor unit, so 500 printed as ¥5.00.\n\nI could not fix it at the root. My edit to `src/utils/money.js` was blocked by a fence rule that limits this task to `src/payments`. So the fix is in `src/payments/receipt.js` instead: yen receipts print the whole-yen amount with no decimals. The change is one helper and one line.\n\nThings to know:\n- **The same bug is still in the shared helper.** Invoice lines (`src/invoices/render.js`) and cart totals (`src/cart/total.js`) call `formatMoney` and will still show yen with two decimals. The proper fix is a per-currency decimal count in `src/utils/money.js`, which needs the fence lifted or widened to allow it.\n- I did not commit anything.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 9115,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:18:19.014Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 21709,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 9 s in · Edit"
+}

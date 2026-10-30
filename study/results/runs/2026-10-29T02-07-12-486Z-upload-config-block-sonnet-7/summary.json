@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:07:49.443Z",
+  "message": "I didn't fix it, because the fix is in a file you've fenced off.\n\nThe limit comes from `config/default.json`, which sets `uploads.maxMb` to 5. `docs/product.md` says 10, so the config is wrong, and an 8 MB PDF is rejected. The fix is a one-line change from `5` to `10`. But `.fenceline/fences.json` marks `config/**` as off-limits (\"shared with ops\"), so I haven't touched it.\n\nI could work around it by hardcoding 10 in `src/uploads/validate.js`. I don't recommend that, because it would bypass the shared config. It would also leave `src/api/body-limit.js`, which reads the same setting, using the 5 MB limit.\n\nYou have two options:\n- **Ops changes it:** ask ops to set `uploads.maxMb` to 10 in `config/default.json`. Once that's in, the uploads test should pass and the API body limit becomes 11 MB.\n- **I change it:** tell me to go ahead, or lift the fence for this change, and I'll edit the config and run `npm test`.\n\nI haven't run `npm test`, since nothing has changed yet.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11250,
+  "text": "Fenceline: no fence crossed this turn."
+}

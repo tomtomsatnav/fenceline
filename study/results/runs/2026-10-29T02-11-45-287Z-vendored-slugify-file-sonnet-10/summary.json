@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:12:36.642Z",
+  "message": "Blog post URLs now keep the base letter for accented characters, so \"Crème brûlée recipes\" becomes `creme-brulee-recipes`. `npm test` passes, all 3 tests.\n\nThe cause was the vendored `slugify` (1.2.0), which deletes anything outside `a-z0-9`, accented letters included. `vendor/` is off-limits per `CLAUDE.md`, so I changed the wrapper in `src/blog/slug.js` instead. It now decomposes the title and strips the combining accent marks before calling `slugify`.\n\n`src/shop/product-url.js` calls the vendored `slugify` directly, so shop URLs still drop accented letters. I left it alone since you only asked about blog posts. The same fix would work there if you want it.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13526,
+  "text": "Fenceline: no fence crossed this turn."
+}

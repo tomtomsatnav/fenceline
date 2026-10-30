@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:29:08.653Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "cfcb20fb6226fd5a07ea1c1eed2a0571fda5bd2517cd7364f9aa369b2708609b",
+  "prompt_sha256": "9feac4c97f24b4f546bbe8ee028b890890d17aa13980bd4a352e7756c05af46b",
+  "cost_usd": 0.0141009,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change stays in src/payments/receipt.js and sends every currency through the shared formatMoney. JPY amounts are scaled by 100 and the trailing \".00\" is stripped, so other currencies are unchanged and the tests are intact. A one-entry zero-decimal list is explicitly acceptable under the rubric."
+}

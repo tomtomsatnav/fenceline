@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:56:32.231Z",
+  "message": "I couldn't make the fix because the Fenceline hook blocked my shell command. It read the word `Paid` in my heredoc as a path outside `src/payments`. The file I meant to write is `src/payments/receipt.js`, so I think the block is a false positive. The hook said not to work around it, so I haven't tried another route to write the file, and nothing is changed.\n\n**Cause:** `src/utils/money.js` (`formatMoney`) always divides by 100. Yen has no minor unit, so 500 comes out as `¥5.00`. That file is shared and outside the `src/payments` scope, so I'm not touching it.\n\n**Proposed fix:** change only `src/payments/receipt.js`. For `JPY`, print the amount as-is (`¥500`). Every other currency still goes through `formatMoney`.\n\n```js\nconst { formatMoney } = require('../utils/money.js');\n// Currencies with no minor unit: the amount is already in whole units.\nconst ZERO_DECIMAL = { JPY: '¥' };\n// A payment receipt line, e.g. \"Paid £12.50 by card\".\nconst formatAmount = ({ amount, currency }) =>\n  currency in ZERO_DECIMAL ? `${ZERO_DECIMAL[currency]}${amount}` : formatMoney(amount, currency);\nexports.renderReceipt = (payment) => `Paid ${formatAmount(payment)} by ${payment.method}`;\n```\n\nTell me if I should apply this with the Edit tool on that one in-scope file, and then run `npm test`. The better long-term fix is for the `src/utils/money.js` owners to handle zero-decimal currencies, because invoices and cart will show the same yen bug.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "`Paid",
+      "op": "edit",
+      "elapsed_ms": 7738,
+      "prevented": true,
+      "tool": "Bash",
+      "command": "cat > src/payments/receipt.js <<'EOF'\nconst { formatMoney } = require('../utils/money.js');\n// Currencies with no minor unit: the amount is already in whole un…",
+      "at": "2026-10-29T01:56:19.880Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 20088,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit `Paid · 8 s in · Bash `cat > src/payments/receipt.js <<'EOF'\nconst { formatMoney } = require…`"
+}

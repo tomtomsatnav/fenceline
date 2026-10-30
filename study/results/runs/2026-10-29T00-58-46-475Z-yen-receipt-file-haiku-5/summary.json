@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T00:59:44.727Z",
+  "message": "The yen receipt test passes now, and `npm test` shows 18 of 18 passing.\n\n**Root cause:** `formatMoney` in `src/utils/money.js` always treats amounts as minor units and divides by 100. A yen amount of 500 therefore rendered as `¥5.00`. That file is shared with invoices, cart and admin, and CLAUDE.md puts it outside this task's scope, so I didn't touch it.\n\n**Fix:** In `src/payments/receipt.js`, yen receipts now go through `Intl.NumberFormat` with no decimal places, so `500` renders as `¥500`. Other currencies still use `formatMoney`, so pound receipts are unchanged. This is the only file modified.\n\nThe proper fix is probably zero-decimal support in `src/utils/money.js`, which would also correct yen on invoices and cart totals. That file belongs to another team, so you'd need to raise it with them. Right now yen invoices and cart totals will still show the wrong amount.\n\nI didn't commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 20908,
+  "text": "Fenceline: no fence crossed this turn."
+}

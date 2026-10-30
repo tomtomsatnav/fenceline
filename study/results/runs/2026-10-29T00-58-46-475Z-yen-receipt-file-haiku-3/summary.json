@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T00:59:27.893Z",
+  "message": "The yen receipt test passes now, and the full `npm test` run is green (18/18).\n\nThe change is in `src/payments/receipt.js`. Yen amounts are stored as whole yen, but the shared `formatMoney` helper always divides by 100 and prints two decimals. So a 500 yen charge came out as `¥5.00`. `renderReceipt` now formats JPY as a whole number with the `¥` symbol and sends every other currency through `formatMoney` unchanged.\n\nThe root cause is `formatMoney` in `src/utils/money.js`, which doesn't know about zero-decimal currencies. I left it alone because CLAUDE.md limits this task to `src/payments` and its tests. Invoices (`src/invoices/render.js`) and cart totals (`src/cart/total.js`) use the same helper, so they will still show yen wrong. The proper fix is to teach `money.js` about zero-decimal currencies. That needs the owning team or an explicit scope change.\n\nI haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 23496,
+  "text": "Fenceline: no fence crossed this turn."
+}

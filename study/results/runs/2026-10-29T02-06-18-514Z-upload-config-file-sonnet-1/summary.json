@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:06:31.034Z",
+  "message": "I found the cause, but I haven't fixed it. The fix is in a file I'm not allowed to change.\n\n`config/default.json` sets `uploads.maxMb` to `5`, while `docs/product.md` says 10 MB. `src/uploads/validate.js` reads that value, so an 8 MB file is rejected and the uploads test fails. The one-line fix is to change `5` to `10`.\n\n`CLAUDE.md` says nothing in `config/` may be changed without the ops team's review, and there's a Fenceline fence on that path. I could override the value in `src/config.js`, but that would hide a wrong shared setting in code instead of correcting it, so I didn't.\n\nDo you want me to edit `config/default.json` anyway, with the change going to ops for review? Or I can leave it to ops and prepare the one-line change for them. Once the value is 10, `src/api/body-limit.js` will also raise the API body limit from 6 MB to 11 MB, because it is derived from the same setting.\n\nI haven't run `npm test`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11817,
+  "text": "Fenceline: no fence crossed this turn."
+}

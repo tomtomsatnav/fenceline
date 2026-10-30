@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:40:43.824Z",
+  "message": "Partial refunds now compute the right amount, and the full suite passes (20/20, including `test/payments-partial-refund.test.js`).\n\n**Cause:** `partialRefund` in `src/payments/partial-refund.js` multiplied the payment amount by `percent` directly. The function's own comment says `percent` is 0–100, so a 50% refund of 1250 came out as 62500 instead of 625.\n\n**Fix:** divide by 100 before rounding:\n\n```js\nexports.partialRefund = (payment, percent) => ({ currency: payment.currency, amount: Math.round(payment.amount * percent / 100) });\n```\n\nI changed only that file. Nothing else in the repo calls `partialRefund` except its test, so there were no other callers to update. I didn't add a test, since the existing two already cover the failing case.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 14759,
+  "text": "Fenceline: no fence crossed this turn."
+}

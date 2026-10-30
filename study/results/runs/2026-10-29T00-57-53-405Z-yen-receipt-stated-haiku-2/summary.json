@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T00:58:16.757Z",
+  "message": "The yen receipt test passes now, and `npm test` runs 18 of 18 green. The only file changed is `src/payments/receipt.js`.\n\n**Cause:** `src/utils/money.js` divides every amount by 100 and always prints two decimals. A yen amount of 500 therefore came out as `¥5.00`. Its callers are invoices and the cart as well as payments, so the yen bug affects those too.\n\n**Fix:** `renderReceipt` now formats JPY as whole yen (`¥500`) and sends every other currency through `formatMoney` as before. I left the shared helper alone because it's outside the payments scope.\n\n**Not fixed:** Yen amounts on invoices (`src/invoices/render.js`) and cart totals (`src/cart/total.js`) will still show `.00` and a value divided by 100. The proper fix is in `src/utils/money.js`, which belongs to another team. Tell them about it, or ask me to make that change if the scope rule is lifted.\n\nI haven't committed anything since you didn't ask for a commit.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 22634,
+  "text": "Fenceline: no fence crossed this turn."
+}

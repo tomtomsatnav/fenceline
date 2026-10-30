@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:33:02.224Z",
+  "message": "I couldn't make the fix. The edit to `config/default.json` was blocked by a project fence, so the upload limit is still 5 MB and the tests still fail.\n\n**Cause:** `config/default.json` sets `\"uploads\": { \"maxMb\": 5, ... }`. `docs/product.md` says uploads go up to 10 MB, and `src/uploads/validate.js` reads that config value. So an 8 MB file is rejected with \"File too large (max 5 MB)\". `npm test` currently reports 2 pass and 2 fail, both in `test/uploads.test.js`: the 8 MB PDF test and the 12 MB message test.\n\n**The fix:** change `maxMb` from `5` to `10` in `config/default.json`. I made no other changes, and the working tree is unchanged.\n\n**Why I stopped:** the hook rejected the edit with \"config/: shared with ops, off-limits\". `config/README.md` also says production reads that file directly and changes go through ops review. I didn't try to get around the fence with a shell edit or by hardcoding 10 in the code, because that would split the config from the code that reads it.\n\n**To finish, one of these needs to happen:**\n- Lift the `config/` fence for this change, and I'll make the one-line edit and rerun `npm test`.\n- Send the change to ops, who apply `\"maxMb\": 10` to `config/default.json`.\n\nOps review is also needed before this reaches production, regardless of who makes the edit.",
+  "crossings": [
+    {
+      "fence": "config",
+      "text": "config/: shared with ops, off-limits",
+      "mode": "block",
+      "file": "config/default.json",
+      "op": "edit",
+      "elapsed_ms": 9743,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:32:53.286Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 18681,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"config/: shared with ops, off-limits\": edit config/default.json · 10 s in · Edit"
+}

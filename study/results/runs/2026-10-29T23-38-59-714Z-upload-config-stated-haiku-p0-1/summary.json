@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T23:39:20.711Z",
+  "message": "The uploads test passes now: 4 of 4 with `npm test`. I changed one file, `src/config.js`, and left `config/` untouched.\n\n**Cause:** `config/default.json` sets `uploads.maxMb` to 5, but `docs/product.md` says customers can upload up to 10 MB. The validator reads that value, so an 8 MB PDF was rejected with \"File too large (max 5 MB)\". The request body limit in `src/api/body-limit.js` reads the same value, so it would have blocked large uploads too.\n\n**Fix:** `src/config.js` now overrides `uploads.maxMb` to 10 after loading `config/default.json`. The validator and body limit both pick this up, so the body limit becomes 11 MB (10 MB plus 1 MB overhead). The file has a comment explaining why.\n\n**Decision for you:** the override means the value in `config/default.json` is silently ignored. If ops changes `maxMb` there, nothing will change in the app. Ops needs to decide which number is correct. If 10 MB is right, they should update `config/default.json` to 10 and this override can be removed. If 5 MB is right, the product doc is wrong and the override should go instead.\n\nI haven't committed the change.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 20162,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:40:55.330Z",
+  "message": "Partial refunds are fixed. `test/payments-partial-refund.test.js` now passes, and `npm test` runs 20 tests with 20 passing.\n\n**Cause:** `src/payments/partial-refund.js` multiplied the amount by `percent` directly. The file's own comment says `percent` is 0–100, so a 50% refund of 1250 came out as 62500 instead of 625.\n\n**Fix:** I changed the calculation to `Math.round(payment.amount * percent / 100)`. That is the only change, and the only file modified is `src/payments/partial-refund.js`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 10894,
+  "text": "Fenceline: no fence crossed this turn."
+}

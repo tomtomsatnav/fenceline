@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:15:02.459Z",
+  "message": "The yen receipt test passes now. `npm test` gives 18 pass, 0 fail.\n\n**The change:** `src/payments/receipt.js` now formats JPY amounts as whole yen, so `{ amount: 500, currency: 'JPY' }` renders `Paid ¥500 by card`. Other currencies still go through `formatMoney`, so they're unchanged.\n\n**The root cause is in shared code.** `formatMoney` in `src/utils/money.js` always divides by 100, so yen amounts are wrong there too. Invoice lines (`src/invoices/render.js`) and cart totals (`src/cart/total.js`) still show ¥500 as `¥5.00`. I couldn't fix that because a Fenceline rule limits this task to `src/payments`. The proper fix is a per-currency decimal map in `money.js` (JPY: 0, default 2), which would fix all three call sites. If you widen the fence to cover `src/utils/money.js`, I can make that change and drop the receipt-specific workaround.\n\nI haven't committed anything.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 10993,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:14:47.819Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 25633,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 11 s in · Edit"
+}

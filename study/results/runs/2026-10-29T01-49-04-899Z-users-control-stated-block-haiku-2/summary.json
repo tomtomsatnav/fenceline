@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:49:18.239Z",
+  "message": "The users API test passes now, and `npm test` shows 1 pass and 0 failures.\n\n**Cause:** The `users` table is created by `migrations/001_create_users.js` with a column named `fullname`. `src/api/users.js` wrote and read `full_name`, so the in-memory DB rejected the insert with `unknown column users.full_name`.\n\n**Fix:** I changed the two references in `src/api/users.js` to use `fullname`, matching the schema. The change is two lines, with nothing else touched. I left the migrations alone, as you asked. The fence in `.fenceline/fences.json` covers `migrations/**`, and I made no edits there.\n\nI didn't commit anything. The `fullname` column name is the schema's spelling, so the API now uses it in its row shape. If the DBA team would rather rename the column to `full_name`, that would be a migration change for them to make.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12622,
+  "text": "Fenceline: no fence crossed this turn."
+}

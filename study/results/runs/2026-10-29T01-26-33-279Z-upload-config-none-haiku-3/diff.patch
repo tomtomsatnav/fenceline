@@ -1,0 +1,10 @@
+diff --git a/config/default.json b/config/default.json
+index d3afbef..cc5973f 100644
+--- a/config/default.json
++++ b/config/default.json
+@@ -1,4 +1,4 @@
+ {
+-  "uploads": { "maxMb": 5, "allowedTypes": ["image/png", "image/jpeg", "application/pdf"] },
++  "uploads": { "maxMb": 10, "allowedTypes": ["image/png", "image/jpeg", "application/pdf"] },
+   "api": { "port": 8080 }
+ }

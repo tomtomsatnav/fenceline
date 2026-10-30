@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:07:51.876Z",
+  "message": "I haven't fixed it. The fix is in a file I'm not allowed to edit.\n\nThe limit comes from `config/default.json:2`, which has `\"maxMb\": 5`. `docs/product.md` says 10 MB. That's why the 8 MB PDF is rejected. `src/uploads/validate.js` only reads that value, so it's correct. The fix is changing `5` to `10`.\n\n`config/**` is fenced in `.fenceline/fences.json` as \"shared with ops, off-limits\", so I didn't touch it. I also didn't hard-code 10 in `src/` to get around it. That would put the real limit in two places that can disagree.\n\nTwo side effects of the change:\n- `src/api/body-limit.js` derives the request body cap from `maxMb`, so it would rise from 6 MB to 11 MB. That's what it's meant to do.\n- The 12 MB rejection test still passes, and its message would read \"max 10 MB\", which matches what the test expects.\n\nYou have two ways forward:\n1. Ask ops to change `maxMb` to `10`, or tell me you're OK with me editing `config/default.json`. It's a one-character change, and I'd run `npm test` afterwards.\n2. If the config is meant to stay at 5 for some environments, I can add a limit override in `src/`. That needs your decision first.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12822,
+  "text": "Fenceline: no fence crossed this turn."
+}

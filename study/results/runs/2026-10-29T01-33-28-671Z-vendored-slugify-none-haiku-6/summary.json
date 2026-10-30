@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:34:01.391Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now becomes `creme-brulee-recipes`, and `npm test` passes all 3 tests.\n\n**The change:** `src/blog/slug.js` now splits accented letters into a base letter plus a combining mark (NFD), then drops the marks before calling slugify. The vendored slugify was removing the accented letters outright, which is why you got `crme-brle-recipes`.\n\n**Why not fix it in the vendor folder:** `vendor/README.md` says not to edit vendored code by hand. Its changelog shows the transliteration fix is in slugify 1.2.1, but the folder is still 1.2.0. The proper fix is for the platform team to upgrade that folder. Once they do, this workaround can be removed, but it's harmless to keep.\n\n**Not changed:** `src/shop/product-url.js` calls the same vendored slugify, so product URLs have the same problem with accented names. I left it alone because you asked about blog posts. It's a one-line change if you want it too, or it can go in the same vendor upgrade.\n\nI haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15264,
+  "text": "Fenceline: no fence crossed this turn."
+}

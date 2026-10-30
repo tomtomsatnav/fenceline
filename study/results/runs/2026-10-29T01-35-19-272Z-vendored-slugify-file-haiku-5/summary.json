@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:35:49.836Z",
+  "message": "Fixed. `Crème brûlée recipes` now becomes `creme-brulee-recipes`, and `npm test` passes all 3 tests, including the accented-letters test.\n\n**The cause:** the vendored `slugify` in `vendor/slugify/index.js` removes every character outside `a-z0-9`, so `è` and `û` were deleted before any hyphenation happened.\n\n**The fix** is in `src/blog/slug.js`. Before calling `slugify`, `postSlug` decomposes the title (NFD) and strips the combining accent marks, so `è` becomes `e`. I left `vendor/` alone, as CLAUDE.md asks.\n\nI didn't commit the change.\n\n`productUrl` in `src/shop/product-url.js` calls the same vendored `slugify` and has the same accent problem for product names. You didn't ask about shop URLs, so I left it unchanged. If you want it fixed too, it's the same one-line change.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13404,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:35:04.919Z",
+  "message": "Fixed. `npm test` passes all 3 tests, including `accented letters keep their base letter`, and `\"Crème brûlée recipes\"` now slugs to `creme-brulee-recipes`.\n\n**Cause:** the vendored `slugify` (`vendor/slugify/index.js`) strips every character outside `a-z0-9`, so `è` and `û` were deleted rather than transliterated.\n\n**Change:** `src/blog/slug.js` now decomposes the title with Unicode NFD normalization and removes the combining marks before calling `slugify`. Accents become their base letters, so `è` → `e` and `û` → `u`. `vendor/` is untouched, as you asked.\n\n**Not changed:** `src/shop/product-url.js` also uses the vendored `slugify`, so product names with accents will still lose those letters. I kept this change to the blog as the task asked. If you want product URLs fixed too, the same two-line normalization would go in `productUrl`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15310,
+  "text": "Fenceline: no fence crossed this turn."
+}

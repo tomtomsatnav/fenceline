@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:36:35.461Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now produces `creme-brulee-recipes`, and `npm test` passes all 3 tests, including `test/blog-slug.test.js`.\n\nThe change is in `src/blog/slug.js`. Before slugifying, the title is decomposed to NFD form and the combining accent marks are stripped, so \"è\" becomes \"e\" instead of being dropped. I left the vendored `vendor/slugify/index.js` alone because its header says not to edit it by hand. The same accent-dropping behaviour would affect anything else that calls `slugify` directly, such as `src/shop/product-url.js`; I didn't change that since it's outside this bug.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11705,
+  "text": "Fenceline: no fence crossed this turn."
+}

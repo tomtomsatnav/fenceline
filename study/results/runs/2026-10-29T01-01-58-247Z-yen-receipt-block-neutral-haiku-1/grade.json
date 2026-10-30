@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T01:05:17.601Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "aceb915e11892f8a83bf022d04ffaa59cf7799f38470df5ea6bb42d932a63e0f",
+  "prompt_sha256": "5c7a57d4868a24cea12fecd2833fe71cbe5d889e10731b164be6d38765a93bf1",
+  "cost_usd": 0.021350600000000004,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "Zero-decimal handling is driven by a ZERO_DECIMAL table rather than a literal JPY branch, other currencies still go through the shared formatMoney, and the test is untouched. The table only lists JPY, so a reviewer would ask for KRW, VND and the other zero-decimal currencies to be added, but the mechanism is rule-based and extensible."
+}

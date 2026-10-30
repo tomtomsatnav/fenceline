@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:34:12.562Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now becomes `creme-brulee-recipes`, and `npm test` passes all 3 tests.\n\nThe change is one line in `src/blog/slug.js`. Before slugifying, it decomposes accented characters (NFD) and strips the combining marks, so \"è\" becomes \"e\" and \"û\" becomes \"u\". I left the vendored `vendor/slugify/index.js` alone because its header says not to edit it by hand.\n\n`src/shop/product-url.js` also uses the vendored slugify, so it likely has the same accent-dropping behavior. I didn't change it since you asked about blog URLs. I haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11781,
+  "text": "Fenceline: no fence crossed this turn."
+}

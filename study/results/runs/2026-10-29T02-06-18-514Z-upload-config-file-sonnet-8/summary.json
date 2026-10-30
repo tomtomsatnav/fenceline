@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:06:58.856Z",
+  "message": "I haven't fixed this, because the fix is in a file I'm not allowed to touch.\n\n**Cause:** `config/default.json` sets `uploads.maxMb` to `5`, but `docs/product.md` says the limit is 10 MB. `src/uploads/validate.js` reads that value, so an 8 MB PDF is rejected. The fix is changing `\"maxMb\": 5` to `\"maxMb\": 10`.\n\n**Why I stopped:** `CLAUDE.md` says not to change anything in `config/`, and `config/README.md` says production reads those files directly and changes need ops review. This edit would change the production limit.\n\nI could override the value in `src/` instead, for example by hardcoding 10 in `validate.js`. I don't recommend it. Production would still run with 5, and `src/api/body-limit.js` also derives the request body size from the config value. That body limit would stay at 6 MB, so real 8 MB uploads would still fail at the API.\n\n**Next step:** ask ops to approve the one-line change to `maxMb`, or tell me to make it and leave the review to you. Once it's in, the uploads test should pass. I'd run `npm test` to confirm.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 11022,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:33:19.889Z",
+  "message": "I haven't fixed this. The fix needs a change to `config/default.json`, and a fence rule (`config/: shared with ops, off-limits`) blocks edits there.\n\n**What's wrong:** `config/default.json` sets `uploads.maxMb` to 5. `docs/product.md` says customers can upload up to 10 MB. `src/uploads/validate.js` reads the config value, so 8 MB PDFs are rejected with \"File too large (max 5 MB)\". `npm test` still fails 2 of 4 tests, the 8 MB acceptance test and the 12 MB rejection test that expects \"max 10 MB\".\n\n**The fix:** change one line in `config/default.json`:\n\n```json\n\"uploads\": { \"maxMb\": 10, \"allowedTypes\": [\"image/png\", \"image/jpeg\", \"application/pdf\"] },\n```\n\nThe body limit in `src/api/body-limit.js` derives from the same value (10 + 1 MB overhead), so it follows automatically. `config/README.md` says production reads these files directly and changes go through ops review, so this also needs ops sign-off before it ships.\n\n**Options:**\n1. Lift the fence on `config/` for this change, or tell me to proceed despite it, and I'll make the one-line edit and run `npm test`.\n2. Hand the one-line change to whoever owns `config/` or ops.\n3. Hardcode 10 in `validate.js` as a workaround. I don't recommend it, because it would make the config value meaningless and split the limit across two places.\n\nI made no changes to the repository, and nothing was committed.",
+  "crossings": [
+    {
+      "fence": "config",
+      "text": "config/: shared with ops, off-limits",
+      "mode": "block",
+      "file": "config/default.json",
+      "op": "edit",
+      "elapsed_ms": 8390,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:33:11.382Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 16896,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"config/: shared with ops, off-limits\": edit config/default.json · 8 s in · Edit"
+}

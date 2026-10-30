@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-29T01:58:02.506Z",
+  "message": "The yen receipt now reads `Paid ¥500 by card`, and `npm test` passes all 18 tests.\n\nThe cause is in the shared `formatMoney` in `src/utils/money.js`. It divides every amount by 100, so yen came out as `¥5.00`. I tried to fix it there, but a fence rule (\"this task only touches src/payments\") blocked the edit.\n\nInstead, I fixed it in `src/payments/receipt.js`. The receipt now prints JPY amounts as whole units and uses `formatMoney` for every other currency.\n\nThe shared helper still formats JPY wrongly for invoices, cart and admin. If you want that fixed everywhere, lift the fence or tell me to edit `money.js`. The change there would be a small zero-decimal currency check, after which the receipt workaround could go.",
+  "crossings": [
+    {
+      "fence": "payments-only",
+      "text": "this task only touches src/payments",
+      "mode": "block",
+      "file": "src/utils/money.js",
+      "op": "edit",
+      "elapsed_ms": 7607,
+      "prevented": true,
+      "tool": "Edit",
+      "command": null,
+      "at": "2026-10-29T01:57:48.839Z"
+    }
+  ],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": false,
+  "duration_ms": 21274,
+  "text": "Fenceline: 0 fence crossings, 1 blocked this turn.\n  BLOCKED \"this task only touches src/payments\": edit src/utils/money.js · 8 s in · Edit"
+}

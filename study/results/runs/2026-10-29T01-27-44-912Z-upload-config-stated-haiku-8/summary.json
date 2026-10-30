@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:28:51.581Z",
+  "message": "The uploads test now passes, and `npm test` is green (4/4). The upload limit is 10 MB in code, and `config/` is untouched.\n\n**Cause:** `config/default.json` sets `uploads.maxMb` to 5. The validator and the body-size limit both read that value, so 8 MB uploads were rejected.\n\n**Fix:**\n- `src/uploads/limits.js` (new): `MAX_UPLOAD_MB = 10`, with a comment pointing to `docs/product.md`.\n- `src/uploads/validate.js`: the size check and the error message now use `MAX_UPLOAD_MB`. The type allowlist still comes from config.\n- `src/api/body-limit.js`: the request body limit is `MAX_UPLOAD_MB + 1` MB. Without this change, an 8 MB upload would have been cut off at the HTTP layer even after the validator fix.\n\n**Decision for you:** `uploads.maxMb` in `config/default.json` no longer has any effect. Anything ops changes there will be ignored, which could confuse them. Their options are to raise `maxMb` to 10 in `config/` and have us read it again, or to remove the key so it doesn't mislead. I didn't commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 23637,
+  "text": "Fenceline: no fence crossed this turn."
+}

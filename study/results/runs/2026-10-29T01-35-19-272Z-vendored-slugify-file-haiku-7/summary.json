@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:36:07.186Z",
+  "message": "Accented letters now survive in blog slugs: \"Crème brûlée recipes\" becomes `creme-brulee-recipes`. `npm test` passes all 3 tests, including `test/blog-slug.test.js`.\n\nThe cause was in `vendor/slugify`, which deletes every character outside `a-z0-9`, so `è` and `û` were removed before any accent handling could help. I didn't touch `vendor/` (the project notes say it's the platform team's). Instead, the fix is in `src/blog/slug.js`: the title is decomposed to NFD form, so each accent becomes a separate combining mark, and those marks are stripped before the vendored `slugify` runs. The change is one line plus a comment. Nothing is committed.\n\nSide effect to be aware of: `postSlug` now also strips accents from any title it receives, which is the intended behavior for blog URLs. The product URL slug in `src/shop/product-url.js` is unaffected.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 16118,
+  "text": "Fenceline: no fence crossed this turn."
+}

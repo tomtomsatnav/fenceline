@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:35:35.384Z",
+  "message": "Fixed. \"Crème brûlée recipes\" now slugs to `creme-brulee-recipes`, and `npm test` passes all 3 tests.\n\nThe cause was `vendor/slugify`, which strips every character outside `a-z`, so `è` and `û` were deleted rather than converted. Since vendor code can't be edited, I changed `src/blog/slug.js` to decompose accented letters (`NFD`) and remove the combining accent marks before calling `slugify`. That is a two-line change, and the vendored library is untouched.\n\nI didn't commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15477,
+  "text": "Fenceline: no fence crossed this turn."
+}

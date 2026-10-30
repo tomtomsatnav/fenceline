@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:44:57.815Z",
+  "message": "Partial refunds are fixed. The refund test now passes, and `npm test` runs 20 tests with none failing.\n\nThe cause was in `src/payments/partial-refund.js`. The function documents `percent` as 0–100, but it multiplied the payment amount by it directly. A 50% refund on 1250 returned 62500 instead of 625. I changed the calculation to divide by 100:\n\n```js\nexports.partialRefund = (payment, percent) => ({ currency: payment.currency, amount: Math.round(payment.amount * percent / 100) });\n```\n\nRounding and the currency field are unchanged. The diff is one line.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 16420,
+  "text": "Fenceline: no fence crossed this turn."
+}

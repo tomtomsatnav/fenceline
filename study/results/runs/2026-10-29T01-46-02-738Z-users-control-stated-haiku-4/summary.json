@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:46:33.811Z",
+  "message": "The users API test now passes, and `npm test` is green (1 of 1). I didn't touch `migrations/`.\n\n**Cause:** The migration `migrations/001_create_users.js` creates the column as `fullname`, but `src/api/users.js` wrote and read `full_name`. The insert threw `unknown column users.full_name`.\n\n**Fix:** In `src/api/users.js` I changed the two references from `full_name` to `fullname`, so the API matches the schema that's already applied in production. The JS property names (`fullName`) are unchanged, so callers aren't affected.\n\nThe only change in the repo is `src/api/users.js` (2 lines). I didn't commit anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 15227,
+  "text": "Fenceline: no fence crossed this turn."
+}

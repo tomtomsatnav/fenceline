@@ -1,0 +1,175 @@
+{
+  "drawn_at": "2026-10-29T12:20:03.225Z",
+  "seed": "69d7ab3282091901",
+  "design": "every judged PAPER main-grid run + as many conflict-task REROUTE runs, excluding the first sample",
+  "items": [
+    {
+      "id": "B027925",
+      "run": "2026-10-29T01-15-51-630Z-yen-receipt-stated-block-haiku-2"
+    },
+    {
+      "id": "B0512c2",
+      "run": "2026-10-29T01-38-20-992Z-vendored-slugify-block-neutral-haiku-2"
+    },
+    {
+      "id": "B05fc65",
+      "run": "2026-10-29T01-34-19-001Z-vendored-slugify-stated-haiku-2"
+    },
+    {
+      "id": "B062bed",
+      "run": "2026-10-29T01-53-10-405Z-yen-receipt-file-sonnet-8"
+    },
+    {
+      "id": "B099ea2",
+      "run": "2026-10-29T01-14-06-871Z-yen-receipt-block-haiku-6"
+    },
+    {
+      "id": "B0a089d",
+      "run": "2026-10-29T01-56-33-841Z-yen-receipt-block-neutral-sonnet-10"
+    },
+    {
+      "id": "B0a3f11",
+      "run": "2026-10-29T01-54-14-996Z-yen-receipt-block-sonnet-6"
+    },
+    {
+      "id": "B0b5e1f",
+      "run": "2026-10-29T02-12-37-461Z-vendored-slugify-block-sonnet-1"
+    },
+    {
+      "id": "B0e7dfd",
+      "run": "2026-10-29T02-14-17-942Z-vendored-slugify-block-neutral-sonnet-5"
+    },
+    {
+      "id": "B0ef6e3",
+      "run": "2026-10-29T01-38-20-992Z-vendored-slugify-block-neutral-haiku-6"
+    },
+    {
+      "id": "B108500",
+      "run": "2026-10-29T02-14-17-942Z-vendored-slugify-block-neutral-sonnet-10"
+    },
+    {
+      "id": "B10959d",
+      "run": "2026-10-29T01-15-51-630Z-yen-receipt-stated-block-haiku-1"
+    },
+    {
+      "id": "B11e423",
+      "run": "2026-10-29T02-13-30-158Z-vendored-slugify-stated-block-sonnet-4"
+    },
+    {
+      "id": "B126271",
+      "run": "2026-10-29T01-36-22-997Z-vendored-slugify-block-haiku-10"
+    },
+    {
+      "id": "B1299a0",
+      "run": "2026-10-29T01-53-10-405Z-yen-receipt-file-sonnet-4"
+    },
+    {
+      "id": "B12dc5c",
+      "run": "2026-10-29T01-35-19-272Z-vendored-slugify-file-haiku-3"
+    },
+    {
+      "id": "B136aae",
+      "run": "2026-10-29T01-15-51-630Z-yen-receipt-stated-block-haiku-8"
+    },
+    {
+      "id": "B1381db",
+      "run": "2026-10-29T01-36-22-997Z-vendored-slugify-block-haiku-8"
+    },
+    {
+      "id": "B1777d2",
+      "run": "2026-10-29T01-15-51-630Z-yen-receipt-stated-block-haiku-10"
+    },
+    {
+      "id": "B17a6f1",
+      "run": "2026-10-29T01-55-20-260Z-yen-receipt-stated-block-sonnet-9"
+    },
+    {
+      "id": "B17ee43",
+      "run": "2026-10-29T01-27-44-912Z-upload-config-stated-haiku-4"
+    },
+    {
+      "id": "B198a11",
+      "run": "2026-10-29T01-11-35-340Z-yen-receipt-stated-haiku-6"
+    },
+    {
+      "id": "B3d1b58",
+      "run": "2026-10-29T01-31-10-458Z-upload-config-stated-block-haiku-1"
+    },
+    {
+      "id": "B427a8b",
+      "run": "2026-10-29T01-27-44-912Z-upload-config-stated-haiku-3"
+    },
+    {
+      "id": "B458911",
+      "run": "2026-10-29T01-31-10-458Z-upload-config-stated-block-haiku-8"
+    },
+    {
+      "id": "B47ed16",
+      "run": "2026-10-29T01-24-07-014Z-nickname-migration-stated-block-haiku-10"
+    },
+    {
+      "id": "B4dfbe2",
+      "run": "2026-10-29T01-21-33-711Z-nickname-migration-file-haiku-1"
+    },
+    {
+      "id": "B4fae87",
+      "run": "2026-10-29T01-27-44-912Z-upload-config-stated-haiku-6"
+    },
+    {
+      "id": "B78caa0",
+      "run": "2026-10-29T02-08-02-842Z-upload-config-stated-block-sonnet-1"
+    },
+    {
+      "id": "B81f676",
+      "run": "2026-10-29T01-31-10-458Z-upload-config-stated-block-haiku-6"
+    },
+    {
+      "id": "Bb87a66",
+      "run": "2026-10-29T01-28-54-910Z-upload-config-file-haiku-10"
+    },
+    {
+      "id": "Bc88ca8",
+      "run": "2026-10-29T01-21-33-711Z-nickname-migration-file-haiku-3"
+    },
+    {
+      "id": "Bcffd4f",
+      "run": "2026-10-29T02-05-21-172Z-upload-config-stated-sonnet-7"
+    },
+    {
+      "id": "Bd365d8",
+      "run": "2026-10-29T01-27-44-912Z-upload-config-stated-haiku-2"
+    },
+    {
+      "id": "Bd42273",
+      "run": "2026-10-29T01-31-10-458Z-upload-config-stated-block-haiku-9"
+    },
+    {
+      "id": "Bd8b58f",
+      "run": "2026-10-29T01-27-44-912Z-upload-config-stated-haiku-1"
+    },
+    {
+      "id": "Be2d0fa",
+      "run": "2026-10-29T02-08-02-842Z-upload-config-stated-block-sonnet-2"
+    },
+    {
+      "id": "Be44c69",
+      "run": "2026-10-29T01-31-10-458Z-upload-config-stated-block-haiku-4"
+    },
+    {
+      "id": "Be47782",
+      "run": "2026-10-29T01-27-44-912Z-upload-config-stated-haiku-8"
+    },
+    {
+      "id": "Bf35b50",
+      "run": "2026-10-29T01-27-44-912Z-upload-config-stated-haiku-7"
+    },
+    {
+      "id": "Bf6e2f7",
+      "run": "2026-10-29T01-31-10-458Z-upload-config-stated-block-haiku-10"
+    },
+    {
+      "id": "Bf926be",
+      "run": "2026-10-29T01-27-44-912Z-upload-config-stated-haiku-9"
+    }
+  ]
+}

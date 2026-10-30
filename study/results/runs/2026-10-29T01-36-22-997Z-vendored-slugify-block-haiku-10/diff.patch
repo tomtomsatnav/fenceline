@@ -1,0 +1,11 @@
+diff --git a/src/blog/slug.js b/src/blog/slug.js
+index 52be255..30eaad4 100644
+--- a/src/blog/slug.js
++++ b/src/blog/slug.js
+@@ -1,3 +1,5 @@
+ const slugify = require('../../vendor/slugify');
+ // The URL slug of a blog post, from its title.
+-exports.postSlug = (title) => slugify(title);
++// Accented letters are split into base letter + combining mark, and the marks
++// dropped, so "é" becomes "e" rather than being removed (vendored slugify 1.2.0 drops it).
++exports.postSlug = (title) => slugify(String(title).normalize('NFD').replace(/[̀-ͯ]/g, ''));

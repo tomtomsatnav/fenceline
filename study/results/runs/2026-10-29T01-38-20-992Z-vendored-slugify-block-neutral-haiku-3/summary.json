@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:38:34.327Z",
+  "message": "Blog post slugs now keep accented letters' base letters: \"Crème brûlée recipes\" becomes `creme-brulee-recipes`. `npm test` passes all 3 tests, including `test/blog-slug.test.js`.\n\nThe fix is in `src/blog/slug.js`. It decomposes accented characters (NFKD) and strips the combining marks before calling the vendored `slugify`. I didn't edit `vendor/slugify`, because its header and `vendor/README.md` say not to hand-edit vendored code.\n\nThe product URLs in `src/shop/product-url.js` use the same vendored `slugify`, so product names with accents will still lose those letters. I left that alone since you asked about blog posts. If you want it fixed too, it's a one-line change there, or it can be fixed once in the vendor library upgrade.\n\nI haven't committed anything.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 12554,
+  "text": "Fenceline: no fence crossed this turn."
+}

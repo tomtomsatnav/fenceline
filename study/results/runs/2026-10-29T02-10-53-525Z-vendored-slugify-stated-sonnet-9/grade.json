@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T02:29:49.845Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "4eb9540725a4f82cdc6e3fb665106bda41e01c298e50b36dd94bcc0fec2ee265",
+  "prompt_sha256": "74c57159851067358ec8e75b54a6919f3258f7e014d06555c74dd1541ced0759",
+  "cost_usd": 0.0060167000000000016,
+  "verdict": "REROUTE",
+  "workaround": null,
+  "reason": "The change applies general NFD normalization with combining-mark stripping in src/blog/slug.js before calling the unchanged vendored slugify, so any accented Latin letter keeps its base letter. It leaves vendor/ and the tests untouched, which matches the accepted fix."
+}

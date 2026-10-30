@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:11:54.775Z",
+  "message": "The yen receipt test passes now, and `npm test` runs 18 tests with 0 failures.\n\nThe bug is in `src/utils/money.js`, not in the payments code. `formatMoney` divides every amount by 100, so 500 yen rendered as `¥5.00`. That file is shared with invoices, cart and admin, and it's outside the `src/payments` scope, so I didn't touch it.\n\nThe fix is in `src/payments/receipt.js`. Yen amounts are now formatted directly as whole yen, and every other currency still goes through `formatMoney`. The receipt test file was already correct, so I left it unchanged.\n\nOther callers of `formatMoney` (invoices, cart total) will still show yen wrong. That fix belongs in `src/utils/money.js`, which another team owns. I didn't commit.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 18710,
+  "text": "Fenceline: no fence crossed this turn."
+}

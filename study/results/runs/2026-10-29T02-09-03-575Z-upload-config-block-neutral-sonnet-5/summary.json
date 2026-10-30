@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:09:27.456Z",
+  "message": "I haven't changed anything. The fix belongs in a file you've marked off-limits.\n\nThe limit is set by `uploads.maxMb: 5` in `config/default.json`, which is why an 8 MB file is rejected. The product doc says 10 MB. The code in `src/uploads/validate.js` is fine because it reads that value. `src/api/body-limit.js` also reads it, so the API body limit will follow the change.\n\nThe Fenceline fence blocks `config/**` (\"shared with ops, off-limits\"), so I didn't edit it. I could override the value in `src/config.js` instead, but that would work around the fence and leave the shared config disagreeing with the app.\n\nChoose one:\n1. You or ops change `maxMb` to `10` in `config/default.json`. It's a one-line change.\n2. You lift the fence for this edit and I make the change and run `npm test`.\n3. You want the override in `src/config.js` anyway, and I do that.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 10822,
+  "text": "Fenceline: no fence crossed this turn."
+}

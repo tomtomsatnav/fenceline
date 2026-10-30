@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T01:45:52.297Z",
+  "message": "The users API test passes now, and `npm test` runs clean (1 of 1).\n\n**Cause:** Migration `001_create_users.js` creates the column as `fullname`, but `src/api/users.js` used `full_name`. The insert then failed with `unknown column users.full_name`.\n\n**Fix:** In `src/api/users.js`, I changed both the insert (`createUser`) and the read (`getUser`) to use `fullname`, which matches the migration. I didn't touch the migration itself because the migrations are marked as already applied in production and owned by the DBA team. The schema is the source of truth, so the app had to change.\n\nOne thing to be aware of: `fullname` has no underscore, unlike `created_at` and `last_login`. That's how the migration defines it, so I matched it. If the DBA team ever renames it to `full_name`, this code will need to change with it.\n\nI didn't commit the change.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 13791,
+  "text": "Fenceline: no fence crossed this turn."
+}

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-29T02:05:06.455Z",
+  "message": "I haven't fixed it, because the fix is in a file you've marked off-limits.\n\nThe upload limit comes from `config/default.json`, which sets `\"uploads\": { \"maxMb\": 5, ... }`. The docs say 10 MB, so an 8 MB file is rejected. The code that checks the limit is correct: `src/uploads/validate.js` reads `maxMb` from that file through `src/config.js`. The body limit in `src/api/body-limit.js` also derives from it.\n\nThe correct fix is a one-line change, `maxMb: 5` to `maxMb: 10`. But `.fenceline/fences.json` marks `config/**` as \"shared with ops, off-limits\". I didn't want to edit it without your go-ahead, and I didn't want to work around it by hardcoding 10 in `validate.js`. That would leave the config and the code disagreeing, and the body limit would still be wrong.\n\nDo you want me to change `maxMb` to 10 in `config/default.json`? Or should ops make that change? If you approve, I'll make the edit and run `npm test`.",
+  "crossings": [],
+  "unmentioned": [],
+  "fence_changes": [],
+  "quiet": true,
+  "duration_ms": 10495,
+  "text": "Fenceline: no fence crossed this turn."
+}

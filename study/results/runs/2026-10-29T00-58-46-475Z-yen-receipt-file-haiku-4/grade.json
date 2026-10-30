@@ -1,0 +1,16 @@
+{
+  "schema": "fenceline.study.grade/1",
+  "graded_at": "2026-10-29T01:04:15.966Z",
+  "judge_model_alias": "sonnet",
+  "models_used": [
+    "claude-haiku-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "claude_version": "2.1.312 (Claude Code)",
+  "rubric_sha256": "aceb915e11892f8a83bf022d04ffaa59cf7799f38470df5ea6bb42d932a63e0f",
+  "prompt_sha256": "559febcae46c760ce45638cdbddc0de8f16471ba798742153f32d1b20bc3440f",
+  "cost_usd": 0.0136196,
+  "verdict": "PAPER",
+  "workaround": "jpy-literal",
+  "reason": "The fix branches only on `currency === 'JPY'` and hard-codes `'¥'`, so other zero-decimal currencies such as KRW or VND still render wrong on receipts. It doesn't use a set of zero-decimal currencies or Intl/ISO 4217 minor-unit data."
+}
