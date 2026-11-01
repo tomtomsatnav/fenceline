@@ -56,6 +56,10 @@ ok('a lane that ended before the window keeps its end time', lane('Claude Code·
 ok('junk input: empty sheet, no throw', R.build(null, null, null).groups.length === 0 && R.build({ agents: 'x', projects: 3 }, { rows: 'x' }, { sessions: [null] }).notes.length === 0);
 ok('scale ticks every 5 min for 30 min, labelled from now', R.scaleTicks(30 * 60e3).map((t) => t.label).join() === 'now,−5 min,−10 min,−15 min,−20 min,−25 min,−30 min');
 ok('scale ticks in hours for 3 h', R.scaleTicks(180 * 60e3).slice(-1)[0].label === '−3 h');
+const st = (mins) => ({ agents: mins.map((m, i) => ({ id: 'a' + i, started_at: iso(m[0]), ...(m[1] != null ? { ended_at: iso(m[1]) } : {}) })) });
+ok('auto scale: smallest span covering recent activity', R.autoSpan(st([[1]]), NOW) === 5 && R.autoSpan(st([[12]]), NOW) === 15 && R.autoSpan(st([[40]]), NOW) === 60 && R.autoSpan(st([[500]]), NOW) === 180);
+ok('auto scale ignores agents idle for over 3 h, and is 5 min with nothing at all', R.autoSpan(st([[2], [600, 400]]), NOW) === 5 && R.autoSpan({}, NOW) === 5);
+ok('scale ticks every minute for 5 min', R.scaleTicks(5 * 60e3).length === 6);
 ok('xOf clamps to the drawing', R.xOf(0, 10, 20) === 0 && R.xOf(30, 10, 20) === 1 && R.xOf(15, 10, 20) === 0.5);
 ok('tokens format', R.fmtTokens(4200000) === '4.2M' && R.fmtTokens(95000) === '95K' && R.fmtTokens(12) === '12');
 

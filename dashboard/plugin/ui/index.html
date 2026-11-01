@@ -8,13 +8,10 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 20V7l2.5-2.5L9 7v13M15 20V7l2.5-2.5L20 7v13M4 10.5h16M4 16h16' fill='none' stroke='%239a6a12' stroke-width='2'/%3E%3C/svg%3E">
 <script>/* apply the saved theme before first paint (no attribute = follow the system) */
 try{var t=localStorage.getItem('aos.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
-<link rel="stylesheet" href="sheet.css?v=1">
+<link rel="stylesheet" href="sheet.css?v=3">
 </head>
 <body>
 <div class="sheet">
-  <div class="gridref top" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span></div>
-  <div class="gridref bottom" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span><span>G</span><span>H</span></div>
-
   <header class="head">
     <h1 class="mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 20V7l2.5-2.5L9 7v13M15 20V7l2.5-2.5L20 7v13M4 10.5h16M4 16h16"/></svg>Fenceline</h1>
     <p class="where" id="where">Reading sessions…</p>
@@ -53,13 +50,13 @@ try{var t=localStorage.getItem('aos.theme');if(t==='light'||t==='dark')document.
     <div class="titleblock">
       <div><span>Sheet</span><b id="tb-sheet">Routes · live</b></div>
       <div><span>Drawn</span><b id="tb-drawn">--:--</b></div>
-      <div><label for="tb-scale"><span>Scale</span></label><select id="tb-scale"><option value="15">15 min across</option><option value="30" selected>30 min across</option><option value="60">1 h across</option><option value="180">3 h across</option></select></div>
+      <div><label for="tb-scale"><span>Scale</span></label><select id="tb-scale"><option value="auto" selected>Auto</option><option value="5">5 min across</option><option value="15">15 min across</option><option value="30">30 min across</option><option value="60">1 h across</option><option value="180">3 h across</option></select></div>
       <div><span>Tokens</span><b id="tb-tokens">0</b></div>
     </div>
   </footer>
 </div>
-<script src="routes.js?v=1"></script>
+<script src="routes.js?v=2"></script>
 <script src="guard.js?v=3"></script>
-<script src="sheet.js?v=1"></script>
+<script src="sheet.js?v=2"></script>
 </body>
 </html>

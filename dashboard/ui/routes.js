@@ -120,17 +120,29 @@
         fencesMet: crossed + blocked, blocked: blocked, shared: ties.length, needs: notes.length, tokens: tokens } };
   }
 
+  /* Auto scale: the smallest of 5/15/30/60/180 minutes that covers every agent active in the last 3 hours, with a little room */
+  var SPANS = [5, 15, 30, 60, 180];
+  function autoSpan(state, now) {
+    var earliest = now;
+    list(state && state.agents).forEach(function (a) {
+      if (!a) return; var st = ms(a.started_at), end = a.ended_at ? ms(a.ended_at) : now;
+      if (st == null || end < now - 180 * 60e3) return; earliest = Math.min(earliest, Math.max(st, now - 180 * 60e3));
+    });
+    var need = (now - earliest) / 60e3 * 1.08;
+    for (var i = 0; i < SPANS.length; i++) if (SPANS[i] >= need) return SPANS[i];
+    return 180;
+  }
   /* x position (0..1 across the drawing) of a time, clamped */
   function xOf(t, t0, t1) { return t1 > t0 ? Math.max(0, Math.min(1, (t - t0) / (t1 - t0))) : 1; }
   /* tick marks for the scale: every step minutes, from now backwards */
   function scaleTicks(span) {
-    var m = span / 60e3, step = m <= 15 ? 3 : m <= 30 ? 5 : m <= 60 ? 10 : m <= 180 ? 30 : 60, out = [];
+    var m = span / 60e3, step = m <= 5 ? 1 : m <= 15 ? 3 : m <= 30 ? 5 : m <= 60 ? 10 : m <= 180 ? 30 : 60, out = [];
     for (var k = 0; k <= m + 0.001; k += step) out.push({ minutes: k, label: k === 0 ? 'now' : k >= 60 && k % 60 === 0 ? '−' + (k / 60) + ' h' : '−' + k + ' min' });
     return out;
   }
   function fmtTokens(n) { n = Number(n) || 0; return n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : String(n); }
 
-  var api = { build: build, splitId: splitId, laneStatus: laneStatus, xOf: xOf, scaleTicks: scaleTicks, fmtTokens: fmtTokens, ago: ago, STATUS_TEXT: STATUS_TEXT };
+  var api = { build: build, autoSpan: autoSpan, splitId: splitId, laneStatus: laneStatus, xOf: xOf, scaleTicks: scaleTicks, fmtTokens: fmtTokens, ago: ago, STATUS_TEXT: STATUS_TEXT };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.FLRoutes = api;
 })(typeof window !== 'undefined' ? window : globalThis);

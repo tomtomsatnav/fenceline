@@ -30,7 +30,7 @@ const RUN_NOW = Date.now();
 
 async function newPage(browser, { theme = 'dark', scale = 2, viewport = VIEW } = {}) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: scale, colorScheme: theme, reducedMotion: 'no-preference' });
-  await ctx.addInitScript((t) => { try { localStorage.setItem('aos.theme', t); localStorage.removeItem('fl.scale'); } catch {} }, theme);
+  await ctx.addInitScript((t) => { try { localStorage.setItem('aos.theme', t); localStorage.setItem('fl.scale', '30'); } catch {} }, theme);
   await ctx.route('**/api/history*', (r) => r.fulfill({ json: buildDemoHistory({ now: RUN_NOW }) }));
   await ctx.route('**/api/fences*', (r) => r.fulfill({ json: buildDemoFences({ now: RUN_NOW }) }));
   await ctx.route('**/api/verdicts*', (r) => r.fulfill({ json: { verdicts: [] } }));

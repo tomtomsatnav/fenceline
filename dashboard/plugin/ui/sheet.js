@@ -14,7 +14,8 @@
   var NS = 'http://www.w3.org/2000/svg';
   var S = { view: 'routes', state: null, timeline: null, fences: null, verdicts: null, model: null, sel: null, span: 30, at: null,
     history: null, err: 0, lastOk: 0, evType: '', evQuery: '', focusFence: null, open: {} };
-  try { var sp = Number(localStorage.getItem('fl.scale')); if ([15, 30, 60, 180].indexOf(sp) >= 0) S.span = sp; } catch (e) { /* storage blocked */ }
+  S.scale = 'auto'; // 'auto' or minutes across; S.span is what is drawn
+  try { var sp = localStorage.getItem('fl.scale'); if (sp === 'auto' || [5, 15, 30, 60, 180].indexOf(Number(sp)) >= 0) S.scale = sp === 'auto' ? 'auto' : Number(sp); } catch (e) { /* storage blocked */ }
 
   function $(id) { return document.getElementById(id); }
   function h(tag, cls, text, parent) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; }
@@ -46,7 +47,9 @@
   }
   function rebuild() {
     if (!S.state) return;
-    S.model = R.build(S.state, S.timeline, fencesAt(), { now: S.at || Date.parse(S.state.server_time) || Date.now(), spanMs: S.span * 60e3 });
+    var now = S.at || Date.parse(S.state.server_time) || Date.now();
+    S.span = S.scale === 'auto' ? R.autoSpan(S.state, now) : S.scale;
+    S.model = R.build(S.state, S.timeline, fencesAt(), { now: now, spanMs: S.span * 60e3 });
     var lanes = allLanes();
     if (!S.sel || !lanes.some(function (l) { return l.id === S.sel; })) {
       var n = S.model.notes.filter(function (x) { return x.lane; })[0], run = lanes.filter(function (l) { return l.status === 'running'; })[0];
@@ -94,7 +97,8 @@
     row('Status', l.statusText + (l.status === 'stalled' && l.stuckFor ? ' for ' + Math.round(l.stuckFor / 60) + ' min' : '') + (l.error ? ' (' + l.error + ')' : ''));
     row('Now', l.status === 'done' || l.status === 'idle' ? '' : l.tool);
     row('Model', l.model); row('Tokens', l.tokens ? R.fmtTokens(l.tokens) + ' new' : '');
-    row('Started', hm(l.start) + (l.end ? ', ended ' + hm(l.end) : '')); row('Machine', l.machine);
+    row('Started', hm(l.start) + (l.status === 'idle' || l.status === 'ask' ? ', last active ' + hm(l.last) : l.end ? ', ended ' + hm(l.end) : ''));
+    if (l.machine && l.machine !== 'local') row('Machine', l.machine);
     if (l.fences.length) {
       h('h4', null, 'Fences met', box);
       l.fences.slice().reverse().slice(0, 6).forEach(function (f) { h('p', 'met ' + f.kind, hm(f.at) + '  ' + (f.kind === 'blocked' ? 'blocked: ' : '') + f.op + ' ' + f.file + (f.rule ? ' · ' + f.rule : ''), box); });
@@ -110,6 +114,7 @@
     $('tb-sheet').textContent = name + (S.at ? ' · replay' : ' · live');
     $('tb-drawn').textContent = hm(S.model.t1) + (S.at ? '' : ' local');
     $('tb-tokens').textContent = R.fmtTokens(S.model.summary.tokens) + ' new';
+    var ao = $('tb-scale').querySelector('option[value="auto"]'); if (ao) ao.textContent = 'Auto · ' + (S.span >= 60 ? S.span / 60 + ' h' : S.span + ' min') + ' across';
   }
 
   /* ---------- routes view ---------- */
@@ -336,8 +341,8 @@
   /* ---------- controls ---------- */
   document.querySelectorAll('.views [data-view]').forEach(function (b) { b.addEventListener('click', function () { setView(b.getAttribute('data-view')); }); });
   $('maplink').href = location.protocol + '//' + location.hostname + ':4319/';
-  $('tb-scale').value = String(S.span);
-  $('tb-scale').addEventListener('change', function () { S.span = Number($('tb-scale').value) || 30; try { localStorage.setItem('fl.scale', String(S.span)); } catch (e) { /* ignore */ } rebuild(); });
+  $('tb-scale').value = String(S.scale);
+  $('tb-scale').addEventListener('change', function () { var v = $('tb-scale').value; S.scale = v === 'auto' ? 'auto' : Number(v) || 30; try { localStorage.setItem('fl.scale', String(S.scale)); } catch (e) { /* ignore */ } rebuild(); });
   var THEMES = ['auto', 'light', 'dark'];
   function theme() { var t = document.documentElement.getAttribute('data-theme') || 'auto'; $('theme-btn').textContent = 'Theme: ' + t; return t; }
   function cycleTheme() {

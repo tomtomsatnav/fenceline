@@ -1,4 +1,4 @@
-/* Fenceline dashboard: one survey sheet. A framed drawing with grid references; agents are routes along a time scale, fences sit
+/* Fenceline dashboard: one survey sheet, no frame. Agents are routes along a time scale, fences sit
    on the routes where they were met, numbered margin notes are what needs you. Key and title block along the foot.
    Palette: survey paper by day, night survey after dark, contour brown/gold as the one accent. Status colours are semantic only. */
 @font-face{font-family:"Barlow Semi Condensed";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/BarlowSemiCondensed-400.woff2) format("woff2")}
@@ -30,18 +30,14 @@
 *{box-sizing:border-box}
 html{background:var(--paper)}
 body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.4 var(--label);font-variant-numeric:tabular-nums;
-  padding-block:22px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  padding-block:16px 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 button,select,input{font:inherit;color:inherit}
 button{background:none;border:0;cursor:pointer;padding:0}
 :focus-visible{outline:2px solid var(--contour);outline-offset:2px}
 [hidden]{display:none!important}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
-/* the sheet: neatline inside an outer frame, grid letters in the margin */
-.sheet{max-width:1600px;margin:0 auto;border:1px solid var(--ink);padding:18px;position:relative}
-.sheet::before{content:"";position:absolute;inset:5px;border:2.5px solid var(--ink);pointer-events:none}
-.gridref{position:absolute;left:18px;right:18px;font:500 11px var(--data);color:var(--ink3);display:flex;justify-content:space-around;pointer-events:none}
-.gridref.top{top:-18px} .gridref.bottom{bottom:-18px}
+.sheet{max-width:2200px;margin:0 auto}
 
 .head{display:flex;align-items:baseline;gap:12px 26px;flex-wrap:wrap;padding:6px 6px 14px;border-bottom:1px solid var(--rule)}
 .mark{display:flex;align-items:center;gap:9px;font:500 26px var(--note);letter-spacing:-.01em;margin:0}
@@ -158,4 +154,4 @@ table.events td.k{white-space:nowrap} table.events td.k.alert{color:var(--warn)}
   .body{grid-template-columns:minmax(0,1fr)} .drawing{border-right:0;border-bottom:1px solid var(--rule)} .margin{padding-left:4px}
   .foot{grid-template-columns:minmax(0,1fr)} .titleblock{justify-self:start;grid-column:auto}
 }
-@media (max-width:560px){ .sheet{padding:12px} .mark{font-size:22px} .head{gap:8px 16px} .gridref{display:none} }
+@media (max-width:560px){ .mark{font-size:22px} .head{gap:8px 16px} }
