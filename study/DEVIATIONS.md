@@ -167,3 +167,54 @@ an enforced one. The follow-up adds `block-neutral` under pressure, to separate 
 audit sheets are fully graded.
 
 **The analysis:** `confirm()` in `lib/analysis.mjs`, with a unit test.
+
+## 2026-11-01: the branch's history was rewritten (no change to any file the study uses)
+
+### 12. Commit hashes changed; this table maps them
+
+`docs/linkedin-post.md` was removed from the repository's whole history, and this branch was rewritten onto the cleaned
+`main`. Every file the study uses is byte-for-byte the same, but every commit has a new hash. The hashes cited in these
+documents, and the `fenceline_commit` recorded in each batch file in `study/results/`, are the original ones. They are
+left as they were recorded, and this table gives each one's replacement.
+
+**The PREREG freeze commit `6bf5d34` is now `6d9f5bb`.** It is still the commit before any study run.
+
+| Original | Now | Commit |
+|---|---|---|
+| `04e4b97` | `b3e7e76` | Study phase 0: pre-registration, six tasks with rubrics, runner, judge, blind audit and re |
+| `df5c8c9` | `88a3042` | Study: second related-work search (EvasionBench, Troy Moment, Harness-IF and others); refr |
+| `6bf5d34` | `6d9f5bb` | Study: add block-neutral presentation; freeze PREREG.md as approved by Tom |
+| `432a585` | `f102c4f` | Study pilot: first completed batches (in progress) |
+| `4d739a4` | `a0d41ef` | Study pilot: completed batches (in progress) |
+| `f8f8778` | `472e15a` | Study pilot: completed batches (in progress) |
+| `fd6cea9` | `c436f36` | Study pilot: completed batches (in progress) |
+| `aa63964` | `42e13d0` | Study pilot: completed batches (in progress) |
+| `c798828` | `35f90f2` | Study pilot (phase 1): 30 Haiku runs, judge grades, results and gate report |
+| `93fba45` | `c415692` | Study pilot gate: yen rubric grades the fence-dodge, cap to $45 with a Sonnet cost stop (D |
+| `dc4dcde` | `4e0cd2e` | Study main grid: completed batches (in progress) |
+| `e2d65da` | `abd08b6` | Study main grid: completed batches (in progress) |
+| `7c19052` | `3d74cf3` | Study main grid: completed batches (in progress) |
+| `fad0297` | `e786ed7` | Study main grid: completed batches (in progress) |
+| `f37aeba` | `64a39a1` | Study main grid: completed batches (in progress) |
+| `bebe757` | `24c2079` | Study main grid: completed batches (in progress) |
+| `212228c` | `a2a1e62` | Study main grid: completed batches (in progress) |
+| `68e2ec3` | `0948c5b` | Study main grid: completed batches (in progress) |
+| `c21033a` | `63d1ade` | Study main grid: completed batches (in progress) |
+| `e2ae31f` | `7e6dcc9` | Study main grid: completed batches (in progress) |
+| `34be8d2` | `d5f2cce` | Study main grid: completed batches (in progress) |
+| `36a2d0e` | `c7b6b11` | Study main grid: completed batches (in progress) |
+| `ae34c8e` | `611f44a` | Study judge: --parallel |
+| `1f74943` | `e374936` | Study main grid: completed batches (in progress) |
+| `8f97c9a` | `014778b` | Study phase 2: 720 main-grid runs, 470 judge grades, results, blind audit sample, gate rep |
+| `4bbd1c9` | `0256b85` | Fenceline: quote-aware Bash command splitting (a quoted ; hid the redirect after it); stud |
+| `2987c03` | `c8e3216` | Study phase 3: first 3 Opus runs (cost measurement); status |
+| `e852d60` | `20ae21f` | Study phase 3: 60 Opus runs (all ASK), results and status |
+| `a8a913b` | `8255dd4` | Study phase 4: long-session runner (--length long), procedure (PHASE4.md), tests |
+| `00f5415` | `88337c0` | Study phase 4: first two long sessions; cost is cumulative across resumed turns (fixed, DE |
+| `12edde6` | `5d95a37` | Study phase 4: ceiling to $100, warm-up list extended to 100 tasks (DEVIATIONS 9) |
+| `6074d45` | `505dccc` | Study phase 4: 20 long sessions (all ASK), H3 inconclusive; status |
+| `90c7175` | `d414019` | Study extension: continue-pressure with hidden fences, pre-registered (EXTENSION.md, DEVIA |
+| `2723928` | `25292f9` | Study extension: 80 continue-pressure runs, judged; results and status |
+| `c28ff9e` | `b84c09d` | Study: pre-register the confirmatory follow-up (CONFIRM.md, DEVIATIONS 11); confirm grid g |
+
+The batch files record these commits: `12edde6`, `212228c`, `2987c03`, `34be8d2`, `432a585`, `4bbd1c9`, `4d739a4`, `68e2ec3`, `6bf5d34`, `7c19052`, `90c7175`, `93fba45`, `a8a913b`, `aa63964`, `bebe757`, `c21033a`, `dc4dcde`, `e2ae31f`, `e2d65da`, `f37aeba`, `f8f8778`, `fad0297`, `fd6cea9`.
