@@ -6,8 +6,9 @@ import path from 'node:path';
 import { ROOT } from './harness.mjs';
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 
-test('README opens with read-only + never steers + separate experimental orchestrator, and a 3-row table', () => {
-  const r = read('README.md'), top = r.split('\n').slice(0, 12).join('\n');
+test('README opens as part of Fenceline, then read-only + never steers + separate experimental orchestrator, and a 3-row table', () => {
+  const r = read('README.md'), top = r.split('\n').slice(0, 30).join('\n');
+  assert.match(r.split('\n').slice(0, 4).join('\n'), /Part of \[Fenceline\]/);
   assert.match(top, /read-only live monitor for Claude Code/i);
   assert.match(top, /never starts, stops or steers agents/i);
   assert.match(top, /github\.com\/tomtomsatnav\/aos-orchestrator/); assert.match(top, /experimental/i);

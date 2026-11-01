@@ -1,6 +1,16 @@
-# AOS Dashboard
+# Fenceline dashboard
 
-[![CI](https://github.com/tomtomsatnav/agent-orchestration-standard/actions/workflows/ci.yml/badge.svg)](https://github.com/tomtomsatnav/agent-orchestration-standard/actions/workflows/ci.yml)
+**Part of [Fenceline](../README.md).** This folder is the live dashboard that used to be the AOS dashboard
+([agent-orchestration-standard](https://github.com/tomtomsatnav/agent-orchestration-standard)), moved here with its history.
+Installing Fenceline installs the dashboard too: Fenceline's plugin runs its hooks, starts its monitor and serves it at
+http://127.0.0.1:4318. Fenceline adds its fences to the dashboard's Guard panel and to Needs you.
+
+**Do not also install the standalone `aos-dashboard` plugin** (`make install` below): both would log every hook event and
+start a monitor on the same port. `make install` and the rest of this README describe the standalone build, kept for
+development (`make test`, `make build`) and for anyone who wants the monitor without fences.
+
+The graph draws static lines coded by status (running solid, stalled and errored dashed, idle faint); the particle
+streams and the Streams button are gone.
 
 **A read-only live monitor for Claude Code.** It shows what your sessions and subagents are doing (agents, tasks, tokens, cost, file conflicts, alerts) as a streaming graph in the browser, a terminal view (`aos-dash`), an MCP server and a status line. It never starts, stops or steers agents. Local-only, zero dependencies.
 
@@ -13,8 +23,8 @@ Looking for orchestration (planning goals, launching and managing workers)? That
 | Have agents planned and run for me | [aos-orchestrator](https://github.com/tomtomsatnav/aos-orchestrator) | Experimental engine that launches real `claude` workers. |
 
 <p align="center">
-  <a href="docs/screenshots.md"><img src="docs/hero.gif" alt="AOS live dashboard: a project graph of agents with streaming activity" width="900"></a><br>
-  <sub>The live dashboard on a synthetic demo dataset. <a href="docs/screenshots.md">More screenshots</a>.</sub>
+  <img src="../docs/dashboard-dark.png" alt="The Fenceline dashboard: a project graph of sessions and subagents, lines coded by status" width="900"><br>
+  <sub>The live dashboard on a synthetic demo dataset. Older screenshots in <a href="docs/screenshots.md">docs/screenshots.md</a> still show the particle streams.</sub>
 </p>
 
 ## Install the dashboard
