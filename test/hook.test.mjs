@@ -186,3 +186,27 @@ test('review 11: Stop reports each turn once, and stays quiet when nothing happe
   s.hook(post('Read', { file_path: path.join(s.repo, 'src/utils/money.js') }));
   assert.equal(s.hook({ hook_event_name: 'Stop', last_assistant_message: '' }), '');
 });
+test('the fence step changing .fenceline/ through Bash is not drawn as the agent\'s work; the new fences are recorded', () => {
+  const s = setup();
+  // what `/fenceline:fence` then `fenceline accept` do: write a proposal, then replace fences.json and remove the proposal
+  fs.writeFileSync(path.join(s.repo, '.fenceline/proposed.json'), '{}');
+  s.hook(post('Bash', { command: 'node bin/fenceline.mjs fence "src only" --propose' }));
+  const fences = JSON.parse(fs.readFileSync(path.join(s.repo, '.fenceline/fences.json'), 'utf8'));
+  fences.fences.push({ id: 'docs', text: 'docs: off-limits', kind: 'deny', mode: 'warn', paths: ['docs/**'] });
+  fs.writeFileSync(path.join(s.repo, '.fenceline/fences.json'), JSON.stringify(fences)); fs.rmSync(path.join(s.repo, '.fenceline/proposed.json'));
+  s.hook(post('Bash', { command: 'node bin/fenceline.mjs accept' }));
+  const ev = s.events();
+  assert.ok(!ev.some((e) => (e.touches || []).some((t) => t.file.startsWith('.fenceline') && t.op !== 'read')), 'no .fenceline write on the trail');
+  assert.ok(ev.some((e) => e.kind === 'fences' && e.fences.some((f) => f.id === 'docs')), 'the new fences are recorded');
+  // a real change made in the same Bash call is still on the trail
+  fs.writeFileSync(path.join(s.repo, '.fenceline/proposed.json'), '{}'); fs.writeFileSync(path.join(s.repo, 'src/utils/money.js'), 'z\n');
+  s.hook(post('Bash', { command: 'node bin/fenceline.mjs fence x --propose; sed -i s/y/z/ src/utils/money.js' }));
+  assert.deepEqual(s.last().touches.filter((t) => t.op !== 'read').map((t) => t.file), ['src/utils/money.js']);
+});
+test('an agent reading its fences file is still on the trail', () => {
+  const s = setup();
+  s.hook(post('Read', { file_path: path.join(s.repo, '.fenceline/fences.json') }));
+  assert.deepEqual(s.last().touches, [{ file: '.fenceline/fences.json', op: 'read' }]);
+  s.hook(post('Bash', { command: 'cat .fenceline/fences.json' }));
+  assert.ok(s.last().touches.some((t) => t.file === '.fenceline/fences.json' && t.op === 'read'));
+});
