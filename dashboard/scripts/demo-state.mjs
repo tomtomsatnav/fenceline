@@ -113,6 +113,9 @@ export function buildDemoState(variant = 'main', opts = {}) {
   }
   const named = agents.map((a) => ({ id: a.id, p: a._p, def: a._def, start: a._start, end: a._end }));
   const clean = agents.map(({ _p, _def, _start, _end, ...r }) => r);
+  // subagents name their session; the web-storefront session is waiting on a permission prompt
+  for (const c of clean) if (!c.can_delegate) { const m = clean.find((x) => x.can_delegate && x.project_id === c.project_id); if (m) c.parent = m.id; }
+  if (variant === 'main' && at == null) { const w = clean.find((x) => x.can_delegate && x.project_id === 'web-storefront'); if (w) { w.waiting = true; w.last_event_at = iso(now - 0.7 * MIN); w.current_tool = { name: 'Bash', summary: 'npm publish', ts: iso(now - 0.7 * MIN) }; } }
 
   const tasks = [];
   const nameOf = {};
@@ -170,6 +173,7 @@ export function buildDemoState(variant = 'main', opts = {}) {
     alerts.push({ ts: iso(AB - 21 * MIN), kind: 'needs_input', agent: mainOf('atlas-api').id, text: 'Claude Code needs input (permission_request)', project: 'atlas-api' });
     if (st) alerts.push({ ts: iso(AB - 7 * MIN), kind: 'stuck', agent: st.id, text: st.id.split('·')[0] + ' had no activity for ' + st.stuck_for_s + 's', project: st.project });
     alerts.push({ ts: iso(AB - 6 * MIN), kind: 'agent_done', agent: 'Update onboarding copy·' + (clean.find((a) => a.id.startsWith('Update onboarding')) || { id: '·x' }).id.split('·')[1], text: 'Update onboarding copy finished', project: 'mobile-app' });
+    alerts.push({ ts: iso(AB - 0.7 * MIN), kind: 'needs_input', agent: mainOf('web-storefront').id, text: 'Claude Code needs input (permission_prompt)', project: 'web-storefront' });
     if (opts.freshAlert) alerts.push({ ts: iso(opts.freshAlert), kind: 'needs_input', agent: mainOf('web-storefront').id, text: 'Claude Code needs input (permission_prompt)', project: 'web-storefront' });
   }
 
@@ -206,3 +210,28 @@ export function buildDemoHistory(opts = {}) {
 }
 
 export const DEMO_WINDOW_MS = WINDOW_MIN * MIN;
+
+// /api/timeline for the demo: each agent's start/end and a deterministic spread of activity ticks
+export function buildDemoTimeline(opts = {}) {
+  const st = buildDemoState('main', opts), T = Date.parse(st.server_time);
+  const rows = st.agents.map((a, i) => {
+    const s0 = Date.parse(a.started_at), e0 = a.ended_at ? Date.parse(a.ended_at) : a.status === 'stalled' ? Date.parse(a.last_event_at) : T, ticks = [];
+    const step = (a.can_delegate ? 4.3 : 1.4 + (i % 4) * 0.35) * MIN;
+    for (let t = s0 + step * 0.5; t < e0; t += step) ticks.push(Math.round(t));
+    if (!a.ended_at && a.status !== 'stalled') ticks.push(Date.parse(a.last_event_at));
+    return { id: a.id, kind: a.can_delegate ? 'session' : 'subagent', project: a.project, ...(a.parent ? { parent: a.parent } : {}), status: a.status, start: a.started_at, end: a.ended_at, ticks };
+  });
+  return { from: rows.reduce((m, r) => (r.start < m ? r.start : m), st.server_time), to: st.server_time, replay: !!opts.at, rows };
+}
+
+// /api/fences for the demo: a block fence that stopped the atlas-api session, and a warn fence crossed in web-storefront
+export function buildDemoFences(opts = {}) {
+  const now = opts.now ?? Date.now(), st = buildDemoState('main', opts), main = (p) => st.agents.find((a) => a.can_delegate && a.project_id === p);
+  const F1 = { fence: 'migrations', text: 'migrations are off-limits (the DBA team owns them)', mode: 'block' }, F2 = { fence: 'scope', text: 'this task only touches src/payments', mode: 'warn' };
+  return { sessions: [
+    { id: 'f-1a2b3c4d5e6f', repo_name: 'atlas-api', agent: main('atlas-api').id, started_at: iso(now - 176 * MIN), updated_at: iso(now - 2 * MIN), fences: [F1, F2], crossed: 0, blocked: 1, needs: 'denied',
+      latest: [{ at: iso(now - 2 * MIN), fence: F1.fence, text: F1.text, file: '0042_orders.sql', op: 'create', prevented: true, tool: 'Write' }] },
+    { id: 'f-6f5e4d3c2b1a', repo_name: 'web-storefront', agent: main('web-storefront').id, started_at: iso(now - 172 * MIN), updated_at: iso(now - 9 * MIN), fences: [F1, F2], crossed: 1, blocked: 0, needs: 'unmentioned',
+      latest: [{ at: iso(now - 9 * MIN), fence: F2.fence, text: F2.text, file: 'money.js', op: 'edit', prevented: false, tool: 'Edit' }] },
+  ] };
+}

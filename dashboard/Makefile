@@ -103,13 +103,8 @@ test: ## Run every test suite
 	@set -o pipefail; echo "==> MCP server"; node plugin/mcp/test.mjs | tail -1
 	@if [ "$$(uname)" = "Darwin" ]; then set -o pipefail; echo "==> notifier"; node plugin/notify/test.mjs | tail -1; else echo "==> notifier: skipped (macOS only)"; fi
 	@set -o pipefail; echo "==> aos helper (stop/doctor)"; node scripts/aos.test.mjs | tail -1
-	@echo "==> theme contrast"; out="$$(node ui/theme-tokens.test.mjs)" || { echo "$$out"; exit 1; }; echo "$$out" | head -1
-	@echo "==> mobile layout"; out="$$(node ui/mobile.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
-	@echo "==> needs-you"; out="$$(node ui/needs-you.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
-	@echo "==> guard view"; out="$$(node ui/guard.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
-	@echo "==> done subagents"; out="$$(node ui/done.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
-	@echo "==> machines (cross-machine UI)"; out="$$(node ui/machines.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
-	@echo "==> timeline"; out="$$(node ui/timeline.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
+	@echo "==> sheet (routes model, read-only, palette contrast)"; out="$$(node ui/sheet.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
+	@echo "==> guard and fence models"; out="$$(node ui/guard.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
 	@echo "==> monitor goals, verdicts + hooks"; out="$$(node --test tests-monitor/*.test.mjs 2>&1)" || { echo "$$out" | grep -E "^not ok|error:" | head -20; exit 1; }; echo "$$out" | grep -E '^# (pass|fail)' | tr '\n' ' '; echo
 
 doctor: ## Check the whole setup and say what to fix

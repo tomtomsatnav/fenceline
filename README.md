@@ -26,22 +26,23 @@ Then start a new Claude Code session and open http://127.0.0.1:4318 for the dash
 
 ## The dashboard
 
-![The Fenceline dashboard on a synthetic demo dataset: a graph of three projects and their sessions and subagents, lines coded by status (running solid, stalled and errored dashed, idle faint), alerts on the right](docs/dashboard-dark.png)
+![The Fenceline dashboard on a synthetic demo dataset: a survey sheet with each agent drawn as a route over the last 30 minutes, grouped by project, subagents branching from their session, a blocked fence and a warned fence on the routes, and three numbered Needs-you notes in the margin](docs/dashboard-dark.png)
 
 <sub>Synthetic demo data (`dashboard/scripts/demo-state.mjs`): every name is fictional.</sub>
 
-Every session and subagent on your machine, live: status, model, tokens and cost, file conflicts between agents, stuck
-and errored agents, and a replayable timeline. It starts on its own when a session opens (`AOS_NO_AUTOSTART=1` turns
+Every session and subagent on your machine, live, drawn as a survey sheet: each agent is a route along a time scale,
+subagents branch off the session that started them, fences sit on the route where an agent met them, and two agents that
+touched the same file are tied together. Status, model and tokens are a click away, and Replay redraws the sheet as it was. It starts on its own when a session opens (`AOS_NO_AUTOSTART=1` turns
 that off), binds 127.0.0.1 only, and is also a terminal view (`/fenceline:dash`, or `dashboard/plugin/cli/dash.mjs`) and
 a read-only MCP server. The dashboard never starts, stops or steers an agent.
 
-**Guard.** Fences and test-integrity checks sit together in one panel. A session that crossed a fence, or was stopped by
-one, gets a badge; when a fence stopped an agent at the end of its turn (it is probably asking you something), or the
-agent crossed one without saying so in its final message, it appears under **Needs you**. Verdicts from
+**Needs you** is the margin: numbered notes, keyed to the same numbers on the routes, for a session a fence stopped (it is
+probably asking you something), a session waiting for a permission answer, a crossing the agent never mentioned, and
+work the guard rejected. **Fences** lists every session's rules and each time an agent met one, with the verdicts of
 [`aos-orch verify`](https://github.com/tomtomsatnav/aos-orchestrator) (the original tests re-run in a sandbox, plus
-anti-cheat checks) show in the same panel.
+anti-cheat checks) below.
 
-![The Guard panel: a session stopped by a block fence (a denied create of 0042_orders.sql in migrations/) and an earlier landed crossing, with its two fences; a second session with no crossings](docs/dashboard-guard.png)
+![The Fences view: a session stopped by a block fence (a denied create of 0042_orders.sql) and a session that crossed a warn fence (an edit of money.js), each with its two rules](docs/dashboard-fences.png)
 
 **Privacy.** The dashboard's hooks store event and tool names, short labels, counts and the paths it needs to group
 projects and spot conflicts: never prompts, command text, file contents, tool output or error messages. It shows file

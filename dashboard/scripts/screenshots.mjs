@@ -1,21 +1,19 @@
 #!/usr/bin/env node
-// Regenerates docs/screenshots/*.png (and docs/hero.gif) from a SYNTHETIC demo dataset (scripts/demo-state.mjs).
-// The deployed web UI is served by the running monitor; /api/state and /api/history are intercepted in the browser and
+// Regenerates docs/screenshots/*.png from a SYNTHETIC demo dataset (scripts/demo-state.mjs).
+// The deployed web UI is served by the running monitor; /api/state, /api/timeline, /api/fences, /api/verdicts and /api/history are intercepted and
 // answered from the demo data, so the real page pipeline runs against fictional data. The monitor's data is never touched.
-// Needs: the monitor running (make start), playwright-core + a Chromium build, and (for the GIF only) ffmpeg.
+// Needs: the monitor running (make start) and playwright-core + a Chromium build.
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { buildDemoState, buildDemoHistory, DEMO_WINDOW_MS } from './demo-state.mjs';
+import { buildDemoState, buildDemoHistory, buildDemoTimeline, buildDemoFences } from './demo-state.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(REPO, 'docs', 'screenshots');
 const BASE = process.env.AOS_URL || 'http://127.0.0.1:4318';
 const MAX_BYTES = 900 * 1024;
-const VIEW = { width: 1600, height: 900 };
+const VIEW = { width: 1600, height: 1000 };
 
 function loadPlaywright() {
   const attempts = [
@@ -28,23 +26,25 @@ function loadPlaywright() {
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const state = { fresh: 0 };
 const RUN_NOW = Date.now();
 
 async function newPage(browser, { theme = 'dark', scale = 2, viewport = VIEW } = {}) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: scale, colorScheme: theme, reducedMotion: 'no-preference' });
-  await ctx.addInitScript((t) => { try { localStorage.setItem('aos.theme', t); localStorage.setItem('aos.dock', 'closed'); } catch {} }, theme);
-  await ctx.route('**/api/history*', (r) => r.fulfill({ json: buildDemoHistory() }));
+  await ctx.addInitScript((t) => { try { localStorage.setItem('aos.theme', t); localStorage.removeItem('fl.scale'); } catch {} }, theme);
+  await ctx.route('**/api/history*', (r) => r.fulfill({ json: buildDemoHistory({ now: RUN_NOW }) }));
+  await ctx.route('**/api/fences*', (r) => r.fulfill({ json: buildDemoFences({ now: RUN_NOW }) }));
+  await ctx.route('**/api/verdicts*', (r) => r.fulfill({ json: { verdicts: [] } }));
+  await ctx.route('**/api/timeline*', (r) => { const at = new URL(r.request().url()).searchParams.get('at'); r.fulfill({ json: buildDemoTimeline({ now: RUN_NOW, ...(at ? { at: Date.parse(at) } : {}) }) }); });
   await ctx.route('**/api/state*', (r) => {
     const u = new URL(r.request().url());
     const at = u.searchParams.get('at');
-    if (at) return r.fulfill({ json: buildDemoState('main', { at: Date.parse(at) }) });
-    return r.fulfill({ json: buildDemoState('main', { freshAlert: state.fresh || 0, alertBase: RUN_NOW }) });
+    if (at) return r.fulfill({ json: buildDemoState('main', { now: RUN_NOW, at: Date.parse(at) }) });
+    return r.fulfill({ json: buildDemoState('main', { now: RUN_NOW, alertBase: RUN_NOW }) });
   });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.warn('  page error:', e.message));
   await page.goto(BASE + '/', { waitUntil: 'load' });
-  await page.waitForSelector('#g-agents > *', { timeout: 15000 });
+  await page.waitForSelector('svg.lanes .lane', { timeout: 15000 });
   return { page, ctx };
 }
 
@@ -53,7 +53,8 @@ async function settle(page, quiet = 800, max = 8000) {
   await page.evaluate(({ quiet, max }) => new Promise((resolve) => {
     let t = setTimeout(done, quiet); const hard = setTimeout(done, max);
     const mo = new MutationObserver((ms) => {
-      if (ms.every((m) => m.target.closest && m.target.closest('#mission-clock,#utc-clock,#updated,.clock'))) return;
+      const elOf = (m) => (m.target.nodeType === 1 ? m.target : m.target.parentElement);
+      if (ms.every((m) => elOf(m) && elOf(m).closest('#tb-drawn'))) return;
       clearTimeout(t); t = setTimeout(done, quiet);
     });
     mo.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
@@ -61,42 +62,27 @@ async function settle(page, quiet = 800, max = 8000) {
   }), { quiet, max });
 }
 
-async function setDock(page, open) {
-  const cur = (await page.getAttribute('#dock-toggle', 'aria-expanded')) === 'true';
-  if (cur !== open) await page.click('#dock-toggle');
-}
-
-const idOf = (page, prefix) => page.evaluate((p) => window.AosApp.getState().agents.find((a) => a.id.startsWith(p)).id, prefix);
-
-// each shot: [file, theme, prep(page)]
+// each shot: [file, theme, prep(page), viewport?]
 const SHOTS = [
-  ['01-graph-dark.png', 'dark', async () => {}],
-  ['02-graph-light.png', 'light', async () => {}],
-  ['03-agent-drawer-dark.png', 'dark', async (page) => {
-    const id = await idOf(page, 'Add rate limiting');
-    await page.evaluate((i) => window.AosApp.selectAgent(i), id);
+  ['01-sheet-dark.png', 'dark', async () => {}],
+  ['02-sheet-light.png', 'light', async () => {}],
+  ['03-route-selected-dark.png', 'dark', async (page) => {
+    const id = await page.evaluate(() => window.FLSheet.getState().agents.find((a) => a.id.startsWith('Audit bundle')).id);
+    await page.evaluate((i) => window.FLSheet.select(i), id);
   }],
-  ['04-project-drawer-dark.png', 'dark', async (page) => { await page.evaluate(() => window.AosApp.selectProject('web-storefront')); }],
-  ['05-conflict-and-alerts-dark.png', 'dark', async (page) => {
-    state.fresh = Date.now(); await sleep(2600); // next 2 s poll delivers a fresh alert -> toast
-    await page.click('#conflict-chip');
-    await sleep(700);
-    return 'noSettle'; // the toast lives 8 s: capture right away
-  }],
+  ['04-fences-dark.png', 'dark', async (page) => { await page.click('.views [data-view="fences"]'); }],
+  ['05-activity-light.png', 'light', async (page) => { await page.click('.views [data-view="activity"]'); }],
   ['06-replay-dark.png', 'dark', async (page) => {
-    await page.click('.aos-replay-btn');
-    await page.waitForSelector('.aos-track');
-    const b = await page.locator('.aos-track').boundingBox();
-    await page.mouse.click(b.x + b.width * 0.55, b.y + b.height / 2);
-    await sleep(1200);
+    await page.click('#replay-btn'); await sleep(300);
+    await page.$eval('#replay-range', (el) => { el.value = '930'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+    await sleep(900);
   }],
-  ['07-telemetry-dark.png', 'dark', async (page) => { await setDock(page, true); }],
+  ['07-phone-light.png', 'light', async () => {}, { width: 390, height: 1400 }],
 ];
 
-async function takePng(browser, file, theme, prep) {
+async function takePng(browser, file, theme, prep, viewport) {
   for (const scale of [2, 1.5, 1.25]) {
-    state.fresh = 0;
-    const { page, ctx } = await newPage(browser, { theme, scale });
+    const { page, ctx } = await newPage(browser, { theme, scale, ...(viewport ? { viewport } : {}) });
     try {
       await settle(page);
       const r = await prep(page);
@@ -151,35 +137,6 @@ async function terminalShot(browser) {
   await ctx.close();
 }
 
-// ------------------------------------------------------------------- hero gif
-async function heroGif(browser) {
-  try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }); }
-  catch { console.log('  hero.gif skipped: ffmpeg not found on PATH (brew install ffmpeg)'); return; }
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'aos-gif-'));
-  const { page, ctx } = await newPage(browser, { theme: 'dark', scale: 1, viewport: { width: 1280, height: 720 } });
-  try {
-    await settle(page);
-    const FPS = 12, SECS = 7;
-    let n = 0; const t0 = Date.now();
-    while (n < FPS * SECS) {
-      const target = t0 + (n * 1000) / FPS;
-      const wait = target - Date.now(); if (wait > 0) await sleep(wait);
-      fs.writeFileSync(path.join(tmp, `frame_${String(n).padStart(4, '0')}.png`), await page.screenshot({ type: 'png' }));
-      n++;
-    }
-    const realFps = (n / ((Date.now() - t0) / 1000)).toFixed(2);
-    const out = path.join(REPO, 'docs', 'hero.gif');
-    for (const w of [960, 800, 640]) {
-      execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', realFps, '-i', path.join(tmp, 'frame_%04d.png'), '-vf',
-        `fps=${Math.min(12, Math.floor(realFps))},scale=${w}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle`,
-        '-loop', '0', out]);
-      const size = fs.statSync(out).size;
-      console.log(`  hero.gif  ${(size / 1024 / 1024).toFixed(2)} MB  (${w}px, captured at ${realFps} fps)`);
-      if (size < 6 * 1024 * 1024) break;
-    }
-  } finally { await ctx.close(); fs.rmSync(tmp, { recursive: true, force: true }); }
-}
-
 // ----------------------------------------------------------------------- main
 async function main() {
   try { const r = await fetch(BASE + '/'); if (!r.ok) throw new Error(r.status); }
@@ -189,10 +146,9 @@ async function main() {
   const browser = await pw.chromium.launch();
   try {
     console.log('Screenshots (synthetic demo data):');
-    for (const [file, theme, prep] of SHOTS) await takePng(browser, file, theme, prep);
+    for (const [file, theme, prep, vp] of SHOTS) await takePng(browser, file, theme, prep, vp);
     await terminalShot(browser);
-    await heroGif(browser);
   } finally { await browser.close(); }
-  console.log('Done: docs/screenshots/ (+ docs/hero.gif).');
+  console.log('Done: docs/screenshots/.');
 }
 main().catch((e) => { console.error(e); process.exit(1); });

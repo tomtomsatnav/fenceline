@@ -7,7 +7,7 @@ How much CPU and memory the live monitor (`monitor.mjs`) uses. These are measure
 `node scripts/overhead.mjs [--port 4399] [--secs 30] [--rate 50]` starts a **test** monitor on a spare port with a temporary data dir (`AOS_LIVE_DIR`, `AOS_ORCH_DIR`, `CLAUDE_PLUGIN_DATA` all point into a fresh temp folder; `AOS_NOTIFY_DRY=1`), so it never touches a running monitor or `~/.claude`. It then runs three 30 s phases:
 
 1. **idle**: no client connected.
-2. **idle + dashboard**: one client fetching `/api/state` every 2 s, like an open browser tab (`POLL_MS` in `ui/app.js`).
+2. **idle + dashboard**: one client fetching `/api/state` every 2 s, like an open browser tab (the 2 s poll in `ui/sheet.js`).
 3. **loaded**: the same client plus synthetic hook events appended to `hook-events.ndjson` at 50 events/s (batched every 100 ms), in the format `hooks/aos-hook.mjs` writes (`ts`, `ev`, `sid`, `cwd`, `cwdp`, `tool`, `sum`, and `f` for Edit/Write), spread over 6 sessions and 3 projects.
 
 CPU% is the delta of the process's cumulative CPU time (`ps -o time=`) over wall time, so 100% means one full core. RSS is sampled once per second via `ps`. The latency column is the client-side p95 of `/api/state` responses. The monitor ingests the log when it is requested, so the dashboard client is part of the load phase on purpose.

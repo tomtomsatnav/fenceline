@@ -3,16 +3,17 @@
 **Part of [Fenceline](../README.md).** This folder is the live dashboard that used to be the AOS dashboard
 ([agent-orchestration-standard](https://github.com/tomtomsatnav/agent-orchestration-standard)), moved here with its history.
 Installing Fenceline installs the dashboard too: Fenceline's plugin runs its hooks, starts its monitor and serves it at
-http://127.0.0.1:4318. Fenceline adds its fences to the dashboard's Guard panel and to Needs you.
+http://127.0.0.1:4318. Fenceline adds its fences to the sheet: on the routes, in the Fences view and in Needs you.
 
 **Do not also install the standalone `aos-dashboard` plugin** (`make install` below): both would log every hook event and
 start a monitor on the same port. `make install` and the rest of this README describe the standalone build, kept for
 development (`make test`, `make build`) and for anyone who wants the monitor without fences.
 
-The graph draws static lines coded by status (running solid, stalled and errored dashed, idle faint); the particle
-streams and the Streams button are gone.
+The browser view is a survey sheet: agents are routes along a time scale (15 minutes to 3 hours across), subagents branch
+from their session, fences sit on the routes, and Needs you is a column of numbered margin notes. Views: Routes, Fences
+and Activity, plus Replay.
 
-**A read-only live monitor for Claude Code.** It shows what your sessions and subagents are doing (agents, tasks, tokens, cost, file conflicts, alerts) as a streaming graph in the browser, a terminal view (`aos-dash`), an MCP server and a status line. It never starts, stops or steers agents. Local-only, zero dependencies.
+**A read-only live monitor for Claude Code.** It shows what your sessions and subagents are doing (agents, tasks, tokens, cost, file conflicts, alerts) as a survey sheet in the browser, a terminal view (`aos-dash`), an MCP server and a status line. It never starts, stops or steers agents. Local-only, zero dependencies.
 
 Looking for orchestration (planning goals, launching and managing workers)? That is a different, separate and **experimental** project: [aos-orchestrator](https://github.com/tomtomsatnav/aos-orchestrator), opt-in. This dashboard can display its goals, nothing more.
 
@@ -23,7 +24,7 @@ Looking for orchestration (planning goals, launching and managing workers)? That
 | Have agents planned and run for me | [aos-orchestrator](https://github.com/tomtomsatnav/aos-orchestrator) | Experimental engine that launches real `claude` workers. |
 
 <p align="center">
-  <img src="../docs/dashboard-dark.png" alt="The Fenceline dashboard: a project graph of sessions and subagents, lines coded by status" width="900"><br>
+  <img src="../docs/dashboard-dark.png" alt="The Fenceline dashboard: agents as routes over time, fences on the routes, Needs-you notes in the margin" width="900"><br>
   <sub>The live dashboard on a synthetic demo dataset. More in <a href="docs/screenshots.md">docs/screenshots.md</a>.</sub>
 </p>
 
@@ -42,7 +43,7 @@ make                # lists every target
 
 Then start a new Claude Code session and open http://127.0.0.1:4318 (the page is empty until a session sends events; `aos-dash` is the same view in the terminal). Local-only, read-only; hooks never log prompts, file contents or tool output, but do log event and tool names, working-folder and edited-file paths, transcript paths and a redacted short task description (full list: [plugin/README.md](plugin/README.md#privacy)). Status: personal project, macOS-first. [MIT License](LICENSE).
 
-**Lowest overhead:** run `aos-dash` for the terminal view (no browser tab, no animation), and set the graph's `Streams` button to `Lines`.
+**Lowest overhead:** run `aos-dash` for the terminal view (no browser tab). The browser sheet polls every 2 seconds and runs no animation loop.
 
 <p align="center"><a href="docs/screenshots.md"><img src="docs/screenshots/08-terminal.png" alt="Terminal dashboard (aos-dash)" width="620"></a></p>
 
@@ -51,7 +52,7 @@ Then start a new Claude Code session and open http://127.0.0.1:4318 (the page is
 - [aos-1-spec](https://github.com/tomtomsatnav/aos-1-spec): normative specification, schemas, conformance validator, reference runner
 - [aos-orchestrator](https://github.com/tomtomsatnav/aos-orchestrator): orchestrator engine and its design doc
 - [docs/dashboard.md](docs/dashboard.md): the Claude Code dashboard, highlights, debugging, security and threat model
-- [docs/dashboard.md#guard-view](docs/dashboard.md#guard-view): the Guard view (verify verdicts on sessions, Needs-you on integrity rejections) and the opt-in auto-verify Stop hook
+- [docs/dashboard.md#guard-view](docs/dashboard.md#guard-view): guard verdicts (shown in the Fences view; integrity rejections go to Needs you) and the opt-in auto-verify Stop hook
 - [docs/architecture.md](docs/architecture.md): how events flow from hooks to the UI
 - [docs/screenshots.md](docs/screenshots.md): screenshot gallery
 - [docs/cross-machine.md](docs/cross-machine.md): opt-in, read-only view of agents and usage across several machines over your existing SSH access (no new ports)

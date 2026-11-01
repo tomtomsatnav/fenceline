@@ -1,13 +1,13 @@
 # Claude Code live dashboard (plugin)
 
-This repo contains a read-only **live monitor for Claude Code sessions**: it shows every session, project and subagent as a graph (heart -> project hubs -> agents) with live streams, per-agent model, tokens, run time, tool feed, file conflicts, errors and alerts. It is local-only (binds 127.0.0.1) and stores only event and tool names, short labels, counts, and the local folder/file paths it needs for project grouping and file-conflict detection: never prompts, command lines (only a Bash command's first word), file contents, tool output or error messages. Full paths stay in the local log and are never shown in the dashboard, terminal view or MCP output (see [plugin/README.md](../plugin/README.md) for the exact list).
+This repo contains a read-only **live monitor for Claude Code sessions**: it draws every session, project and subagent on a survey sheet (agents as routes along a time scale, subagents branching from their session, fences on the routes), with per-agent model, tokens, run time, tool feed, file conflicts, errors and alerts. It is local-only (binds 127.0.0.1) and stores only event and tool names, short labels, counts, and the local folder/file paths it needs for project grouping and file-conflict detection: never prompts, command lines (only a Bash command's first word), file contents, tool output or error messages. Full paths stay in the local log and are never shown in the dashboard, terminal view or MCP output (see [plugin/README.md](../plugin/README.md) for the exact list).
 
 | Part | Where | What |
 |---|---|---|
 | Hooks | `hooks/aos-hook.mjs`, `plugin/hooks/hooks.json` | Claude Code hooks write sanitized one-line events |
 | Monitor | `monitor.mjs` | Folds events into `/api/state`, `/api/history`, replay (`?at=`), alerts, notifications |
-| Web UI | `ui/` | The graph, drawers, replay, cost readout, light/dark toggle |
-| Terminal UI | `cli/dash.mjs` (`aos-dash`) | The same graph in the terminal (`--once` for a snapshot; `--json` for a JSON snapshot `{agents, tasks?, totals}`, or `{"error":"monitor unreachable"}` with exit 1 when the monitor is down) |
+| Web UI | `ui/` | The survey sheet: Routes, Fences and Activity views, Needs-you margin notes, replay, light/dark toggle |
+| Terminal UI | `cli/dash.mjs` (`aos-dash`) | The same sessions in the terminal (`--once` for a snapshot; `--json` for a JSON snapshot `{agents, tasks?, totals}`, or `{"error":"monitor unreachable"}` with exit 1 when the monitor is down) |
 | MCP server | `plugin/mcp/server.mjs` | Read-only tools so Claude can query the monitor |
 | Notifier | `plugin/notify/` | Branded macOS notifications with an app icon |
 | Plugin | `plugin/`, `.claude-plugin/marketplace.json` | Packages all of the above; `node plugin/build.mjs` regenerates the copies |
@@ -25,22 +25,22 @@ Then open http://127.0.0.1:4318 (the monitor starts automatically with a session
 ## Highlights
 
 - Privacy-first local telemetry: hooks log event and tool names, counts and short labels only, never prompts, command lines, file contents, tool output or error messages.
-- Project-graph layout (heart, project hubs, agents) with node and label overlaps ruled out by construction; the terminal layout's no-overlap rules are covered by automated tests.
-- Canvas particle streams (adaptive to frame time, paused in background tabs, crisp on high-DPI screens), tried in Safari and Chromium.
+- A survey sheet: each agent is a route from its start to now with a tick per tool call, drawn by status (running solid, idle thin, no activity dotted, error crossed out, finished barred); subagents branch from the session that started them; agents that finished before the window fold into one row per project.
+- Fences on the routes (a solid wall where one blocked, a dashed bar where one only warned) and dashed ties between agents that touched the same file.
+- Needs you as numbered margin notes, keyed to the same numbers on the routes: blocked fences, permission prompts waiting for an answer, unmentioned crossings, rejected work.
 - Per-model stuck thresholds, plus errored-agent and file-conflict detection.
-- Pan and zoom (wheel, trackpad, pinch, drag, keyboard) with the particle streams staying aligned to the graph.
-- Replay: scrub the recorded timeline and see the graph as it was.
-- Light and dark themes with checked contrast tokens.
+- Scale from 15 minutes to 3 hours across; keyboard: j/k move between routes, 1/2/3 switch views, T switches theme.
+- Replay: drag back through the recorded history and the sheet is redrawn as it was.
+- Light and dark themes with checked contrast tokens; fonts ship with the plugin, nothing loads from the network.
 - One plugin ships the hooks, the web UI, a terminal dashboard (`aos-dash`), a read-only MCP server and a macOS notifier.
 - Automated test suites for the terminal UI, monitor (verdicts, fences, cost, timeline), MCP server, notifier and theme contrast (`make test`).
 
 ## Guard view
 
-Guardrails around a single Claude Code session (the orchestrator's `aos-orch verify`: re-run the original tests in a sandbox, anti-cheat diff analysis) are what stops an agent rewriting tests to pass. The Guard view puts those verdicts on the dashboard. It is read-only and stays hidden until at least one verdict exists.
+Guardrails around a single Claude Code session (the orchestrator's `aos-orch verify`: re-run the original tests in a sandbox, anti-cheat diff analysis) are what stops an agent rewriting tests to pass. The Fences view puts those verdicts on the dashboard, read-only.
 
-- **Session badge.** A dot on the session node (top right) and a badge in the agent drawer: `verified` (accepted, accent colour), `rejected: <kind>` (integrity rejection such as tests edited, skipped or deleted, vacuous pass, literal copy, worktree mutated during checks: red), `rejected: checks failed` (capability rejection: the tests or checks failed, amber), or `guard: none` on a session without a verdict. The tooltip and the node's accessible name say the same. Clicking the drawer badge opens the panel at that verdict.
-- **GUARD panel.** The header's `Guard` button (count of verdicts, red dot when a repo's newest verdict is an integrity rejection) lists the 50 newest verdicts: repo folder name, time, verdict, source (cli / hook / eval), linked session, tree and base commit, reasons, failing tests, warnings, and each check command with its result and duration.
-- **Needs you.** A repo whose newest verdict is an integrity rejection adds one item to the Needs-you badge; clicking it opens the panel at that verdict. A newer verdict for the repo clears it.
+- **Fences view.** Under each session's fences, the 50 newest verdicts: repo folder name, time, verdict (`verified`; `rejected: <kind>` for an integrity rejection such as tests edited, skipped or deleted, vacuous pass, literal copy, worktree mutated during checks; `rejected: checks failed` for a capability rejection), source, linked session, tree and base commit, reasons, failing tests and warnings.
+- **Needs you.** A repo whose newest verdict is an integrity rejection adds a margin note; selecting it opens the Fences view. A newer verdict for the repo clears it.
 
 Data: `<orch dir>/verdicts/<id>.json` (`id` matching `v-YYYYMMDD-HHMMSS-<6 hex>`, schema `aos.verdict/1`) in the same orchestrator dirs the monitor reads goals from (`AOS_ORCH_DIR`, `~/.aos/orch`, the legacy plugin-data `orch`). The newest 200 files by id are read (64 KB each, cached by mtime, rescanned at most once a second); bad JSON, a wrong schema, an id that differs from the file name, symlinks and oversized files are skipped. `GET /api/verdicts` returns `{verdicts: [...]}`; `/api/state` carries `verdicts: {total, verified, integrity, capability, latest[newest per repo]}` and `guard` on linked session agents; replay (`?at=`) omits both. A verdict is linked to a live session when its `session_id` starts with the session's 8-character id from the hook log. The full repo path and the session id are never exposed.
 
@@ -73,7 +73,7 @@ Remove the `guard` key (or the repo from `repos`) to turn it off.
 
 ## Debugging
 
-Open http://127.0.0.1:4318/?debug=1 to show a small on-screen recorder (`ui/debug.js`) that logs layout, canvas, visibility and frame-rate changes with Copy/Clear buttons. It is inert without the flag and never changes the page.
+`window.FLSheet` in the browser console exposes `getState()` (the last `/api/state`), `getModel()` (what the sheet drew: groups, lanes, notes, ties), `select(id)` and `setView(name)`. `node ui/sheet.test.mjs` checks the model, the read-only and text-only rules, and the palette's contrast.
 
 ## Security
 

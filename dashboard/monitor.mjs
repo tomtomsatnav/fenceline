@@ -562,7 +562,7 @@ function fold(list, ref) {
       }
     }
     else if (name === 'PermissionRequest') {
-      actor.act = t; actor.wait = true;
+      actor.act = t; actor.wait = true; actor.ask = t;
       alert(t, 'needs_input', label, `${label} needs input (permission_request)`);
     }
     else if (name === 'TaskCreated' || name === 'TaskCompleted') {
@@ -573,7 +573,7 @@ function fold(list, ref) {
     }
     else if (name === 'Notification') {
       actor.act = t; actor.wait = true;
-      if (r.nt && !NI_IGNORE.has(r.nt) || !r.nt) alert(t, 'needs_input', label, `${label} needs input${r.nt ? ' (' + r.nt + ')' : ''}`);
+      if (r.nt && !NI_IGNORE.has(r.nt) || !r.nt) actor.ask = t, alert(t, 'needs_input', label, `${label} needs input${r.nt ? ' (' + r.nt + ')' : ''}`);
     }
     else if (name === 'PreToolUse' || name === 'PostToolUse') {
       if (name === 'PreToolUse' && (r.tool === 'Agent' || r.tool === 'Task') && r.sum && !r.agent_id) (s.pend = s.pend || []).push(String(r.sum));
@@ -660,6 +660,7 @@ function fold(list, ref) {
     const ranMs = s.closed + (s.seg !== null ? Math.max(0, (running ? ref : s.last) - s.seg) : 0), ran = runS(ranMs);
     agents.push({ id: s.id, role: `orchestrator: Claude Code session${s.cwd ? ' in ' + s.cwd : ''}`, capabilities: ['claude-code'], can_delegate: true,
       status: ek ? 'errored' : running ? 'running' : 'idle', error_kind: ek, recent_failures: recentF(s, ref), current_task: null, last_event_at: iso(s.last),
+      ...(s.wait && s.ask === s.act && !s.ended ? { waiting: true } : {}), // asked for permission or input and nothing has happened since
       current_tool: tv.current_tool, recent_tools: tv.recent_tools, model: u.model, model_label: modelLabel(s.mdl) || modelLabel(u.model), ...(u.effort ? { effort: u.effort } : {}), usage: u.usage, files: filesOf(s.id),
       stuck: sf !== null, ...(sf !== null ? { stuck_for_s: sf } : {}), project: PF(p).name, project_id: PF(p).id,
       started_at: iso(s.first), ended_at: running ? null : iso(s.last), ran_s: ran, tok_per_min: tokPerMin(ran, u.usage, u.have), ...(s.gid ? { goal_id: s.gid, ...(s.tid ? { task_id: s.tid } : {}) } : {}), });
@@ -672,7 +673,7 @@ function fold(list, ref) {
     // a killed subagent never stops: its open run segment ends at its last event; ran_s sums every run segment
     const ranMs = sub.ranMs + (sub.segOpen !== null ? Math.max(0, (silent ? sub.last : ref) - sub.segOpen) : 0), ran = runS(ranMs);
     // a subagent that sent SubagentStop is finished and listens for nothing, so it is `done`; `idle` stays the session's word (it waits for input)
-    agents.push({ id: sub.id, role: sub.role, capabilities: [], can_delegate: false, status: ek ? 'errored' : running ? 'running' : silent ? 'stalled' : 'done', error_kind: ek, recent_failures: recentF(sub, ref),
+    agents.push({ id: sub.id, role: sub.role, ...(ps.id ? { parent: ps.id } : {}), capabilities: [], can_delegate: false, status: ek ? 'errored' : running ? 'running' : silent ? 'stalled' : 'done', error_kind: ek, recent_failures: recentF(sub, ref),
       current_task: open ? 't-' + sub.id : null, last_event_at: iso(sub.last),
       current_tool: tv.current_tool, recent_tools: tv.recent_tools, model: u.model, model_label: modelLabel(sub.mdl) || modelLabel(u.model), ...(u.effort ? { effort: u.effort } : {}), usage: u.usage, files: filesOf(sub.id),
       stuck: sf !== null, ...(sf !== null ? { stuck_for_s: sf } : {}), project: PF(p).name, project_id: PF(p).id,
@@ -795,7 +796,7 @@ function timeline(atMs) {
   const ref = atMs || Date.now();
   let end = recs.length; if (atMs) while (end > 0 && Date.parse(recs[end - 1].ts) > atMs) end--;
   const f = fold(recs.slice(Math.max(0, end - FOLD_N), end), ref);
-  const rows = f.agents.filter((a) => a.started_at).map((a) => ({ id: a.id, role: ctl(a.role, 60), kind: a.capabilities && a.capabilities.length ? 'session' : 'subagent', project: a.project,
+  const rows = f.agents.filter((a) => a.started_at).map((a) => ({ id: a.id, role: ctl(a.role, 60), kind: a.capabilities && a.capabilities.length ? 'session' : 'subagent', project: a.project, ...(a.parent ? { parent: a.parent } : {}),
     status: a.status, start: a.started_at, end: a.ended_at, ticks: (f.tickMap.get(a.id) || []).filter((t) => t >= Date.parse(a.started_at) && t <= ref),
     ...(a.goal_id ? { goal_id: a.goal_id, ...(a.task_id ? { task_id: a.task_id } : {}) } : {}) }))
     .sort((x, y) => (x.start < y.start ? -1 : x.start > y.start ? 1 : x.id < y.id ? -1 : 1)).slice(0, 300);
