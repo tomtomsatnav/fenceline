@@ -24,7 +24,7 @@ Looking for orchestration (planning goals, launching and managing workers)? That
 
 <p align="center">
   <img src="../docs/dashboard-dark.png" alt="The Fenceline dashboard: a project graph of sessions and subagents, lines coded by status" width="900"><br>
-  <sub>The live dashboard on a synthetic demo dataset. Older screenshots in <a href="docs/screenshots.md">docs/screenshots.md</a> still show the particle streams.</sub>
+  <sub>The live dashboard on a synthetic demo dataset. More in <a href="docs/screenshots.md">docs/screenshots.md</a>.</sub>
 </p>
 
 ## Install the dashboard
@@ -40,7 +40,7 @@ make                # lists every target
 
 `make install` changes only: the Claude Code plugin (user scope, via `claude plugin install`), a symlink `~/.local/bin/aos-dash` (on Windows, two launcher scripts there instead: `aos-dash` for Git Bash and `aos-dash.cmd` for cmd and PowerShell; add that folder to your PATH if `aos-dash` is not found), a small notifier app under `~/.claude/plugins/data/`, and a monitor process on port 4318 (`make install PORT=4328` uses another port). `make uninstall` reverses it. `make stop` and `make uninstall` stop only the monitor on PORT (4318 unless you pass `PORT=`). `make doctor` shows "no hook log yet" until you start a Claude Code session; that is normal.
 
-Then start a new Claude Code session and open http://127.0.0.1:4318 (the page is empty until a session sends events; `aos-dash` is the same view in the terminal). The graph's `Streams` button (or `Q`) cycles Full / Quiet / Lines; Lines draws no particles and stops per-frame redraws, for the lowest overhead ([measured](docs/overhead.md)). Local-only, read-only; hooks never log prompts, file contents or tool output, but do log event and tool names, working-folder and edited-file paths, transcript paths and a redacted short task description (full list: [plugin/README.md](plugin/README.md#privacy)). Status: personal project, macOS-first. [MIT License](LICENSE).
+Then start a new Claude Code session and open http://127.0.0.1:4318 (the page is empty until a session sends events; `aos-dash` is the same view in the terminal). Local-only, read-only; hooks never log prompts, file contents or tool output, but do log event and tool names, working-folder and edited-file paths, transcript paths and a redacted short task description (full list: [plugin/README.md](plugin/README.md#privacy)). Status: personal project, macOS-first. [MIT License](LICENSE).
 
 **Lowest overhead:** run `aos-dash` for the terminal view (no browser tab, no animation), and set the graph's `Streams` button to `Lines`.
 
