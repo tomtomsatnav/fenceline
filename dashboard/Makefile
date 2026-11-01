@@ -52,7 +52,7 @@ OPEN        = $(if $(filter Darwin,$(shell uname -s)),open,xdg-open)
 endif
 
 .DEFAULT_GOAL := help
-.PHONY: help install uninstall build validate test doctor start stop restart open link unlink statusline statusline-off notifier screenshots
+.PHONY: help inside-fenceline install uninstall build validate test doctor start stop restart open link unlink statusline statusline-off notifier screenshots
 
 help: ## Show this list
 	@echo "AOS: Claude Code live dashboard"; echo
@@ -61,7 +61,7 @@ help: ## Show this list
 
 # `link` fails when an aos-dash that is not ours is in the way. The plugin is installed by then, so the install goes on
 # to start the monitor instead of stopping halfway.
-install: check build validate ## Install everything: build, register + install the plugin, link `aos-dash`, build the notifier, start the monitor
+install: inside-fenceline check build validate ## Install everything: build, register + install the plugin, link `aos-dash`, build the notifier, start the monitor
 	@echo "==> registering the local marketplace"
 	@claude plugin marketplace add "$(REPO)" 2>&1 | tail -1 || true
 	@echo "==> installing $(PLUGIN)"
@@ -86,6 +86,11 @@ uninstall: ## Remove the plugin, marketplace entry, aos-dash link and status lin
 	-@claude plugin uninstall $(PLUGIN) 2>&1 | tail -1
 	-@claude plugin marketplace remove $(MARKET) 2>&1 | tail -1
 	@echo "Removed. Activity history is kept in $(DATA) (delete it to erase)."
+
+# Inside Fenceline this folder is part of the fenceline plugin: installing the standalone aos-dashboard plugin as well
+# would log every hook event twice and start a second monitor on the same port. `make install` at the repo root instead.
+inside-fenceline:
+	@if [ -f ../.claude-plugin/plugin.json ] && grep -q '"name": *"fenceline"' ../.claude-plugin/plugin.json; then echo "This dashboard is part of Fenceline: run  make install  in $$(cd .. && pwd)  instead (installing aos-dashboard as well would log every event twice)."; exit 1; fi
 
 check:
 	@command -v node >/dev/null || { echo "node not found (need 18+)"; exit 1; }

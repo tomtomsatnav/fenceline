@@ -5,9 +5,9 @@
 Installing Fenceline installs the dashboard too: Fenceline's plugin runs its hooks, starts its monitor and serves it at
 http://127.0.0.1:4318. Fenceline adds its fences to the sheet: on the routes, in the Fences view and in Needs you.
 
-**Do not also install the standalone `aos-dashboard` plugin** (`make install` below): both would log every hook event and
-start a monitor on the same port. `make install` and the rest of this README describe the standalone build, kept for
-development (`make test`, `make build`) and for anyone who wants the monitor without fences.
+**Install Fenceline, not this folder:** run `make install` at the repo root. This folder's own `make install` (the
+standalone `aos-dashboard` plugin) refuses to run inside Fenceline, because both plugins would log every hook event and
+start a monitor on the same port. Its other targets (`make test`, `make build`, `make validate`) are for development.
 
 The browser view is a survey sheet: agents are routes along a time scale (Auto, or 5 minutes to 3 hours across), subagents branch
 from their session, fences sit on the routes, and Needs you is a column of numbered margin notes. Views: Routes, Fences

@@ -17,6 +17,17 @@ the moment the work leaves the area you meant. No LLM runs while the agent works
 claude plugin marketplace add tomtomsatnav/fenceline && claude plugin install fenceline@fenceline
 ```
 
+**From a clone**, `make` does the same from your checkout and keeps it in step as you pull:
+
+```sh
+git clone https://github.com/tomtomsatnav/fenceline && cd fenceline
+make install    # installs from this folder; removes the old aos-dashboard plugin and its monitor first
+make doctor     # checks the install and says what to fix
+```
+
+`make update` pulls and restarts the dashboard, `make start` / `stop` / `open` run it by hand, `make map` starts the
+repo map, `make test` runs every suite, and `make` lists the rest.
+
 Then start a new Claude Code session and open http://127.0.0.1:4318 for the dashboard. In Claude Code:
 
 ```
