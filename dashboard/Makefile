@@ -105,9 +105,6 @@ test: ## Run every test suite
 	@set -o pipefail; echo "==> aos helper (stop/doctor)"; node scripts/aos.test.mjs | tail -1
 	@echo "==> theme contrast"; out="$$(node ui/theme-tokens.test.mjs)" || { echo "$$out"; exit 1; }; echo "$$out" | head -1
 	@echo "==> mobile layout"; out="$$(node ui/mobile.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
-	@echo "==> orch badges"; out="$$(node ui/orch-badges.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
-	@echo "==> orch rules + draft"; out="$$(node ui/orch-rules.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
-	@echo "==> orch presence"; out="$$(node ui/orch-presence.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
 	@echo "==> needs-you"; out="$$(node ui/needs-you.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
 	@echo "==> guard view"; out="$$(node ui/guard.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
 	@echo "==> done subagents"; out="$$(node ui/done.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1

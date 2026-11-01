@@ -3,7 +3,7 @@
 import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 const dir = path.dirname(fileURLToPath(import.meta.url)); let fails = 0;
 const ok = (n, c) => { if (!c) fails++; console.log((c ? 'ok   ' : 'FAIL ') + n); };
-const css = fs.readFileSync(path.join(dir, 'global.css'), 'utf8'), html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), orch = fs.readFileSync(path.join(dir, 'orch.js'), 'utf8');
+const css = fs.readFileSync(path.join(dir, 'global.css'), 'utf8'), html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 const m = css.slice(css.indexOf('mobile polish'));
 const block = (m.match(/@media \(max-width:720px\)\{([\s\S]*?)\n\}/) || [])[1] || '';
 const rule = (sel) => (block.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\{([^}]*)\\}')) || [])[1] || '';
@@ -14,7 +14,6 @@ ok('stats stay inside the viewport', /max-width:calc\(100% - 28px\)/.test(rule('
 ok('header buttons are icon-only', /display:none/.test(rule('.theme-btn .theme-l')));
 ok('touch targets >= 36px, drawer close 44px', /min-height:36px/.test(rule('.orch-hbtn,.theme-btn,.live-ind,.aos-replay-btn')) && /width:44px;height:44px/.test(rule('#dr-close')));
 ok('global.css cache-busted', /global\.css\?v=([3-9]|\d\d)/.test(html));
-ok('GOALS header badge is labelled active-only', /R\.n\.textContent = n \+ ' active'/.test(orch));
 const appjs = fs.readFileSync(path.join(dir, 'app.js'), 'utf8');
 ok('dashboard is read-only: no pause/resume/cancel/note controls', !/btn-pause|btn-resume|btn-cancel|note-form|id="note"|id="toolbar"|id="confirm"/.test(html) && !/\/api\/control|lockCtl|WHY_LIVE|btn-pause|\$\('note'\)/.test(appjs));
 console.log(fails ? fails + ' FAILED' : 'mobile: all ok'); process.exit(fails ? 1 : 0);

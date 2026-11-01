@@ -21,10 +21,10 @@ ok('row model tolerates junk', G.rowModel({ rejections: 'x', checks: [null] }).c
 
 // Needs you
 const S = { total: 3, latest: [{ id: 'v-1', repo_name: 'shop', verdict: 'integrity', kind: 'tests_skipped' }, { id: 'v-2', repo_name: 'api', verdict: 'capability' }, { id: 'v-3', repo_name: 'web', verdict: 'verified' }] };
-const n = compute([], S);
+const n = compute(S);
 ok('integrity rejection raises one Needs-you item; capability/verified do not', n.total === 1 && n.items[0].kind === 'integrity' && n.items[0].id === 'v-1' && n.items[0].text === 'guard rejected: tests skipped');
-ok('needs-you unchanged without verdicts', compute([], null).total === 0 && compute([], { latest: 'x' }).total === 0);
-ok('needs-you sums goals and verdicts', compute([{ id: 'a', title: 'A', status: 'active', approvals_pending: 2 }], S).total === 3);
+ok('needs-you unchanged without verdicts', compute(null).total === 0 && compute({ latest: 'x' }).total === 0);
+ok('needs-you sums fence stops and verdicts', compute(S, { needs: [{ id: 'f-1', needs: 'denied' }] }).total === 2);
 
 // real DOM code against a fake DOM
 class CL { constructor(n) { this.n = n; } _l() { return this.n.className.split(/\s+/).filter(Boolean); } add(c) { const l = this._l(); if (!l.includes(c)) l.push(c); this.n.className = l.join(' '); } remove(c) { this.n.className = this._l().filter((x) => x !== c).join(' '); } toggle(c, on) { if (on === undefined) on = !this.contains(c); if (on) this.add(c); else this.remove(c); } contains(c) { return this._l().includes(c); } }
@@ -72,12 +72,12 @@ ok('drawer badge: verified / capability', A.badgeEl({ ...sess, guard: { verdict:
 ok('drawer badge: none on a session only when verdicts exist', A.badgeEl({ ...sess, guard: undefined }, { verdicts: S }).textContent === 'guard: none' && A.badgeEl({ ...sess, guard: undefined }, { verdicts: { total: 0 } }) === null && A.badgeEl({ id: 'x·1', capabilities: [] }, { verdicts: S }) === null);
 
 // static wiring
-const g = rd('guard.js'), app = rd('app.js'), orch = rd('orch.js'), css = rd('orch.css'), theme = rd('theme.css'), html = rd('index.html');
+const g = rd('guard.js'), app = rd('app.js'), needsUi = rd('needs.js'), css = rd('panel.css'), theme = rd('theme.css'), html = rd('index.html');
 ok('guard.js never uses innerHTML', !/\.(innerHTML|outerHTML|insertAdjacentHTML)\b|document\.write/.test(g));
 ok('guard.js is read-only: GETs /api/verdicts and /api/fences only', (g.match(/fetch\(/g) || []).length === 1 && /get\('\/api\/verdicts'\), get\('\/api\/fences'\)/.test(g) && !/method:|POST/.test(g));
-ok('script loaded after needs-you and orch', html.indexOf('guard.js') > html.indexOf('orch.js') && html.indexOf('orch.js') > html.indexOf('needs-you.js'));
+ok('script loaded after needs-you and before needs.js', html.indexOf('guard.js') > html.indexOf('needs-you.js') && html.indexOf('guard.js') < html.indexOf('needs.js?'));
 ok('session node mark + tooltip + drawer badge wired in app.js', /'guardmark'/.test(app) && /' g-' \+ guardSt\(a\)/.test(app) && /'GUARD: '/.test(app) && /AOSGuard\.badgeEl\(a, state\)/.test(app));
-ok('Needs you counts verdicts and fence stops and opens the guard panel', /AOSNeeds\.compute\(on \? goalList\(\) : \[\], verdictSum, fenceSum\)/.test(orch) && /it\.kind === 'integrity' \|\| it\.kind === 'fence'[\s\S]{0,80}AOSGuard\.open\(it\.id\)/.test(orch));
+ok('Needs you counts verdicts and fence stops and opens the guard panel', /AOSNeeds\.compute\(verdictSum, fenceSum\)/.test(needsUi) && /AOSGuard\.open\(it\.id\)/.test(needsUi));
 ok('drawer fence badge wired in app.js', /AOSGuard\.fenceBadgeEl\(a\)/.test(app));
 ok('node mark colours from theme tokens (red/amber/accent)', /g-integrity \.guardmark\{fill:var\(--errored\)\}/.test(theme) && /g-capability \.guardmark\{fill:var\(--stalled\)\}/.test(theme) && /g-verified \.guardmark\{fill:var\(--running\)\}/.test(theme));
 ok('panel CSS uses tokens only (no hex colours)', !/#[0-9a-f]{3,6}\b/i.test(css.slice(css.indexOf('GUARD view'))));
@@ -85,7 +85,7 @@ ok('mobile: 36px targets for the button and badge, panel is the shared bottom sh
 // fences: badge states, Needs you, the guard button
 const fb = (f) => G.fenceBadge(f);
 ok('fence badge: stopped after a denial, crossed with a count, denied-only, clean, none', fb({ needs: 'denied', crossed: 0, blocked: 1 }).state === 'stopped' && fb({ crossed: 2 }).text === 'fence: 2 crossed' && fb({ crossed: 0, blocked: 3 }).text === 'fence: 3 denied' && fb({ crossed: 0, blocked: 0 }).text === 'fences: clean' && fb(null) === null);
-const nf = compute([], null, { needs: [{ id: 'f-1', repo_name: 'shop', needs: 'denied', agent: 'Claude Code·sess' }, { id: 'f-2', repo_name: 'api', needs: 'unmentioned' }, { id: 'f-3', needs: 'bogus' }] });
+const nf = compute(null, { needs: [{ id: 'f-1', repo_name: 'shop', needs: 'denied', agent: 'Claude Code·sess' }, { id: 'f-2', repo_name: 'api', needs: 'unmentioned' }, { id: 'f-3', needs: 'bogus' }] });
 ok('Needs you: one item per fence stop or unmentioned crossing; unknown kinds ignored', nf.total === 2 && nf.items[0].kind === 'fence' && nf.items[0].id === 'f-1' && /waiting on you/.test(nf.items[0].text) && nf.items[0].title === 'shop · Claude Code·sess' && /without saying so/.test(nf.items[1].text));
 A.setSummary({ total: 0, latest: [] }, { sessions: 3, crossed: 2, blocked: 1, needs: [{ id: 'f-1', needs: 'denied' }] });
 ok('guard button shows for fence events alone, with the waiting-on-you dot', btn.hidden === false && btn.textContent.includes('3') && /3 fence events/.test(btn.attrs['aria-label']) && /1 waiting on you/.test(btn.attrs['aria-label']));

@@ -142,7 +142,7 @@
   function openPanel(id) {
     if (!R.panel) buildPanel();
     focusId = id || null;
-    if (!open) { safe(function () { var gp = $('orch-panel'), gx = gp && !gp.hidden ? gp.querySelector('.orch-x') : null; if (gx) gx.click(); }); lastFocus = document.activeElement; }
+    if (!open) lastFocus = document.activeElement;
     open = true; R.panel.hidden = false; setBtn(); render(); load();
     if (!focusId) safe(function () { R.panel.querySelector('.orch-x').focus(); });
   }

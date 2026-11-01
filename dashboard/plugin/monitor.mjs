@@ -258,298 +258,27 @@ function finalNames(visible, rank) {
   return fin;
 }
 
-// ---------- orchestrator goals (READ-ONLY view of the engine's per-goal directories) ----------
-// Source: ${AOS_ORCH_DIR || both (${XDG_STATE_HOME/aos | ~/.aos}/orch, legacy ${CLAUDE_PLUGIN_DATA || ~/.claude/plugins/data/aos-dashboard-aos-local}/orch)}/goals/<goal-id>/
-// Field mapping (engine file -> API). Nothing is ever written; no full path leaves this process (repo is reduced to its basename,
-// free text is scrubbed of absolute paths and token-like strings).
-//   GoalSummary.id            dir name (== goal.json id)             .title/.description  goal.json title/description (cleaned, capped)
-//   .status                   goal.json status                       .repo_name           basename(goal.json orch.repo)
-//   .created_at/.updated_at   goal.json                              .blocked_reason      goal.json blocked_reason (extra, additive)
-//   .plan_state               goal.orch.plan_state: planning|awaiting_approval|approved|rejected pass through; 'supplied' (a plan
-//                             handed over, not yet validated) -> 'planning'; 'none' and anything unknown -> 'none'
-//   .paused_reason/.resume_at goal.orch.paused_reason / goal.orch.resume_at (governor pause)
-//   .limit_paused             true when paused_reason is a plan-limit pause (engine reasons: 'plan limit...', 'five-hour/seven-day utilisation...');
-//                             false for other pauses (overloaded, manual); .rerun_count = tasks in GoalDetail with rerun true
-//   GoalDetail.tasks[].rerun  task not terminal (done|failed|cancelled) whose newest attempt_log entry has outcome 'rate_limited' (attempt
-//                             not counted; the engine requeues it) = interrupted by the plan limit and will rerun after the pause
-//   .budget.max_new_tokens    goal.orch.budgets.max_new_tokens       .used_new_tokens     goal.orch.usage.new_tokens
-//   .budget.max_wall_s        goal.budget.max_wall_clock_s           .used_wall_s         now - orch.started_ms (updated_at for terminal goals)
-//   .budget.max_parallel      goal.orch.budgets.max_parallel         .max_attempts        goal.orch.budgets.max_attempts
-//   .budget.running           count of tasks.json entries with status 'running'
-//   .tasks_total/done/failed  tasks.json status counts ('done' / 'failed')
-//   .approvals_pending        approvals/A-<n>.json with status 'pending'
-//   .outcome                  {merged: tasks done, discarded: tasks failed+cancelled, tokens_per_accepted: usage.new_tokens/merged|null,
-//                             cost_usd: usage.notional_usd, waiting_s/waiting_on: age of the oldest pending approval (requested_at) or plan
-//                             awaiting approval (orch.plan_awaiting_since_ms, else updated_at); null/null when nothing waits}
-//   GoalDetail.tasks[].outcome achieved|retried|escalated|failed|discarded|waiting|in_progress|pending, .retries (counted attempts - 1),
-//                             .tier_path (tiers in attempt order, deduped), .cost_usd (sum of attempt notional_usd), .waiting_s
-//   .out_of_scope_count       tasks with >=1 attempt_log entry of outcome 'scope_violation'   GoalDetail.tasks[].out_of_scope/.scope_violations  that flag / the count of such attempts
-//   .workers                  agents currently running whose hook events carry gid == goal id (added from the live fold)
-//   GoalDetail.criteria       goal.success_criteria {id,text,met}    .tasks[]  tasks.json: phase=orch.phase, tier=orch.model_tier,
-//                             branch=orch.branch, ran_s=sum(orch.attempt_log durations), new_tokens=orch.tokens.new (else sum of attempts),
-//                             check_summary='checking'|'checks passed'|'checks failed'|null (same words as the control server) from phase / last attempt checks_ok,
-//                             waiting_for_human = status 'needs_review' or a pending approval for the task,
-//                             error = orch.last_failure kind+note (scrubbed), only when the task is not done
-//   .rules                    goal.orch.rules (the engine's rule-set snapshot summary; absent on older goals -> null): {hash (12 chars), profile (orch.rules.profile_name when present, else .profile), legacy, loosenings: n,
-//                             dropped: n}; GoalDetail adds layers[{layer, sha12}], loosening_ids[{rule_id, layer}] and dropped_ids[{rule_id, layer, reason}] (ids only: no rule
-//                             values and no paths; the 32-hex content binding of an id is shortened to 8 characters for display)
-//   GoalDetail.criteria[].verify/.needs_confirmation   present only on a human-review criterion: verify 'human', needs_confirmation = not yet met
-//   .integrity                (summary) {status clean|warning|failed, failed_attempts, warning_attempts, kinds{kind:n}, checked}: worst attempt_log[].anticheat status (+ protected_result / acceptance_result failures); old goals -> clean, checked false
-//   GoalDetail.protected_tests {ok,files,not_executed,kind,output}|null from orch.protected_result; .review {tier,text,error}|null from orch.review (advisory); .claude_version_start
-//   GoalDetail.tasks[].attempt_log[{n,tier,outcome,integrity{status,reasons[]}|null,self_checks,claude_version,version_mismatch,stderr_tail}] (newest 10), .integrity (worst of attempts), .self_checks (sum), .version_mismatch
-//   .last_events              the 25 newest lines of events.ndjson, oldest first (same order as state.events): {type, ts, task_id, text}
-// Replay (?at=): goals are NOT time-sliced; replayed /api/state omits the `goals` key. Agent tags and goal-based project grouping
-// still come from the (time-sliced) events.
-// State dirs (all read-only, never created): AOS_ORCH_DIR if set; otherwise BOTH the orchestrator's default dir
-// ($XDG_STATE_HOME/aos/orch if XDG_STATE_HOME is set, else ~/.aos/orch) and the legacy <plugin data>/orch. Goals from both are merged,
-// deduped by goal id; the copy with the newer heartbeat (goal.json mtime) wins.
+// ---------- orchestrator state dirs (read-only; the guard verdicts below live in <root>/verdicts) ----------
+// AOS_ORCH_DIR if set; otherwise BOTH the orchestrator's default dir ($XDG_STATE_HOME/aos/orch if XDG_STATE_HOME is set, else
+// ~/.aos/orch) and the legacy <plugin data>/orch. Never written, never created. (The goals panel that also read these dirs is gone:
+// Fenceline watches and fences sessions you run; planning and running agents is the separate aos-orchestrator.)
 const ORCH_ROOTS = process.env.AOS_ORCH_DIR ? [path.resolve(process.env.AOS_ORCH_DIR)] : [...new Set([
   path.join(process.env.XDG_STATE_HOME ? path.resolve(process.env.XDG_STATE_HOME) : path.join(os.homedir(), '.aos'), ...(process.env.XDG_STATE_HOME ? ['aos'] : []), 'orch'),
   path.join(process.env.CLAUDE_PLUGIN_DATA || path.join(os.homedir(), '.claude', 'plugins', 'data', 'aos-dashboard-aos-local'), 'orch')])];
-const GOALS_DIRS = ORCH_ROOTS.map((r) => path.join(r, 'goals'));
-const GOAL_READ_MAX = 50, STATE_GOALS_MAX = 20, GOAL_DIRS_SCAN_MAX = 5000, FILE_MAX = 2 * 1024 * 1024, EVENT_TAIL_BYTES = 256 * 1024, DETAIL_EVENTS = 25, TASKS_MAX = 200, APPROVALS_MAX = 200;
-const GID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/, TAG_RE = /^[A-Za-z0-9._-]{1,64}$/;
-const PLAN_STATES = new Set(['planning', 'awaiting_approval', 'approved', 'rejected', 'none']);
-const TERMINAL_TASK = new Set(['done', 'failed', 'cancelled']);
-const TERMINAL_GOAL = new Set(['achieved', 'failed', 'cancelled']);
+const TAG_RE = /^[A-Za-z0-9._-]{1,64}$/; // goal/task tags an orchestrator worker carries in its environment (shown on its agent only)
 const ctl = (s, n) => String(s ?? '').replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]+/g, ' ').trim().slice(0, n);
-// free text from the engine: absolute paths reduced to their basename, long token-like strings redacted
+// free text: absolute paths reduced to their basename, long token-like strings redacted
 const scrub = (s, n = 160) => ctl(s, 600)
   .replace(/(^|[\s("'=:])((?:~|\/)[^\s"'`),;]*)/g, (m, pre, p) => pre + (path.basename(p) || '.'))
   .replace(/\b(sk|pk|ghp|gho|xox[a-z]|AKIA|eyJ)[A-Za-z0-9_\-]{8,}/g, '[redacted]').replace(/\b[A-Za-z0-9+\/_\-]{32,}\b/g, '[redacted]').slice(0, n);
 const nn = (v) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
 const isoOrNull = (v) => (typeof v === 'string' && Number.isFinite(Date.parse(v)) ? v.slice(0, 40) : null);
-const objOr = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
-
-// reads a JSON file (size-capped); undefined on any failure (missing, partial write, corrupt, too big)
-function readJsonSafe(file, st) {
-  try { if (!st || st.size > FILE_MAX) return undefined; return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return undefined; }
-}
-const statOrNull = (f) => { try { return fs.statSync(f); } catch { return null; } };
 const sigOf = (st) => (st ? st.mtimeMs + ':' + st.size : '-');
-// last N events of an ndjson file by reading only its tail; a cut first line and a partial last line are dropped
-function tailEvents(file, st, n) {
-  let fd;
-  try {
-    if (!st || st.size === 0) return [];
-    fd = fs.openSync(file, 'r');
-    const len = Math.min(st.size, EVENT_TAIL_BYTES), buf = Buffer.alloc(len);
-    const got = fs.readSync(fd, buf, 0, len, st.size - len);
-    let lines = buf.subarray(0, got).toString('utf8').split('\n');
-    if (st.size > len) lines = lines.slice(1);
-    const out = [];
-    for (let i = lines.length - 1; i >= 0 && out.length < n; i--) { if (!lines[i]) continue; try { const e = JSON.parse(lines[i]); if (e && typeof e === 'object' && typeof e.type === 'string') out.push(e); } catch {} }
-    return out.reverse();
-  } catch { return []; } finally { if (fd !== undefined) try { fs.closeSync(fd); } catch {} }
-}
-const EVENT_KEYS = ['reason', 'error', 'msg', 'title', 'status', 'plan_state', 'tier', 'attempt', 'outcome', 'rule', 'label', 'tool', 'exit_code', 'kind', 'cause', 'ok', 'run'];
-function eventView(e) {
-  const d = objOr(e.data), parts = [];
-  for (const k of EVENT_KEYS) { const v = d[k]; if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') parts.push((k === 'reason' || k === 'error' || k === 'msg' || k === 'title' ? '' : k + '=') + scrub(v, 100)); if (parts.length >= 4) break; }
-  return { type: ctl(e.type, 60), ts: isoOrNull(e.ts), task_id: typeof e.task_id === 'string' && TAG_RE.test(e.task_id) ? e.task_id : null, text: parts.join(' ').slice(0, 160) };
-}
-function pendingApprovals(dir) { // -> Array of {task_id, ts(ms)} for pending requests
-  let names = [];
-  try { names = fs.readdirSync(dir).filter((n) => /^A-\d{1,6}\.json$/.test(n)).slice(0, APPROVALS_MAX); } catch { return []; }
-  const out = [];
-  for (const n of names) { const f = path.join(dir, n), a = readJsonSafe(f, statOrNull(f)); if (a && typeof a === 'object' && a.status === 'pending') out.push({ task_id: typeof a.task_id === 'string' && TAG_RE.test(a.task_id) ? a.task_id : '', ts: Date.parse(a.requested_at) || (statOrNull(f) || {}).mtimeMs || null }); }
-  return out;
-}
-
-const goalEntries = new Map(); // id -> { sig, goal, tasks, pending, events, gsig, tsig, esig, asig }
-let goalsView = { list: [], byId: new Map(), sig: '' };
-let goalsScanAt = 0;
-function loadGoalEntry(id, gdir) {
-  const dir = path.join(gdir, id), ck = dir;
-  let e = goalEntries.get(ck);
-  const gst = statOrNull(path.join(dir, 'goal.json')), tst = statOrNull(path.join(dir, 'tasks.json')), est = statOrNull(path.join(dir, 'events.ndjson')), ast = statOrNull(path.join(dir, 'approvals'));
-  const gs = sigOf(gst), ts = sigOf(tst), es = sigOf(est), as = sigOf(ast);
-  if (!e) e = { goal: null, tasks: [], pending: [], events: [], gsig: '', tsig: '', esig: '', asig: '' };
-  if (gs !== e.gsig) { const g = readJsonSafe(path.join(dir, 'goal.json'), gst); if (g && typeof g === 'object' && !Array.isArray(g)) { e.goal = g; e.gsig = gs; } }
-  if (!e.goal) return null;
-  if (ts !== e.tsig) { const t = readJsonSafe(path.join(dir, 'tasks.json'), tst); if (Array.isArray(t)) { e.tasks = t.slice(0, TASKS_MAX).filter((x) => x && typeof x === 'object' && typeof x.id === 'string' && TAG_RE.test(x.id)); e.tsig = ts; } else if (!tst) { e.tasks = []; e.tsig = ts; } }
-  if (es !== e.esig) { e.events = tailEvents(path.join(dir, 'events.ndjson'), est, DETAIL_EVENTS).map(eventView); e.esig = es; }
-  if (as !== e.asig) { e.pending = pendingApprovals(path.join(dir, 'approvals')); e.asig = as; }
-  e.sig = e.gsig + '|' + e.tsig + '|' + e.esig + '|' + e.asig;
-  return e;
-}
-// Outcome roll-up, all derived from existing state: merged = tasks integrated (status done), discarded = work that never reached the integration
-// branch (failed + cancelled); tokens_per_accepted = orch.usage.new_tokens / merged (null until one is merged); cost_usd = orch.usage.notional_usd;
-// waiting_s = age of the oldest pending approval or of a plan awaiting approval (null when nothing waits on a human).
-function goalOutcome(g, e, now) {
-  const o = objOr(g.orch), U = objOr(o.usage), T = e.tasks, merged = T.filter((t) => t.status === 'done').length;
-  const plan = o.plan_state === 'awaiting_approval' && g.status === 'draft' ? (Number.isFinite(o.plan_awaiting_since_ms) ? o.plan_awaiting_since_ms : Date.parse(g.updated_at) || null) : null;
-  const since = [plan, ...e.pending.map((p) => p.ts)].filter((x) => Number.isFinite(x));
-  const oldest = since.length ? Math.min(...since) : null;
-  return { merged, discarded: T.filter((t) => t.status === 'failed' || t.status === 'cancelled').length,
-    tokens_per_accepted: merged ? Math.round(nn(U.new_tokens) / merged) : null, cost_usd: Math.round(nn(U.notional_usd) * 1e4) / 1e4,
-    waiting_s: oldest === null ? null : Math.max(0, Math.round((now - oldest) / 1000)), waiting_on: oldest === null ? null : plan !== null && plan === oldest ? 'plan' : 'approval' };
-}
-// engine records a scope violation as attempt_log outcome 'scope_violation' (changed files outside path_scope; the attempt fails and is escalated)
-const scopeViolations = (t) => (Array.isArray(objOr(t.orch).attempt_log) ? t.orch.attempt_log : []).filter((a) => a && typeof a === 'object' && a.outcome === 'scope_violation').length;
-const isRerun = (t) => { const log = Array.isArray(objOr(t.orch).attempt_log) ? t.orch.attempt_log : [], l = log[log.length - 1]; return !TERMINAL_TASK.has(t.status) && !!l && typeof l === 'object' && l.outcome === 'rate_limited'; };
-// ---- anti-cheat / integrity (additive, optional; old goals without these fields render as null/empty) ----
-// attempt_log[].anticheat {status pass|warn|fail, failed, findings[{kind,severity}]} -> integrity clean|warning|failed + reason kinds; attempt outcome
-// 'worktree_mutated_during_checks' counts as failed; attempt_log[].self_checks.runs -> self_checks; attempt_log[].claude_version vs goal.orch.claude_version_start;
-// attempt_log[].stderr_tail (scrubbed per line, newest 20 lines); goal.orch.protected_result {ok,files,not_executed,kind}; goal.orch.review {tier,text,error}
-const INTEG = { pass: 'clean', warn: 'warning', fail: 'failed' }, INTEG_RANK = { clean: 0, warning: 1, failed: 2 };
-const KIND_RE = /^[a-z_]{1,40}$/;
-const logOf = (t) => (Array.isArray(objOr(t.orch).attempt_log) ? t.orch.attempt_log.filter((a) => a && typeof a === 'object') : []);
-function attemptIntegrity(a) {
-  const ac = objOr(a.anticheat), reasons = [];
-  let st = INTEG[ac.status] || null;
-  if (typeof ac.failed === 'string' && KIND_RE.test(ac.failed)) reasons.push(ac.failed);
-  for (const f of (Array.isArray(ac.findings) ? ac.findings : []).slice(0, 20)) { const k = objOr(f).kind; if (typeof k === 'string' && KIND_RE.test(k) && !reasons.includes(k)) reasons.push(k); }
-  if (a.outcome === 'worktree_mutated_during_checks') { st = 'failed'; if (!reasons.includes(a.outcome)) reasons.push(a.outcome); }
-  return st ? { status: st, reasons: reasons.slice(0, 8) } : null;
-}
-const tailText = (s) => (typeof s === 'string' ? s.split('\n').slice(-20).map((l) => scrub(l, 200)).join('\n').slice(-1500).trim() : '');
-function attemptView(a, start) {
-  const sc = objOr(a.self_checks), v = typeof a.claude_version === 'string' ? ctl(a.claude_version, 40) : null, tail = tailText(a.stderr_tail);
-  return { n: nn(a.n), tier: a.tier ? ctl(a.tier, 20) : null, outcome: a.outcome ? ctl(a.outcome, 40) : null, integrity: attemptIntegrity(a),
-    self_checks: Number.isFinite(sc.runs) ? nn(sc.runs) : null, claude_version: v, version_mismatch: !!(v && start && v !== start), stderr_tail: tail || null };
-}
-function taskIntegrity(log) {
-  let st = null; const kinds = [];
-  for (const a of log) { const i = attemptIntegrity(a); if (!i) continue; if (st === null || INTEG_RANK[i.status] > INTEG_RANK[st]) st = i.status; for (const k of i.reasons) if (!kinds.includes(k)) kinds.push(k); }
-  return st ? { status: st, reasons: kinds.slice(0, 8) } : null;
-}
-function integrityOf(tasks, o) {
-  const kinds = {}; let status = 'clean', warnings = 0, failed = 0, seen = 0;
-  for (const t of tasks) for (const a of logOf(t)) {
-    const i = attemptIntegrity(a); if (!i) continue; seen++;
-    if (i.status === 'failed') failed++; else if (i.status === 'warning') warnings++;
-    if (INTEG_RANK[i.status] > INTEG_RANK[status]) status = i.status;
-    if (i.status !== 'clean') for (const k of i.reasons) kinds[k] = (kinds[k] || 0) + 1;
-  }
-  const pr = objOr(o.protected_result), ar = objOr(objOr(o.anticheat).acceptance_result);
-  if (pr.ok === false || ar.ok === false) { status = 'failed'; const k = typeof pr.kind === 'string' && KIND_RE.test(pr.kind) ? pr.kind : pr.ok === false ? 'protected_tests_failed' : 'acceptance_failed'; kinds[k] = (kinds[k] || 0) + 1; }
-  return { status, failed_attempts: failed, warning_attempts: warnings, kinds, checked: seen > 0 || typeof pr.ok === 'boolean' };
-}
-function protectedView(o) {
-  const r = objOr(o.protected_result); if (typeof r.ok !== 'boolean') return null;
-  return { ok: r.ok, files: nn(r.files), not_executed: Array.isArray(r.not_executed) ? r.not_executed.length : 0, kind: typeof r.kind === 'string' && KIND_RE.test(r.kind) ? r.kind : null, output: r.ok ? null : (tailText(r.output) || null) };
-}
-function reviewView(o) {
-  if (!o.review || typeof o.review !== 'object' || Array.isArray(o.review)) return null;
-  const r = o.review;
-  return { tier: r.tier ? ctl(r.tier, 20) : null, text: tailText(r.text) || null, error: r.error ? scrub(r.error, 200) : null };
-}
-const RULE_ID_RE = /@([0-9a-f]{8})[0-9a-f]{24}\b/g;
-const ruleId = (v) => ctl(v, 160).replace(RULE_ID_RE, '@$1');
-function rulesView(o, detail) {
-  const r = objOr(o.rules); if (typeof r.hash !== 'string' || !r.hash) return null;
-  const A = (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === 'object') : []);
-  // profile_name: the profile the human chose (r.profile only follows the user layer)
-  const out = { hash: ctl(r.hash, 12), profile: ctl(r.profile_name, 24) || ctl(r.profile, 24) || 'strict', legacy: r.legacy === true, loosenings: A(r.loosenings).length, dropped: A(r.dropped).length };
-  if (detail) {
-    out.layers = A(r.layers).slice(0, 8).map((l) => ({ layer: ctl(l.layer, 16), sha12: typeof l.sha12 === 'string' ? ctl(l.sha12, 12) : null }));
-    out.loosening_ids = A(r.loosenings).slice(0, 30).map((l) => ({ rule_id: ruleId(l.rule_id), layer: ctl(l.layer, 16) }));
-    out.dropped_ids = A(r.dropped).slice(0, 30).map((l) => ({ rule_id: ruleId(l.rule_id), layer: ctl(l.layer, 16), reason: ctl(l.reason, 40) }));
-  }
-  return out;
-}
-function summaryOf(id, e, now) {
-  const g = e.goal, o = objOr(g.orch), B = objOr(o.budgets), U = objOr(o.usage), GB = objOr(g.budget), T = e.tasks;
-  const startedMs = Number.isFinite(o.started_ms) ? o.started_ms : null, status = ctl(g.status, 20) || 'unknown';
-  const endMs = TERMINAL_GOAL.has(status) ? (Date.parse(g.updated_at) || now) : now;
-  return {
-    id, title: ctl(g.title, 120), status, repo_name: typeof o.repo === 'string' && o.repo ? ctl(path.basename(o.repo), 60) : '',
-    created_at: isoOrNull(g.created_at), updated_at: isoOrNull(g.updated_at),
-    plan_state: o.plan_state === 'supplied' ? 'planning' : PLAN_STATES.has(o.plan_state) ? o.plan_state : 'none',
-    paused_reason: o.paused_reason ? scrub(o.paused_reason, 160) : null, resume_at: isoOrNull(o.resume_at),
-    limit_paused: typeof o.paused_reason === 'string' && /plan limit|utili[sz]ation/i.test(o.paused_reason), rerun_count: T.filter((t) => isRerun(t)).length, out_of_scope_count: T.filter((t) => scopeViolations(t) > 0).length,
-    budget: { max_new_tokens: nn(B.max_new_tokens), used_new_tokens: nn(U.new_tokens), max_wall_s: nn(GB.max_wall_clock_s), used_wall_s: startedMs === null ? 0 : Math.max(0, Math.round((endMs - startedMs) / 1000)),
-      max_parallel: nn(B.max_parallel), running: T.filter((t) => t.status === 'running').length, max_attempts: nn(B.max_attempts) },
-    tasks_total: T.length, tasks_done: T.filter((t) => t.status === 'done').length, tasks_failed: T.filter((t) => t.status === 'failed').length,
-    approvals_pending: e.pending.length, blocked_reason: g.blocked_reason ? scrub(g.blocked_reason, 200) : null,
-    outcome: goalOutcome(g, e, now), rules: rulesView(o, false), integrity: integrityOf(T, o),
-  };
-}
-function taskView(t, e, now) {
-  const o = objOr(t.orch), log = Array.isArray(o.attempt_log) ? o.attempt_log.filter((a) => a && typeof a === 'object') : [], last = log[log.length - 1];
-  let ran = 0, tok = 0;
-  for (const a of log) { const s = Date.parse(a.started_at); if (Number.isFinite(s)) { const en = a.ended_at ? Date.parse(a.ended_at) : (t.status === 'running' ? now : s); if (Number.isFinite(en)) ran += Math.max(0, en - s); } tok += nn(a.new_tokens); }
-  const counted = log.filter((a) => a.counted !== false).length, tierPath = log.map((a) => ctl(a.tier, 20)).filter((x, i, l) => x && x !== l[i - 1]);
-  const retries = Math.max(0, counted - 1), mine = e.pending.filter((p) => p.task_id === t.id).map((p) => p.ts).filter((x) => Number.isFinite(x));
-  const outcome = t.status === 'done' ? (tierPath.length > 1 ? 'escalated' : retries > 0 ? 'retried' : 'achieved') : t.status === 'failed' ? 'failed' : t.status === 'cancelled' ? 'discarded'
-    : t.status === 'needs_review' || mine.length ? 'waiting' : t.status === 'running' || t.status === 'ready' ? 'in_progress' : 'pending';
-  const check = o.phase === 'checking' ? 'checking' : last && last.checks_ok === true ? 'checks passed' : last && last.checks_ok === false ? 'checks failed' : t.status === 'done' ? 'checks passed' : null;
-  const lf = objOr(o.last_failure), start = typeof objOr(e.goal.orch).claude_version_start === 'string' ? ctl(e.goal.orch.claude_version_start, 40) : null;
-  return { id: t.id, title: ctl(t.title, 120), status: ctl(t.status, 20), phase: o.phase ? ctl(o.phase, 20) : null, tier: o.model_tier ? ctl(o.model_tier, 20) : null,
-    depends_on: (Array.isArray(t.depends_on) ? t.depends_on : []).filter((d) => typeof d === 'string' && TAG_RE.test(d)).slice(0, 50),
-    attempts: nn(t.attempts), max_attempts: nn(t.max_attempts), branch: typeof o.branch === 'string' ? ctl(o.branch, 100) : null, ran_s: Math.round(ran / 1000),
-    new_tokens: o.tokens && Number.isFinite(o.tokens.new) ? nn(o.tokens.new) : tok, check_summary: check,
-    outcome, rerun: isRerun(t), out_of_scope: scopeViolations(t) > 0, scope_violations: scopeViolations(t), retries, tier_path: tierPath, cost_usd: Math.round(log.reduce((x, a) => x + nn(a.notional_usd), 0) * 1e4) / 1e4,
-    waiting_s: mine.length ? Math.max(0, Math.round((now - Math.min(...mine)) / 1000)) : null,
-    waiting_for_human: t.status === 'needs_review' || mine.length > 0 || e.pending.some((p) => p.task_id === t.id),
-    attempt_log: log.slice(-10).map((a) => attemptView(a, start)), integrity: taskIntegrity(log), self_checks: log.reduce((x, a) => x + (Number.isFinite(objOr(a.self_checks).runs) ? nn(a.self_checks.runs) : 0), 0),
-    version_mismatch: log.some((a) => typeof a.claude_version === 'string' && !!start && a.claude_version !== start),
-    ...(t.status !== 'done' && lf.kind ? { error: scrub(`${lf.kind}${lf.note ? ': ' + lf.note : ''}`, 160) } : {}) };
-}
-// refreshes the cached view (at most one directory scan per second)
-function goalsIndex() {
-  const now = Date.now();
-  if (now - goalsScanAt < 1000) return goalsView;
-  goalsScanAt = now;
-  try {
-    const best = new Map(); // id -> { n, m, gd }: newest heartbeat across the state dirs
-    for (const gd of GOALS_DIRS) {
-      let names = [];
-      try { names = fs.readdirSync(gd).slice(0, GOAL_DIRS_SCAN_MAX).filter((n) => GID_RE.test(n)); } catch { names = []; }
-      for (const n of names) { try { const d = path.join(gd, n); if (fs.lstatSync(d).isDirectory()) { const st = statOrNull(path.join(d, 'goal.json')); const o = best.get(n); if (st && (!o || st.mtimeMs > o.m)) best.set(n, { n, m: st.mtimeMs, gd }); } } catch {} }
-    }
-    const cand = [...best.values()];
-    cand.sort((a, b) => b.m - a.m || (a.n < b.n ? -1 : 1));
-    const keep = new Map(), byId = new Map(), list = [];
-    let sig = '';
-    for (const { n, gd } of cand.slice(0, GOAL_READ_MAX)) {
-      let e = null; try { e = loadGoalEntry(n, gd); } catch { e = null; }
-      if (!e) continue;
-      const ck = path.join(gd, n);
-      goalEntries.set(ck, e); keep.set(ck, e); sig += n + '=' + e.sig + ';';
-      list.push(n); byId.set(n, e);
-    }
-    for (const k of [...goalEntries.keys()]) if (!keep.has(k)) goalEntries.delete(k);
-    goalsView = { list, byId, sig };
-  } catch { /* keep the previous view */ }
-  return goalsView;
-}
-// summaries (newest updated_at first). `now` drives the time-based fields only
-function goalSummaries(limit) {
-  const v = goalsIndex(), now = Date.now(), out = [];
-  for (const id of v.list) out.push(summaryOf(id, v.byId.get(id), now));
-  out.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || '') || (a.id < b.id ? -1 : 1));
-  return out.slice(0, limit);
-}
-function goalDetail(id) {
-  const v = goalsIndex(), e = GID_RE.test(id) ? v.byId.get(id) : null;
-  if (!e) return null;
-  const now = Date.now();
-  return { ...summaryOf(id, e, now), rules: rulesView(objOr(e.goal.orch), true), protected_tests: protectedView(objOr(e.goal.orch)), review: reviewView(objOr(e.goal.orch)),
-    claude_version_start: typeof objOr(e.goal.orch).claude_version_start === 'string' ? ctl(e.goal.orch.claude_version_start, 40) : null, description: ctl(e.goal.description, 500),
-    criteria: (Array.isArray(e.goal.success_criteria) ? e.goal.success_criteria : []).slice(0, 50).filter((c) => c && typeof c === 'object').map((c, i) => ({ id: ctl(c.id ?? 'c' + (i + 1), 40), text: ctl(c.text, 200), met: c.met === true, ...(c.verify === 'human' ? { verify: 'human', needs_confirmation: c.met !== true } : {}) })),
-    tasks: e.tasks.map((t) => taskView(t, e, now)), last_events: e.events.slice(-DETAIL_EVENTS) };
-}
-// repo roots stay internal: used only to group tagged workers under the goal's project
-const goalRepo = (id) => { const e = goalsIndex().byId.get(id); return e && typeof e.goal.orch?.repo === 'string' && path.isAbsolute(e.goal.orch.repo) ? e.goal.orch.repo : null; };
-const goalTitle = (id) => { const e = goalsIndex().byId.get(id); return e ? ctl(e.goal.title, 120) : null; };
-// orchestrator worker: tier the engine requested for the task (tasks.json orch.model_tier) vs the model family actually served (transcript / SessionStart).
-// Only tiers that name a model family (opus|sonnet|haiku) are compared; mismatch is flagged only when both sides are known.
-const tierCheck = (gid, tid, served) => {
-  const e = gid && tid ? goalsIndex().byId.get(gid) : null, t = e && e.tasks.find((x) => x && x.id === tid), tier = t && t.orch && t.orch.model_tier ? ctl(t.orch.model_tier, 20) : null;
-  if (!tier) return {};
-  const a = modelFam(tier), b = modelFam(served);
-  return { requested_tier: tier, ...(a && b && a !== b ? { model_mismatch: true } : {}) };
-};
-// orchestrator worker whose task had an attempt rejected for touching files outside its declared path_scope (only tagged workers have a scope; others never get the flag)
-const scopeCheck = (gid, tid) => { const e = gid && tid ? goalsIndex().byId.get(gid) : null, t = e && e.tasks.find((x) => x && x.id === tid); return t && scopeViolations(t) > 0 ? { out_of_scope: true } : {}; };
-const withWorkers = (list, agents) => { const n = new Map(); for (const a of agents) if (a.goal_id && a.status === 'running') n.set(a.goal_id, (n.get(a.goal_id) || 0) + 1); return list.map((g) => ({ ...g, workers: n.get(g.id) || 0 })); };
 
 // ---------- guard verdicts (READ-ONLY view of `aos-orch verify` records: <orch root>/verdicts/<id>.json, schema aos.verdict/1) ----------
-// Same roots as goals. Only file names matching VID_RE are read; the id encodes its time, so the newest VERDICT_SCAN_MAX names are
+// The orchestrator state dirs above. Only file names matching VID_RE are read; the id encodes its time, so the newest VERDICT_SCAN_MAX names are
 // taken by name (no stat of older files), each <= 64 KB, cached by mtime+size, rescanned at most once a second. Bad JSON, wrong
-// schema, an id that differs from the file name or a non-boolean accepted/integrity -> skipped. Exposed (all scrubbed like goals):
+// schema, an id that differs from the file name or a non-boolean accepted/integrity -> skipped. Exposed (all scrubbed):
 // repo -> repo_name (basename only), base -> 12-char sha, tree 'working' or a 12-char sha, rejections[{kind, detail}], warnings,
 // failing_tests, checks[{cmd (argv joined, paths reduced to basenames), ok, exit_code, duration_ms}]. session_id is NEVER exposed: it is
 // only matched (first 8 chars, as the hook log keeps them) against live sessions, which then carry `guard` and the verdict `agent`.
@@ -589,7 +318,7 @@ function verdictsIndex() {
   try {
     const names = [];
     for (const d of VERDICT_DIRS) {
-      let l = []; try { l = fs.readdirSync(d).slice(0, GOAL_DIRS_SCAN_MAX * 4); } catch { l = []; }
+      let l = []; try { l = fs.readdirSync(d).slice(0, 20000); } catch { l = []; }
       for (const n of l) if (n.endsWith('.json') && VID_RE.test(n.slice(0, -5))) names.push({ id: n.slice(0, -5), f: path.join(d, n) });
     }
     names.sort((a, b) => (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
@@ -905,9 +634,7 @@ function fold(list, ref) {
   const pOf = (sid) => {
     let p = projOf.get(sid);
     if (!p) {
-      const gs = sessions.get(sid), repo = gs && gs.gid ? goalRepo(gs.gid) : null; // tagged worker: the goal's repo is the project, not its worktree
-      if (repo) { const root = repo.replace(/\/+$/, '') || '/', base = path.basename(root); p = { key: 'p:' + root, root, base, alias: C.projects.get(root) || C.projects.get(base) || null }; }
-      else p = projectInfo(sid, cwp.get(sid), cw.get(sid), C);
+      p = projectInfo(sid, cwp.get(sid), cw.get(sid), C);
       projOf.set(sid, p);
     }
     return p;
@@ -935,7 +662,7 @@ function fold(list, ref) {
       status: ek ? 'errored' : running ? 'running' : 'idle', error_kind: ek, recent_failures: recentF(s, ref), current_task: null, last_event_at: iso(s.last),
       current_tool: tv.current_tool, recent_tools: tv.recent_tools, model: u.model, model_label: modelLabel(s.mdl) || modelLabel(u.model), ...(u.effort ? { effort: u.effort } : {}), usage: u.usage, files: filesOf(s.id),
       stuck: sf !== null, ...(sf !== null ? { stuck_for_s: sf } : {}), project: PF(p).name, project_id: PF(p).id,
-      started_at: iso(s.first), ended_at: running ? null : iso(s.last), ran_s: ran, tok_per_min: tokPerMin(ran, u.usage, u.have), ...tierCheck(s.gid, s.tid, u.model || s.mdl), ...scopeCheck(s.gid, s.tid), ...(s.gid ? { goal_id: s.gid, ...(s.tid ? { task_id: s.tid } : {}), ...(goalTitle(s.gid) ? { goal_title: goalTitle(s.gid) } : {}) } : {}), });
+      started_at: iso(s.first), ended_at: running ? null : iso(s.last), ran_s: ran, tok_per_min: tokPerMin(ran, u.usage, u.have), ...(s.gid ? { goal_id: s.gid, ...(s.tid ? { task_id: s.tid } : {}) } : {}), });
   }
   for (const sub of subs.values()) {
     if (!subLive(sub)) continue;
@@ -949,7 +676,7 @@ function fold(list, ref) {
       current_task: open ? 't-' + sub.id : null, last_event_at: iso(sub.last),
       current_tool: tv.current_tool, recent_tools: tv.recent_tools, model: u.model, model_label: modelLabel(sub.mdl) || modelLabel(u.model), ...(u.effort ? { effort: u.effort } : {}), usage: u.usage, files: filesOf(sub.id),
       stuck: sf !== null, ...(sf !== null ? { stuck_for_s: sf } : {}), project: PF(p).name, project_id: PF(p).id,
-      started_at: iso(sub.start), ended_at: sub.done ? iso(sub.endMs) : silent ? iso(sub.last) : null, ran_s: ran, tok_per_min: tokPerMin(ran, u.usage, u.have), ...(ps.gid ? { goal_id: ps.gid, ...(ps.tid ? { task_id: ps.tid } : {}), ...scopeCheck(ps.gid, ps.tid), ...(goalTitle(ps.gid) ? { goal_title: goalTitle(ps.gid) } : {}) } : {}), });
+      started_at: iso(sub.start), ended_at: sub.done ? iso(sub.endMs) : silent ? iso(sub.last) : null, ran_s: ran, tok_per_min: tokPerMin(ran, u.usage, u.have), ...(ps.gid ? { goal_id: ps.gid, ...(ps.tid ? { task_id: ps.tid } : {}) } : {}), });
     tasks.push({ id: 't-' + sub.id, goal_id: GOAL_ID, title: sub.title, assignee: sub.id, status: sub.done && sub.failed ? 'failed' : running ? 'running' : silent ? 'stalled' : 'done',
       depends_on: [], attempts: 1, max_attempts: 1, inputs: {}, output_contract: 'n/a (observed)', acceptance: ['Observed'],
       artifacts: [], created_at: sub.ts, updated_at: iso(sub.last) });
@@ -1004,8 +731,7 @@ function assemble(list, ref, replay) {
     cost: f.cost, collisions: f.collisions, alerts: f.alerts.slice(-20),
   };
   if (replay) out.replay = true;
-  else { // replay omits goals, guard verdicts, fences and OTel cost (not time-sliced)
-    out.goals = withWorkers(goalSummaries(STATE_GOALS_MAX), f.agents);
+  else { // replay omits guard verdicts, fences and OTel cost (not time-sliced)
     liveSidOf = f.sidOf; const vl = verdictLinks(f.sidOf); out.verdicts = verdictSummary(vl.agentOf);
     if (vl.guardOf.size) out.agents = out.agents.map((a) => (vl.guardOf.has(a.id) ? { ...a, guard: vl.guardOf.get(a.id) } : a));
     const fl = fenceLinks(f.sidOf); out.fences = fenceSummary(fl.agentOf);
@@ -1044,7 +770,7 @@ function receiveMetrics(req, res) {
 let liveCache = { key: '', v: null };
 function build() {
   ingest();
-  const now = Date.now(), key = ingestSig + ':' + Math.floor(now / 1000) + ':' + goalsIndex().sig + ':' + verdictsIndex().sig;
+  const now = Date.now(), key = ingestSig + ':' + Math.floor(now / 1000) + ':' + verdictsIndex().sig + ':' + fencesIndex().sig;
   if (liveCache.key === key) return liveCache.v;
   const v = assemble(recs.slice(-FOLD_N), now, false);
   liveCache = { key, v };
@@ -1053,7 +779,7 @@ function build() {
 let atCache = { key: '', v: null };
 function buildAt(atMs) {
   ingest();
-  const key = ingestSig + ':' + atMs + ':' + goalsIndex().sig;
+  const key = ingestSig + ':' + atMs;
   if (atCache.key === key) return atCache.v;
   let end = recs.length; while (end > 0 && Date.parse(recs[end - 1].ts) > atMs) end--;
   const v = assemble(recs.slice(Math.max(0, end - FOLD_N), end), atMs, true);
@@ -1225,14 +951,6 @@ const server = http.createServer((req, res) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, { error: 'method not allowed' });
       const n = Number(new URL(req.url, 'http://localhost').searchParams.get('limit'));
       return send(res, 200, history(Number.isInteger(n) && n > 0 ? Math.min(n, 2000) : 200));
-    }
-    if (pathname === '/api/goals' || pathname.startsWith('/api/goals/')) {
-      if (req.method !== 'GET' && req.method !== 'HEAD') { req.resume(); return send(res, 405, { error: 'method not allowed' }); }
-      if (pathname === '/api/goals') return send(res, 200, { goals: withWorkers(goalSummaries(GOAL_READ_MAX), build().agents) });
-      let id; try { id = decodeURIComponent(pathname.slice('/api/goals/'.length)); } catch { return send(res, 400, { error: 'bad id' }); }
-      if (!GID_RE.test(id)) return send(res, 404, { error: 'not found' });
-      const d = goalDetail(id);
-      return d ? send(res, 200, { goal: withWorkers([d], build().agents)[0] }) : send(res, 404, { error: 'not found' });
     }
     if (pathname === '/api/verdicts') { // read-only guard verdicts, newest first (max 50)
       if (req.method !== 'GET' && req.method !== 'HEAD') { req.resume(); return send(res, 405, { error: 'method not allowed' }); }

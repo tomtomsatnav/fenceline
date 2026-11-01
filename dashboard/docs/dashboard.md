@@ -32,7 +32,7 @@ Then open http://127.0.0.1:4318 (the monitor starts automatically with a session
 - Replay: scrub the recorded timeline and see the graph as it was.
 - Light and dark themes with checked contrast tokens.
 - One plugin ships the hooks, the web UI, a terminal dashboard (`aos-dash`), a read-only MCP server and a macOS notifier.
-- Automated test suites for the terminal UI, monitor goal view, MCP server, notifier and theme contrast (`make test`).
+- Automated test suites for the terminal UI, monitor (verdicts, fences, cost, timeline), MCP server, notifier and theme contrast (`make test`).
 
 ## Guard view
 

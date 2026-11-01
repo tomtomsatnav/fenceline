@@ -1,5 +1,9 @@
 # Orchestrator state contract (what the dashboard relies on)
 
+> **The dashboard now reads only guard verdicts (`<root>/verdicts/<id>.json`) from these dirs, and the goal/task tags on a
+> worker's hook events.** The GOALS panel, `/api/goals` and the goal fields in `/api/state` were removed when the dashboard
+> became part of Fenceline. The goal-directory layout below is kept as the record of what the orchestrator writes.
+
 The monitor (`monitor.mjs`, port 4318) never imports or calls the orchestrator. Its whole coupling is the files below, the
 hook env tags, and two ports. Anything that writes this layout (the engine in https://github.com/tomtomsatnav/aos-orchestrator, or any other orchestrator) is compatible. Source of truth for the mapping: the comment block above `loadGoalEntry` in `monitor.mjs`.
 

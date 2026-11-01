@@ -379,8 +379,6 @@ table.ev{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed
   .skeleton-text,.sk-rows i{animation:none}
 }
 
-.mm-badge{border-color:rgb(var(--stalled-rgb)/.6);color:var(--stalled);margin:0 0 0 8px}
-.oos-badge{border-color:rgb(var(--stalled-rgb)/.6);color:var(--stalled);margin:0 0 0 8px;text-transform:uppercase}
 /* cross-machine chips (machines.js) */
 .machines{display:flex;flex-direction:column;gap:3px;min-width:0}
 .machines[hidden]{display:none}
