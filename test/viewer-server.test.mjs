@@ -57,3 +57,30 @@ test('SSE delivers appended events and the summary', async () => {
   assert.ok(!got.includes('"i":0'), 'pre-existing events are not re-sent');
   assert.match(got, /event: summary/);
 });
+
+test('dashboard link: port from AOS_PORT/PORT, and whether anything answers there', async () => {
+  const { dashboardPort } = await import('../viewer/server.mjs');
+  assert.equal(dashboardPort({}), 4318);
+  assert.equal(dashboardPort({ AOS_PORT: '5000', PORT: '6000' }), 5000);
+  assert.equal(dashboardPort({ PORT: 'nope' }), 4318);
+  // a stand-in dashboard answering /api/state
+  const http = await import('node:http');
+  const dash = http.createServer((q, r) => { r.writeHead(q.url === '/api/state' ? 200 : 404); r.end('{}'); });
+  await new Promise((r) => dash.listen(0, '127.0.0.1', r));
+  const port = dash.address().port;
+  const linked = createServer({ home, dashPort: port });
+  await new Promise((r) => linked.listen(0, '127.0.0.1', r));
+  try {
+    const up = await (await fetch(`http://127.0.0.1:${linked.address().port}/api/links`)).json();
+    assert.deepEqual(up, { dashboard: { url: `http://127.0.0.1:${port}/`, up: true } });
+    await new Promise((r) => dash.close(r));
+    const down = await (await fetch(`http://127.0.0.1:${linked.address().port}/api/links`)).json();
+    assert.equal(down.dashboard.up, false);
+  } finally { linked.closeAllConnections?.(); linked.close(); dash.close(); }
+});
+
+test('the page links to the dashboard from the strip and the picker', async () => {
+  const html = await (await fetch(base + '/')).text();
+  assert.match(html, /id="dash"[^>]*>Dashboard/);
+  assert.match(html, /getJson\('\/api\/links'\)/);
+});
