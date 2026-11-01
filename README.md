@@ -17,22 +17,20 @@ the moment the work leaves the area you meant. No LLM runs while the agent works
 claude plugin marketplace add tomtomsatnav/fenceline && claude plugin install fenceline@fenceline
 ```
 
-**From a clone**, `make` does the same from your checkout and keeps it in step as you pull:
-
-```sh
-git clone https://github.com/tomtomsatnav/fenceline && cd fenceline
-make install    # installs from this folder; removes the old aos-dashboard plugin and its monitor first
-make doctor     # checks the install and says what to fix
-```
-
-`make update` pulls and restarts the dashboard, `make start` / `stop` / `open` run it by hand, `make map` starts the
-repo map, `make test` runs every suite, and `make` lists the rest.
-
 Then start a new Claude Code session and open http://127.0.0.1:4318 for the dashboard. In Claude Code:
 
 ```
 /fenceline:fence "migrations: off-limits" "this task only touches src/payments"
 /fenceline:map
+```
+
+**From a clone**, `make install` does the same from your checkout, and removes the old aos-dashboard plugin first if
+you had it. `make doctor` checks the install and tells you what to fix; `make` lists the rest.
+
+```sh
+git clone https://github.com/tomtomsatnav/fenceline && cd fenceline
+make install
+make doctor
 ```
 
 ## The dashboard
@@ -41,17 +39,19 @@ Then start a new Claude Code session and open http://127.0.0.1:4318 for the dash
 
 <sub>Synthetic demo data (`dashboard/scripts/demo-state.mjs`): every name is fictional.</sub>
 
-Every session and subagent on your machine, live, drawn as a survey sheet: each agent is a route along a time scale,
-subagents branch off the session that started them, fences sit on the route where an agent met them, and two agents that
-touched the same file are tied together. Status, model and tokens are a click away, and Replay redraws the sheet as it was. It starts on its own when a session opens (`AOS_NO_AUTOSTART=1` turns
-that off), binds 127.0.0.1 only, and is also a terminal view (`/fenceline:dash`, or `dashboard/plugin/cli/dash.mjs`) and
-a read-only MCP server. The dashboard never starts, stops or steers an agent.
+Every Claude Code session on your machine is a line across the page, and its subagents branch off it. When an agent
+hits a fence, the fence is drawn on its line where it happened: a solid red bar if it was blocked, a dashed one if it
+only warned.
 
-**Needs you** is the margin: numbered notes, keyed to the same numbers on the routes, for a session a fence stopped (it is
-probably asking you something), a session waiting for a permission answer, a crossing the agent never mentioned, and
-work the guard rejected. **Fences** lists every session's rules and each time an agent met one, with the verdicts of
-[`aos-orch verify`](https://github.com/tomtomsatnav/aos-orchestrator) (the original tests re-run in a sandbox, plus
-anti-cheat checks) below.
+Anything that needs you shows up as a numbered note on the right, with the same number on the line it came from. That
+covers a session a fence stopped (it is probably asking you something), one waiting on a permission prompt, and a
+crossing the agent never mentioned. Click a line for its model, tokens and recent tools. Replay shows the page as it
+was earlier.
+
+It starts by itself when a session opens and only listens on 127.0.0.1. It never starts, stops or steers an agent.
+There is also a terminal version (`/fenceline:dash`) and a read-only MCP server. **Fences**, the second tab, lists
+every rule and every time an agent met one, plus the verdicts of
+[`aos-orch verify`](https://github.com/tomtomsatnav/aos-orchestrator) if you use it.
 
 ![The Fences view: a session stopped by a block fence (a denied create of 0042_orders.sql) and a session that crossed a warn fence (an edit of money.js), each with its two rules](docs/dashboard-fences.png)
 
