@@ -14,7 +14,7 @@
     if (s === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', s);
     try { if (s === 'auto') localStorage.removeItem(KEY); else localStorage.setItem(KEY, s); } catch (e) {}
     paint();
-    try { if (window.AosFx && AosFx.refreshColors) AosFx.refreshColors(); window.dispatchEvent(new CustomEvent('aos-theme', { detail: { theme: s } })); } catch (e) {}
+    try { window.dispatchEvent(new CustomEvent('aos-theme', { detail: { theme: s } })); } catch (e) {}
   }
   function cycle() { set(NEXT[cur()]); }
   paint();
@@ -27,36 +27,6 @@
   });
   window.AosTheme = { get: cur, set: set, cycle: cycle };
 })();
-/* streams toggle (STREAMS: FULL -> QUIET -> LINES): QUIET stops idle-edge particles; LINES draws static status-coded lines only (no particles, no waves, idle loop). */
-/*streams:begin*/
-(function () {
-  var KEY = 'aos.streams', btn = document.getElementById('streams-btn'), ORDER = ['full', 'quiet', 'lines'], NAME = { full: 'Full', quiet: 'Quiet', lines: 'Lines' }, s = 'full';
-  try { var v0 = localStorage.getItem(KEY); if (ORDER.indexOf(v0) >= 0) s = v0; } catch (e) {}
-  function paint() {
-    if (!btn) return; var n = ORDER[(ORDER.indexOf(s) + 1) % 3];
-    btn.setAttribute('data-state', s); btn.querySelector('.theme-l').textContent = 'Streams: ' + NAME[s];
-    btn.setAttribute('aria-label', 'Particle streams: ' + s + '. Switch to ' + n);
-    btn.title = 'Particle streams: ' + s + '. Click or press Q to switch to ' + n;
-  }
-  function apply() { try { if (window.AosFx) { if (AosFx.setMode) AosFx.setMode(s); else if (AosFx.setQuiet) AosFx.setQuiet(s === 'quiet'); } } catch (e) {} }
-  function set(v) {
-    s = v === true ? 'quiet' : ORDER.indexOf(v) >= 0 ? v : 'full';
-    try { if (s !== 'full') localStorage.setItem(KEY, s); else localStorage.removeItem(KEY); } catch (e) {}
-    paint(); apply();
-  }
-  function toggle() { set(ORDER[(ORDER.indexOf(s) + 1) % 3]); }
-  paint(); apply();
-  document.addEventListener('DOMContentLoaded', apply);
-  if (btn) btn.addEventListener('click', toggle);
-  document.addEventListener('keydown', function (e) {
-    if ((e.key !== 'q' && e.key !== 'Q') || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-    var el = e.target, tag = el && el.tagName;
-    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (el && el.isContentEditable)) return;
-    toggle();
-  });
-  window.AosStreams = { get: function () { return s; }, set: set, toggle: toggle };
-})();
-/*streams:end*/
 (function () {
   var POLL_MS = 2000, NS = 'http://www.w3.org/2000/svg', CX = 500, CY = 300, GW = 1000, GH = 600;
   var TSTAT = ['running', 'needs_review', 'stalled', 'ready', 'pending', 'failed', 'done', 'cancelled'];
@@ -1038,7 +1008,7 @@
   }
 
   /* ---- static layout: the solver runs to completion synchronously; the settled result is drawn directly (no tween, no rAF loop) ---- */
-  function commit() { NL.forEach(function (n) { n.dx = n.x; n.dy = n.y; }); writeDom(); fxSync(); }
+  function commit() { NL.forEach(function (n) { n.dx = n.x; n.dy = n.y; }); writeDom(); lineSync(); }
 
   /* ---- render ---- */
   function panelQ() {
@@ -1072,7 +1042,7 @@
     }
     updateContent();
     renderOrch();
-    writeDom(); fxSync();
+    writeDom(); lineSync();
   }
 
   /* ---------- drag / pin / nudge ---------- */
@@ -1100,8 +1070,8 @@
   function wireClick(g, id, open) {
     g.addEventListener('click', function () { open(); });
   }
-  /* ---------- pan / zoom: only the SVG viewBox changes (nodes never move); particles.js follows through getScreenCTM ---------- */
-  var VW = { x: 0, y: 0, w: 1000, h: 600 }, ZMIN = 0.5, ZMAX = 8, vbLast = '', fxRaf = 0, zoomUi = null;
+  /* ---------- pan / zoom: only the SVG viewBox changes (nodes and lines never move) ---------- */
+  var VW = { x: 0, y: 0, w: 1000, h: 600 }, ZMIN = 0.5, ZMAX = 8, vbLast = '', zoomUi = null;
   function svgPt(e) {
     var svg = $('graph'), m = svg.getScreenCTM && svg.getScreenCTM();
     if (m) { var pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; var q = pt.matrixTransform(m.inverse()); return { x: q.x, y: q.y }; }
@@ -1133,7 +1103,6 @@
   }
   function viewChanged() {
     hideTip(); paintView(false);
-    if (window.AosFx) { if (AosFx.refreshView) AosFx.refreshView(); if (!fxRaf) fxRaf = requestAnimationFrame(function () { fxRaf = 0; fxSync(); }); }
   }
   function setView(v) { VW = clampView(v); viewChanged(); }
   function resetView() { VW = { x: 0, y: 0, w: WD.w, h: WD.h }; paintView(true); hideTip(); }
@@ -1634,7 +1603,7 @@
     if (window.AosMachines) { try { AosMachines.render(s); s = AosMachines.filter(s); } catch (e0) { if (window.console) console.error(e0); } }
     if (window.AosDone) { try { s = AosDone.filter(s); } catch (e1) { if (window.console) console.error(e1); } }
     prev = fromPoll ? state : null; state = s;
-      try { render(); diff(); if (fromPoll && window.AosFx) AosFx.onState(state, prev); }
+      try { render(); diff(); lineSync(); }
       catch (err) {
         if (window.console) console.error(err);
         setBanner('Dashboard render error: ' + (err && err.message ? err.message : err) + '. Data was received; try a hard refresh.');
@@ -1699,25 +1668,17 @@
   var rzT = null;
   window.addEventListener('resize', function () { clearTimeout(rzT); rzT = setTimeout(onResize, 120); });
 
-  /* hand the graph to particles.js: endpoints in SVG user units, heart/hub as endpoint 1. Called every frame while anything moves. */
-  function fxSync() {
-    if (!window.AosFx || !state) return;
-    var ed = [], nd = [], dp = [], H = N[HEART], KN = kNode();
+  /* connecting lines are plain SVG: each edge carries its endpoint's status (running / stalled / errored / idle / stopped) as a class,
+     and CSS draws it. No canvas, no animation loop: an unchanged state writes nothing (setA caches). */
+  function lineSync() {
+    if (!state) return;
     NL.forEach(function (n) {
-      nd.push({ id: n.id, x: n.dx, y: n.dy, r: (n.R || 0) * KN });
       if (n.kind === 'heart') return;
-      var p = N[n.parent], e = edges[n.id]; if (!p || !e) return;
-      if (n.kind === 'hub') {
-        var hs = hubStatus(n.p.agents);
-        ed.push({ id: 'T:' + n.id, el: e.el, kind: 'trunk', x1: p.dx, y1: p.dy, x2: n.dx, y2: n.dy, r1: p.R * KN, r2: n.R * KN, status: hs.st, activity: hs.running + 0.5 * hs.stalled });
-      } else {
-        var st = n.a.status || 'idle';
-        ed.push({ id: 'B:' + n.id, el: e.el, kind: 'branch', x1: p.dx, y1: p.dy, x2: n.dx, y2: n.dy, r1: p.R * KN, r2: n.R * KN, status: st, activity: st === 'running' ? 1 : 0, agent: n.id });
-      }
+      var e = edges[n.id]; if (!e) return;
+      var st = n.kind === 'hub' ? hubStatus(n.p.agents).st : (n.a && n.a.status) || 'idle';
+      setA(e.el, 'class', 'edge ' + e.kind + ' s-' + st);
     });
-    Object.keys(deps).forEach(function (k) { dp.push({ id: k, el: deps[k], status: depInfo[k] || '' }); });
-    AosFx.sync({ state: state, edges: ed, nodes: nd, deps: dp, cx: H ? H.dx : WD.hx, cy: H ? H.dy : WD.hy, mobile: !!L.mobile, cw: L.cw, ch: L.ch, k: KN, graph: $('graph') });
-    if (AosFx.invalidate) AosFx.invalidate();
+    Object.keys(deps).forEach(function (k) { setA(deps[k], 'class', 'dep' + (depInfo[k] ? ' s-' + depInfo[k] : '')); });
   }
   window.__aosGraph = function () { return { fit: WD.fit, lvl: LVL, s: WD.s, w: WD.w, h: WD.h, runs: layoutRuns, frames: 0, sleeping: true, view: { x: VW.x, y: VW.y, w: VW.w, h: VW.h, z: WD.w / VW.w }, bad: violations(), sig: SIG, why: (function () { DBG = []; relax(0.6, true); var d = DBG; DBG = null; return d; })(),
     nodes: NL.map(function (n) { return { id: n.id, kind: n.kind, x: n.x, y: n.y, dx: n.dx, dy: n.dy, side: n.side, lab: [n.x + n.rx1, n.y + n.ry1, n.x + n.rx2, n.y + n.ry2], R: n.R }; }) }; };

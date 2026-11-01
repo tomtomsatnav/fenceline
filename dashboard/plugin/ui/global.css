@@ -99,9 +99,9 @@ body.aos-replay-open .legend,body.aos-replay-open .updated{opacity:0;pointer-eve
   .stats{left:auto;box-sizing:border-box;width:auto;max-width:calc(100% - 28px)}
   .stat-v{font-size:16px;min-height:20px;white-space:nowrap}
   .stat-v small{font-size:11px}
-  .streams-btn .theme-l,.theme-btn .theme-l{display:none}
-  .streams-btn,.theme-btn{min-width:36px;justify-content:center}
-  .orch-hbtn,.theme-btn,.streams-btn,.live-ind,.aos-replay-btn{min-height:36px}
+  .theme-btn .theme-l{display:none}
+  .theme-btn{min-width:36px;justify-content:center}
+  .orch-hbtn,.theme-btn,.live-ind,.aos-replay-btn{min-height:36px}
   #dr-close{width:44px;height:44px}
   .drawer button,.drawer .kv dd,.drawer summary{min-height:36px}
   .drawer{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}

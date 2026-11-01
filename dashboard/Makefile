@@ -104,7 +104,6 @@ test: ## Run every test suite
 	@if [ "$$(uname)" = "Darwin" ]; then set -o pipefail; echo "==> notifier"; node plugin/notify/test.mjs | tail -1; else echo "==> notifier: skipped (macOS only)"; fi
 	@set -o pipefail; echo "==> aos helper (stop/doctor)"; node scripts/aos.test.mjs | tail -1
 	@echo "==> theme contrast"; out="$$(node ui/theme-tokens.test.mjs)" || { echo "$$out"; exit 1; }; echo "$$out" | head -1
-	@echo "==> streams quiet mode"; out="$$(node ui/streams-quiet.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
 	@echo "==> mobile layout"; out="$$(node ui/mobile.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
 	@echo "==> orch badges"; out="$$(node ui/orch-badges.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1
 	@echo "==> orch rules + draft"; out="$$(node ui/orch-rules.test.mjs)" || { echo "$$out" | grep FAIL; exit 1; }; echo "$$out" | tail -1

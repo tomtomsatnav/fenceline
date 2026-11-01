@@ -219,8 +219,6 @@ table.ev{font-family:var(--mono);font-size:12px}
 .theme-btn g{display:none}
 .theme-btn[data-state=auto] .ti-auto,.theme-btn[data-state=light] .ti-light,.theme-btn[data-state=dark] .ti-dark{display:inline}
 .theme-btn .theme-l{display:inline-block;width:4.2em;white-space:nowrap}
-.streams-btn[data-state=full] .si-full,.streams-btn[data-state=quiet] .si-quiet,.streams-btn[data-state=lines] .si-lines{display:inline}
-.streams-btn .theme-l{width:11.8em}
 .done-btn .dn-mark{display:inline}
 .done-btn[data-state=off] svg{opacity:.55}
 .done-btn .theme-l{width:9.6em}
@@ -291,7 +289,7 @@ input[type=search]::placeholder{color:var(--muted);opacity:.7}
   .brand{order:1;flex:1 1 auto}
   .live-ind{order:2}
   .theme-btn{order:2}
-  .streams-btn .theme-l,.done-btn .theme-l{width:auto}
+  .done-btn .theme-l{width:auto}
   .clock{order:3;border-left:0;padding-left:0;flex-direction:row;gap:0}
   .clock .clk-t{font-size:10px}
   .goalbar{order:4;flex:1 1 100%;height:34px;padding:0;gap:10px}
@@ -315,7 +313,7 @@ input[type=search]::placeholder{color:var(--muted);opacity:.7}
 .ev-bad{--c-rgb:var(--errored-rgb)}
 .logo rect{fill:none;stroke:var(--accent);stroke-width:1}
 
-/* v5: no heartbeat ring; solid core orb with a soft brass halo (pulse is expressed by particles) */
+/* v5: no heartbeat ring; solid core orb with a soft brass halo */
 .orch .ring,.orch .inner{display:none}
 .orch .body{stroke-width:1.2;stroke-dasharray:none!important;opacity:.9!important;animation:none!important}
 .orch.s-late .body,.orch.s-dead .body{stroke-dasharray:none!important}
@@ -324,8 +322,19 @@ input[type=search]::placeholder{color:var(--muted);opacity:.7}
 .orch.s-dead .halo,.orch.s-stopped .halo,.orch.s-paused .halo{opacity:.06}
 .orch .tint{opacity:.85}
 
-/* v5: connecting lines invisible (geometry kept for particles.js: no display:none / visibility:hidden) */
-.edge,.edge.run,.dep{stroke:transparent!important;stroke-opacity:0!important;stroke-dasharray:none!important;opacity:1!important;animation:none!important;transition:none!important;filter:none!important}
+/* connecting lines: static SVG strokes coded by the endpoint's status (no particles, no animation). Running is a solid line in
+   the running colour; stalled and errored are dashed in theirs; idle is a faint neutral line; a stopped agent's line nearly fades. */
+.edge{stroke:rgb(var(--idle-rgb));stroke-opacity:.32;stroke-width:1;stroke-dasharray:none;animation:none;transition:stroke-opacity .3s,stroke .3s}
+.edge.trunk{stroke-width:1.3}
+.edge.s-running{stroke:rgb(var(--running-rgb));stroke-opacity:.85;stroke-width:1.8}
+.edge.s-stalled{stroke:rgb(var(--stalled-rgb));stroke-opacity:.8;stroke-width:1.4;stroke-dasharray:6 4}
+.edge.s-errored{stroke:rgb(var(--errored-rgb));stroke-opacity:.9;stroke-width:1.5;stroke-dasharray:2 3}
+.edge.s-stopped{stroke-opacity:.14}
+.dep{stroke:rgb(var(--accent-rgb));stroke-opacity:.3;stroke-width:1;stroke-dasharray:1.5 4;opacity:1}
+.dep.s-running{stroke-opacity:.6;stroke-width:1.3}
+.dep.s-stopped{stroke:rgb(var(--idle-rgb));stroke-opacity:.12}
+:root[data-theme=light] .edge{stroke-opacity:.42}
+@media (prefers-color-scheme:light){:root:not([data-theme]) .edge{stroke-opacity:.42}}
 .orbit{stroke:rgba(var(--accent-rgb)/.05);stroke-dasharray:1 9}
 .orbit:nth-child(2){stroke-opacity:0}
 .segs[hidden]{display:none!important}
