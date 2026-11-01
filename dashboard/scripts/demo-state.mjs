@@ -180,7 +180,7 @@ export function buildDemoState(variant = 'main', opts = {}) {
   const tokens_total = Object.values(by).reduce((t, u) => t + u.input + u.output + u.cache_read + u.cache_write, 0);
 
   const state = {
-    goal: { id: 'live-goal', title: 'Live Claude Code activity', description: 'Read-only view of Claude Code hook events.', status: 'active',
+    goal: { id: 'live-goal', title: 'Live Claude Code sessions', description: 'Read-only view of Claude Code hook events.', status: 'active',
       success_criteria: [{ id: 'c1', text: 'Observing', met: false }], budget: { max_ticks: 1000000 }, created_at: iso(now - WINDOW_MIN * MIN), updated_at: iso(T) },
     tasks, agents: clean, projects,
     heartbeat: { seq: 2822, ts: iso(T), interval_s: 30, status: 'running', liveness: 'alive', age_s: 0.4, last_tick_ms: 0, consecutive_errors: 0 },

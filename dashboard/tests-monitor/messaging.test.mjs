@@ -17,7 +17,7 @@ test('README opens with read-only + never steers + separate experimental orchest
 test('manifests, skill and UI do not call the dashboard orchestration', () => {
   for (const f of ['plugin/.claude-plugin/plugin.json', 'ui/index.html']) assert.doesNotMatch(read(f).replace(/aria-label="Goal[^"]*"/g, ''), /agent orchestration|orchestration framework|<title>[^<]*orchestrat/i, f);
   assert.doesNotMatch(read('plugin/skills/dashboard/SKILL.md').split('\n')[2], /orchestration/i);
-  assert.match(read('ui/index.html'), /<title>AOS Dashboard<\/title>/);
+  assert.match(read('ui/index.html'), /<title>Fenceline<\/title>/);
 });
 test('README shows aos-dash + terminal screenshot and mentions Streams: Lines', () => {
   const r = read('README.md');

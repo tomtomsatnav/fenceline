@@ -1,6 +1,6 @@
 {
   "name": "fenceline",
-  "description": "Fenceline: a live map of where your coding agent goes, with plain-English fences.",
+  "description": "Fenceline: watch and fence your coding agents.",
   "owner": {
     "name": "Tom Mitchell"
   },
@@ -8,7 +8,7 @@
     {
       "name": "fenceline",
       "source": "./",
-      "description": "A live map of where your coding agent goes, with plain-English fences."
+      "description": "Watch and fence your coding agents: a live dashboard of every session and subagent, and a map of where each one goes, with plain-English fences."
     }
   ]
 }

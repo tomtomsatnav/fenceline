@@ -9,7 +9,9 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = process.env.CLAUDE_PLUGIN_ROOT || path.resolve(HERE, '..');
+// the dashboard's own plugin folder (monitor.mjs, defaults/), found from this file: inside Fenceline's plugin it sits at
+// <plugin root>/dashboard/plugin, so CLAUDE_PLUGIN_ROOT would point at the wrong folder
+const ROOT = path.resolve(HERE, '..');
 const DATA = process.env.CLAUDE_PLUGIN_DATA || '';
 const LIVE = process.env.AOS_LIVE_DIR || (DATA ? path.join(DATA, 'live') : path.join(ROOT, 'live'));
 const LOCK_DIR = DATA || path.dirname(LIVE);

@@ -1,4 +1,4 @@
-// AOS-1 read-only live monitor: folds Claude Code hook events (live/hook-events.ndjson) into an AOS-1 /api/state view.
+// Fenceline dashboard (formerly the AOS dashboard): a read-only live monitor. Folds Claude Code hook events (live/hook-events.ndjson) into an AOS-1 /api/state view.
 // Zero dependencies, Node 18+ ESM. Binds 127.0.0.1 only.
 import http from 'node:http';
 import fs from 'node:fs';
@@ -894,7 +894,7 @@ function assemble(list, ref, replay) {
   const liveness = age === null ? 'dead' : age < 1.5 * INTERVAL_S ? 'alive' : age < 3 * INTERVAL_S ? 'late' : 'dead';
   const first = list.length ? list[0].ts : new Date(ref).toISOString();
   const out = {
-    goal: { id: GOAL_ID, title: 'Live Claude Code activity', description: 'Read-only view of Claude Code hook events.', status: 'active',
+    goal: { id: GOAL_ID, title: 'Live Claude Code sessions', description: 'Read-only view of Claude Code hook events.', status: 'active',
       success_criteria: [{ id: 'c1', text: 'Observing', met: false }], budget: { max_ticks: 1000000 },
       created_at: first, updated_at: newest || first },
     tasks: f.tasks, agents: f.agents, projects: f.projects,
@@ -1018,7 +1018,7 @@ function loadNotifier() {
 }
 // old path: osascript via execFile, args never shell-interpolated
 function sendNotifyLegacy(kind, text, sound) {
-  const title = 'AOS: ' + kind.replace('_', ' '), msg = String(text).replace(/[\u0000-\u001f\u007f]+/g, ' ').slice(0, 200);
+  const title = 'Fenceline: ' + kind.replace('_', ' '), msg = String(text).replace(/[\u0000-\u001f\u007f]+/g, ' ').slice(0, 200);
   if (process.env.AOS_NOTIFY_DRY === '1') { console.log(`[notify:dry] ${kind} | ${msg}`); return; }
   try { execFile('osascript', ['-e', sound ? NOTIFY_SOUND_SCRIPT : NOTIFY_SCRIPT, msg, title], { timeout: 5000 }, () => {}); } catch {}
 }
@@ -1147,7 +1147,7 @@ const server = http.createServer((req, res) => {
   } catch (e) { console.error(e); if (!res.headersSent) send(res, 500, { error: 'internal error' }); }
 });
 server.headersTimeout = 10000; server.requestTimeout = 15000;
-server.listen(PORT, HOST, () => console.log(`AOS-1 live monitor on http://${HOST}:${PORT}  (read-only; ${FILE})`));
+server.listen(PORT, HOST, () => console.log(`Fenceline dashboard: live monitor on http://${HOST}:${PORT}  (read-only; ${FILE})`));
 setInterval(notifyTick, 2000).unref();
 const shutdown = () => { server.close(); setTimeout(() => process.exit(0), 200).unref(); };
 process.on('SIGINT', shutdown);
