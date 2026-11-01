@@ -8,6 +8,10 @@ import { matchGlob } from './glob.mjs';
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const READ_TOOLS = new Set(['Read', 'NotebookRead']);
+// Fenceline's own config: when it changes during a Bash call it was the user's fence step (/fenceline:fence, `fenceline accept`),
+// not the agent's work, so the change is not drawn on the agent's trail. The hook records the new fences as a `fences` event.
+// Reads of it stay on the trail (an agent reading its fences is behaviour worth seeing).
+const isFenceConfig = (rel) => rel === '.fenceline' || rel.startsWith('.fenceline/');
 const clip = (s, n = 160) => (String(s).length > n ? `${String(s).slice(0, n - 1)}…` : String(s));
 
 /**
@@ -102,8 +106,8 @@ export function postEvent(p, ctx) {
     if (rel) touches.push(...ctx.rescan([rel]));
   } else if (tool === 'Bash') {
     const files = ctx.allFiles();
-    const changed = ctx.rescan(files);
-    touches.push(...changed);
+    const changed = ctx.rescan(files);   // rescanned in full either way, so the snapshot never reports these again
+    touches.push(...changed.filter((t) => !isFenceConfig(t.file)));
     // the reads are decoration for the map: they must never cost us the changes above
     try { touches.push(...bashReads(ti.command, { root: ctx.root, cwd, files, skip: new Set(changed.map((t) => t.file)) })); } catch { /* unreadable shell */ }
   }
