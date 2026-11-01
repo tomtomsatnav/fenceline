@@ -1,0 +1,9 @@
+{
+  "name": "aos-dashboard",
+  "displayName": "AOS Dashboard",
+  "version": "0.1.0",
+  "description": "Read-only live monitor for Claude Code sessions and subagents (never starts or steers agents): logs Claude Code hook events locally and serves a live view on 127.0.0.1:4318.",
+  "author": { "name": "Tom Mitchell" },
+  "license": "MIT",
+  "keywords": ["agents", "monitoring", "dashboard", "monitor", "aos"]
+}
