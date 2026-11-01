@@ -86,6 +86,9 @@ svg#map{position:fixed;inset:0;display:block}
 #strip .mode{font:600 10px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--ink2);display:flex;align-items:center;gap:7px}
 #strip .dot{width:8px;height:8px;border-radius:50%;background:var(--bad);animation:blink 1.4s infinite}
 #strip .dot.off{animation:none;background:var(--ink2)}
+.dash{font:600 10px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:3px;padding:3px 8px;white-space:nowrap}
+.dash:hover{background:var(--hover)} .dash.down{color:var(--ink2);border-color:var(--rule)}
+#picker .dash{display:inline-block;float:right;padding:3px 8px;border-bottom:1px solid var(--accent)} #picker .dash.down{border-bottom-color:var(--rule)}
 @keyframes blink{50%{opacity:.25}}
 #clock{font:600 14px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);min-width:64px;text-align:right}
 .box{position:fixed;background:var(--paper2);border:1.5px solid var(--ink);box-shadow:3px 3px 0 var(--shadow);padding:7px 10px 8px;z-index:4;font:11px/1.35 var(--sans);color:var(--ink)}
@@ -121,7 +124,7 @@ svg#map{position:fixed;inset:0;display:block}
 </head>
 <body data-state="loading">
 <svg id="map" xmlns="http://www.w3.org/2000/svg"></svg>
-<div id="strip" hidden><span class="brand">Fenceline</span><span class="repo" id="repo"></span><span class="sp"></span><span class="mode" id="mode"></span><span id="clock">0:00</span></div>
+<div id="strip" hidden><span class="brand">Fenceline</span><span class="repo" id="repo"></span><span class="sp"></span><span class="mode" id="mode"></span><span id="clock">0:00</span><a class="dash" id="dash" hidden target="_blank" rel="noopener">Dashboard ↗</a></div>
 <footer id="key" hidden></footer>
 <aside class="box" id="summary" hidden></aside>
 <div id="callouts"></div>
@@ -435,7 +438,7 @@ function initData(meta, events) {
   for (const f of meta.files || []) addFile(f.path, f.size);
   for (const ev of events) for (const t of ev.touches || []) if (!t.dir) addFile(t.file, 0);
   $('#repo').textContent = meta.repo_name || 'repo'; document.title = `Fenceline · ${meta.repo_name || ''}`.trim();
-  $('#strip').hidden = false; buildKey(); buildScene();
+  $('#strip').hidden = false; dashLink($('#dash')); buildKey(); buildScene();
 }
 let resizeT = 0;
 const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (L) rebuild(); }, 120); };
@@ -477,8 +480,18 @@ async function live(id) {
   document.body.dataset.state = 'live';
 }
 
+// Link to the Fenceline dashboard (all live sessions, verdicts, Needs you). Shown greyed when it is not running.
+async function dashLink(a) {
+  const l = await getJson('/api/links').catch(() => null);
+  if (!l?.dashboard) return;
+  a.href = l.dashboard.url; a.hidden = false; a.classList.toggle('down', !l.dashboard.up);
+  a.title = l.dashboard.up ? 'Open the Fenceline dashboard: every live session, verdicts and Needs you'
+    : 'The dashboard is not running. It starts by itself when a Claude Code session opens with the Fenceline plugin; reload after that.';
+}
+
 async function picker() {
   const p = $('#picker'); p.hidden = false;
+  const d = h('a', 'dash', 'Dashboard ↗', p); d.id = 'dash-picker'; d.hidden = true; d.target = '_blank'; d.rel = 'noopener'; dashLink(d);
   h('h1', '', 'Fenceline', p); h('h2', '', 'Choose a map', p);
   const section = (title, items, href) => {
     h('h3', '', title, p);

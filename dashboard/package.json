@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "description": "The Fenceline dashboard (formerly the AOS dashboard). Its .js files are browser scripts, CommonJS for the node tests; its modules are .mjs.",
+  "type": "commonjs"
+}

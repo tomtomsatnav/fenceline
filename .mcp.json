@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "fenceline": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/dashboard/plugin/mcp/server.mjs"
+      ],
+      "env": {
+        "AOS_LIVE_DIR": "${CLAUDE_PLUGIN_DATA}/live"
+      }
+    }
+  }
+}

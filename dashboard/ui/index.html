@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Fenceline</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 20V7l2.5-2.5L9 7v13M15 20V7l2.5-2.5L20 7v13M4 10.5h16M4 16h16' fill='none' stroke='%239a6a12' stroke-width='2'/%3E%3C/svg%3E">
+<script>/* apply the saved theme before first paint (no attribute = follow the system) */
+try{var t=localStorage.getItem('aos.theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<link rel="stylesheet" href="sheet.css?v=3">
+</head>
+<body>
+<div class="sheet">
+  <header class="head">
+    <h1 class="mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 20V7l2.5-2.5L9 7v13M15 20V7l2.5-2.5L20 7v13M4 10.5h16M4 16h16"/></svg>Fenceline</h1>
+    <p class="where" id="where">Reading sessions…</p>
+    <span class="sp"></span>
+    <nav class="views" aria-label="Views">
+      <button type="button" data-view="routes" aria-current="page">Routes</button>
+      <button type="button" data-view="fences">Fences</button>
+      <button type="button" data-view="activity">Activity</button>
+      <a id="maplink" href="http://127.0.0.1:4319/" target="_blank" rel="noopener" title="The repo map: start it with  fenceline view --detach">Repo map ↗</a>
+    </nav>
+    <div class="controls">
+      <span class="state" id="state" role="status"><i></i><span>live · read-only</span></span>
+      <button type="button" class="ctl" id="replay-btn" aria-pressed="false" aria-controls="replaybar">Replay</button>
+      <button type="button" class="ctl" id="theme-btn" title="Theme (T)">Theme: auto</button>
+    </div>
+  </header>
+
+  <div class="replaybar" id="replaybar" hidden>
+    <label for="replay-range" class="hint">Drag to redraw the sheet as it was</label>
+    <input type="range" id="replay-range" min="0" max="1000" value="1000">
+    <span class="t" id="replay-t">now</span>
+    <button type="button" class="ctl" id="replay-live">Back to live</button>
+  </div>
+
+  <div class="body">
+    <main class="drawing" id="drawing" aria-label="Sheet"></main>
+    <aside class="margin" aria-label="Needs you and details">
+      <h2>Needs you <b id="needs-count" class="zero">0</b></h2>
+      <div id="notes"></div>
+      <section class="survey" id="survey" aria-live="polite"></section>
+    </aside>
+  </div>
+
+  <footer class="foot">
+    <div class="key" id="key" aria-label="Key"></div>
+    <div class="titleblock">
+      <div><span>Sheet</span><b id="tb-sheet">Routes · live</b></div>
+      <div><span>Drawn</span><b id="tb-drawn">--:--</b></div>
+      <div><label for="tb-scale"><span>Scale</span></label><select id="tb-scale"><option value="auto" selected>Auto</option><option value="5">5 min across</option><option value="15">15 min across</option><option value="30">30 min across</option><option value="60">1 h across</option><option value="180">3 h across</option></select></div>
+      <div><span>Tokens</span><b id="tb-tokens">0</b></div>
+    </div>
+  </footer>
+</div>
+<script src="routes.js?v=2"></script>
+<script src="guard.js?v=3"></script>
+<script src="sheet.js?v=2"></script>
+</body>
+</html>

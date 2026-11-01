@@ -5,6 +5,7 @@
 //   GET /api/session/:id      meta + events + summary
 //   GET /api/stream/:id       SSE: events appended after connect (event: ev), summary when it appears (event: summary)
 //   GET /api/recordings, /api/recording/:name   recorded sessions bundled with the repo
+//   GET /api/links            where the Fenceline dashboard lives and whether it is running
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,12 +22,25 @@ const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); }
 const readJsonl = (f) => { try { return fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { return []; } };
 const bundle = (dir) => ({ meta: readJson(path.join(dir, 'meta.json')), events: readJsonl(path.join(dir, 'events.jsonl')), summary: readJson(path.join(dir, 'summary.json')) });
 
+// The dashboard (dashboard/monitor.mjs) listens on AOS_PORT (or PORT), default 4318, like its ensure-monitor hook.
+export function dashboardPort(env = process.env) {
+  const n = Number(env.AOS_PORT || env.PORT);
+  return Number.isInteger(n) && n > 0 && n < 65536 ? n : 4318;
+}
+function probe(port, timeoutMs = 400) {
+  return new Promise((resolve) => {
+    const req = http.get({ host: '127.0.0.1', port, path: '/api/state', timeout: timeoutMs }, (r) => { r.resume(); resolve(r.statusCode < 500); });
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.on('error', () => resolve(false));
+  });
+}
+
 function send(res, code, body, type = 'application/json') {
   res.writeHead(code, { 'content-type': type, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
   res.end(type === 'application/json' ? JSON.stringify(body) : body);
 }
 
-export function createServer({ home = defaultHome(), recordingsDir = path.join(here, '..', 'recordings') } = {}) {
+export function createServer({ home = defaultHome(), recordingsDir = path.join(here, '..', 'recordings'), dashPort = dashboardPort() } = {}) {
   const sessions = path.join(home, 'sessions');
   const listDirs = (root) => { try { return fs.readdirSync(root).map((n) => ({ n, mtime: fs.statSync(path.join(root, n)).mtimeMs })); } catch { return []; } };
 
@@ -62,6 +76,10 @@ export function createServer({ home = defaultHome(), recordingsDir = path.join(h
     try {
       if (p === '/favicon.ico') { res.writeHead(204); return res.end(); }
       if (STATIC[p]) return send(res, 200, fs.readFileSync(path.join(here, STATIC[p][0]), 'utf8'), STATIC[p][1]);
+      if (p === '/api/links') {
+        probe(dashPort).then((up) => send(res, 200, { dashboard: { url: `http://127.0.0.1:${dashPort}/`, up } }));
+        return undefined;
+      }
       if (p === '/api/sessions') {
         return send(res, 200, listDirs(sessions).filter((d) => SID.test(d.n)).sort((a, b) => b.mtime - a.mtime).slice(0, 100)
           .map((d) => { const m = readJson(path.join(sessions, d.n, 'meta.json')); return { id: d.n, repo_name: m?.repo_name ?? null, started_at: m?.started_at ?? null }; }));

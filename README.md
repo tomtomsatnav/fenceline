@@ -1,6 +1,7 @@
 # Fenceline
 
-**A live map of where your coding agent goes, with fences you write in plain English.**
+**Watch and fence your coding agents.** A live dashboard of every Claude Code session and subagent, and a map of where
+each one goes in the repo, with fences you write in plain English.
 
 ![A replay of a real recorded session: the agent's route crosses the map of a 63-file repo, leaves the green "scope: this task only touches src/payments" area, edits src/utils/money.js, and the callout reads "Rule broken: this task only touches src/payments · 11 s in"](docs/demo-loop-dark.gif)
 
@@ -16,18 +17,58 @@ the moment the work leaves the area you meant. No LLM runs while the agent works
 claude plugin marketplace add tomtomsatnav/fenceline && claude plugin install fenceline@fenceline
 ```
 
-Then, in Claude Code:
+**From a clone**, `make` does the same from your checkout and keeps it in step as you pull:
+
+```sh
+git clone https://github.com/tomtomsatnav/fenceline && cd fenceline
+make install    # installs from this folder; removes the old aos-dashboard plugin and its monitor first
+make doctor     # checks the install and says what to fix
+```
+
+`make update` pulls and restarts the dashboard, `make start` / `stop` / `open` run it by hand, `make map` starts the
+repo map, `make test` runs every suite, and `make` lists the rest.
+
+Then start a new Claude Code session and open http://127.0.0.1:4318 for the dashboard. In Claude Code:
 
 ```
 /fenceline:fence "migrations: off-limits" "this task only touches src/payments"
 /fenceline:map
 ```
 
-## What it does
+## The dashboard
+
+![The Fenceline dashboard on a synthetic demo dataset: a survey sheet with each agent drawn as a route over the last 30 minutes, grouped by project, subagents branching from their session, a blocked fence and a warned fence on the routes, and three numbered Needs-you notes in the margin](docs/dashboard-dark.png)
+
+<sub>Synthetic demo data (`dashboard/scripts/demo-state.mjs`): every name is fictional.</sub>
+
+Every session and subagent on your machine, live, drawn as a survey sheet: each agent is a route along a time scale,
+subagents branch off the session that started them, fences sit on the route where an agent met them, and two agents that
+touched the same file are tied together. Status, model and tokens are a click away, and Replay redraws the sheet as it was. It starts on its own when a session opens (`AOS_NO_AUTOSTART=1` turns
+that off), binds 127.0.0.1 only, and is also a terminal view (`/fenceline:dash`, or `dashboard/plugin/cli/dash.mjs`) and
+a read-only MCP server. The dashboard never starts, stops or steers an agent.
+
+**Needs you** is the margin: numbered notes, keyed to the same numbers on the routes, for a session a fence stopped (it is
+probably asking you something), a session waiting for a permission answer, a crossing the agent never mentioned, and
+work the guard rejected. **Fences** lists every session's rules and each time an agent met one, with the verdicts of
+[`aos-orch verify`](https://github.com/tomtomsatnav/aos-orchestrator) (the original tests re-run in a sandbox, plus
+anti-cheat checks) below.
+
+![The Fences view: a session stopped by a block fence (a denied create of 0042_orders.sql) and a session that crossed a warn fence (an edit of money.js), each with its two rules](docs/dashboard-fences.png)
+
+**Privacy.** The dashboard's hooks store event and tool names, short labels, counts and the paths it needs to group
+projects and spot conflicts: never prompts, command text beyond a command's first word, file contents, tool output or error messages. It shows file
+names, not paths. Full list: [dashboard/plugin/README.md](dashboard/plugin/README.md#privacy).
+
+The dashboard was the AOS dashboard ([agent-orchestration-standard](https://github.com/tomtomsatnav/agent-orchestration-standard));
+it now lives in [`dashboard/`](dashboard/) with its history. Its environment variables keep their `AOS_` names.
+
+## Fences and the map
 
 - **Fences in plain English.** `/fenceline:fence` makes one LLM call to compile your sentences into globs
   (`migrations/**`, `src/payments/**` plus `test/payments*`). It shows how many files each fence covers, and saves to
   `.fenceline/fences.json` only after you say yes. `fenceline add` writes a fence by hand with no LLM at all.
+- **Fences are the one place Fenceline steers.** Everything else watches. A fence in warn mode only records; block mode
+  is opt-in, per fence.
 - **Two modes.**
   - **warn** records and flags the crossing after it happens (PostToolUse).
   - **block** denies the edit before it happens (PreToolUse). The deny hands your own sentence back to the agent, so it
@@ -77,7 +118,7 @@ Those runs used small repos and sessions of about a minute, so they can't speak 
     to the fences (including `fenceline accept` after you say yes) is listed in the Stop summary.
 - Hook latency ([docs/bench.json](docs/bench.json), `node scripts/bench-hook.mjs`, median of 10 calls on one Mac): 77 ms
   per Bash call on this 335-file repo and 101 ms on a 5,000-file repo. Most of that is Node startup.
-- Tests (`npm test`, zero dependencies):
+- Tests (`npm test` for Fenceline, `npm run test:dashboard` for the dashboard's suites; zero dependencies):
   - glob and fence unit tests, the compiler with a fake LLM, and the Bash write-target parser;
   - the real hook process against a temp git repo, covering reads vs writes, gitignored build output, renames, `sed -i`
     and `node -e`;
