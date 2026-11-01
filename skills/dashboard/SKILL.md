@@ -29,4 +29,4 @@ The dashboard's hooks store no prompts, command text, file contents, tool output
 
 ## MCP tools
 
-The `fenceline` MCP server exposes read-only views of the same state: `aos_status`, `aos_agent`, `aos_cost`, `aos_conflicts`, `aos_alerts`, `aos_history`.
+The `fenceline` MCP server exposes read-only views of the same state: `aos_status`, `aos_agent`, `aos_cost`, `aos_conflicts`, `aos_alerts`, `aos_history`, `aos_state_at`.

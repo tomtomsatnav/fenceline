@@ -45,7 +45,7 @@ anti-cheat checks) below.
 ![The Fences view: a session stopped by a block fence (a denied create of 0042_orders.sql) and a session that crossed a warn fence (an edit of money.js), each with its two rules](docs/dashboard-fences.png)
 
 **Privacy.** The dashboard's hooks store event and tool names, short labels, counts and the paths it needs to group
-projects and spot conflicts: never prompts, command text, file contents, tool output or error messages. It shows file
+projects and spot conflicts: never prompts, command text beyond a command's first word, file contents, tool output or error messages. It shows file
 names, not paths. Full list: [dashboard/plugin/README.md](dashboard/plugin/README.md#privacy).
 
 The dashboard was the AOS dashboard ([agent-orchestration-standard](https://github.com/tomtomsatnav/agent-orchestration-standard));

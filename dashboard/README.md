@@ -9,13 +9,13 @@ http://127.0.0.1:4318. Fenceline adds its fences to the sheet: on the routes, in
 start a monitor on the same port. `make install` and the rest of this README describe the standalone build, kept for
 development (`make test`, `make build`) and for anyone who wants the monitor without fences.
 
-The browser view is a survey sheet: agents are routes along a time scale (15 minutes to 3 hours across), subagents branch
+The browser view is a survey sheet: agents are routes along a time scale (Auto, or 5 minutes to 3 hours across), subagents branch
 from their session, fences sit on the routes, and Needs you is a column of numbered margin notes. Views: Routes, Fences
 and Activity, plus Replay.
 
 **A read-only live monitor for Claude Code.** It shows what your sessions and subagents are doing (agents, tasks, tokens, cost, file conflicts, alerts) as a survey sheet in the browser, a terminal view (`aos-dash`), an MCP server and a status line. It never starts, stops or steers agents. Local-only, zero dependencies.
 
-Looking for orchestration (planning goals, launching and managing workers)? That is a different, separate and **experimental** project: [aos-orchestrator](https://github.com/tomtomsatnav/aos-orchestrator), opt-in. This dashboard can display its goals, nothing more.
+Looking for orchestration (planning goals, launching and managing workers)? That is a different, separate and **experimental** project: [aos-orchestrator](https://github.com/tomtomsatnav/aos-orchestrator), opt-in. This dashboard does not show or control its goals.
 
 | Which piece do I want? | Repo | What it is |
 |---|---|---|

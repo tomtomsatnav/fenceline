@@ -29,7 +29,7 @@ Then open http://127.0.0.1:4318 (the monitor starts automatically with a session
 - Fences on the routes (a solid wall where one blocked, a dashed bar where one only warned) and dashed ties between agents that touched the same file.
 - Needs you as numbered margin notes, keyed to the same numbers on the routes: blocked fences, permission prompts waiting for an answer, unmentioned crossings, rejected work.
 - Per-model stuck thresholds, plus errored-agent and file-conflict detection.
-- Scale from 15 minutes to 3 hours across; keyboard: j/k move between routes, 1/2/3 switch views, T switches theme.
+- Scale: Auto (the smallest of 5, 15, 30, 60 or 180 minutes that covers recent activity) or a fixed span; keyboard: j/k move between routes, 1/2/3 switch views, T switches theme.
 - Replay: drag back through the recorded history and the sheet is redrawn as it was.
 - Light and dark themes with checked contrast tokens; fonts ship with the plugin, nothing loads from the network.
 - One plugin ships the hooks, the web UI, a terminal dashboard (`aos-dash`), a read-only MCP server and a macOS notifier.

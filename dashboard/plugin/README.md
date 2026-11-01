@@ -1,6 +1,6 @@
 # aos-dashboard (Claude Code plugin)
 
-A local, read-only live dashboard for Claude Code sessions. Hooks log one compact line per event to a local file; a monitor folds them into a graph (heart -> project hubs -> agents) served at http://127.0.0.1:4318. The plugin also ships a terminal view, an `aos` MCP server (read-only tools), a `dash` skill and a branded macOS notifier.
+A local, read-only live dashboard for Claude Code sessions. Hooks log one compact line per event to a local file; a monitor folds them into a survey sheet (agents as routes over time, subagents branching from their session) served at http://127.0.0.1:4318. The plugin also ships a terminal view, an `aos` MCP server (read-only tools), a `dash` skill and a branded macOS notifier.
 
 ## Install
 

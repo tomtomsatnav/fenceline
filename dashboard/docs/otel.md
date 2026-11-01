@@ -23,8 +23,8 @@ to that collector instead and add an extra OTLP/http exporter there that forward
 
 ## What you see
 
-- The cost chip shows the exact total; its popover adds "Exact cost from Claude Code telemetry" with main, subagents and
-  background, and the subagent cost by type (for example Explore).
+- The terminal view (`aos-dash`) shows the exact total, and `/api/state` carries it as `cost.exact`: main, subagents and
+  background, and the subagent cost by type (for example Explore). The browser sheet shows tokens only.
 - `/api/state` gains `cost.exact`: `total_usd`, `by_source` (`main`, `subagent`, `auxiliary`, `other`), `by_agent_type`,
   `by_session`, `tokens` (`input`, `output`, `cache_read`, `cache_write`), `sessions`, `updated_at`. Each session row in
   `agents` gains `usage.usd_exact_session` (that session including its subagents). The transcript-based fields are unchanged.
@@ -37,7 +37,7 @@ to that collector instead and add an extra OTLP/http exporter there that forward
   The live agent view still comes from hooks.
 - Subagent cost is reported by type, not per subagent run, so two Explore subagents in one session share one figure.
 - Sessions are matched on the first 8 characters of the session id (what the hook log keeps).
-- If only some sessions in view send telemetry, the headline keeps the estimate and the popover shows the exact figure as partial
+- If only some sessions in view send telemetry, the headline keeps the estimate and the exact figure is marked partial
   (`cost.exact.complete` is false).
 - With the default delta temporality, an export the exporter retries after a lost response is counted twice. Set
   `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=cumulative` to avoid that.

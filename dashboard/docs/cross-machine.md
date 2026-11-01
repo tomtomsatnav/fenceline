@@ -23,7 +23,7 @@ laptop (you look here)                      laptop2 (remote)
 ## What you get
 
 - `/api/state` gains `machines` (`name`, `ok`, `last_seen`, `error`, `totals`), a `totals` block, and `cost.by_machine`. Every agent, task, project, alert, collision, event and goal carries `machine`; remote ids are namespaced `<name>:<id>`, remote project names read `proj @name`. Local stays `machine: "local"` with unchanged ids. `?local=1` returns the machine's own state without remotes (this is what remotes poll, so two machines can list each other without loops).
-- **Web UI:** a chip row (All / local / each remote, with a status dot) filters the whole view; hovering a chip or reading the line under it shows that machine's agents, tokens and cost. An unreachable machine shows a red dot and the error; its rows disappear after about 20 s without a successful poll.
+- **Web UI:** remote agents are drawn on the sheet with everyone else's; a remote agent's details name its machine. An unreachable machine's rows disappear after about 20 s without a successful poll. `aos-dash --machine <name>` filters the terminal view to one machine.
 - **Terminal:** `aos-dash --machine laptop2` filters; the header shows a `machines:` summary line.
 - **MCP:** `aos_status` includes a `machines:` line and takes an optional `machine` filter.
 
@@ -39,4 +39,4 @@ Polling is every 5 s per remote, with exponential backoff (up to 60 s) while a r
 
 ## Limits
 
-Remote history/replay (`?at=`) and goals' control actions are not aggregated; goals from remotes are listed read-only. A remote only needs a dashboard that serves `/api/state`.
+Remote history/replay (`?at=`) is not aggregated. A remote only needs a dashboard that serves `/api/state`.
