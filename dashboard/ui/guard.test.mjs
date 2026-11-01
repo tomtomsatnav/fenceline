@@ -43,8 +43,12 @@ const doc = { readyState: 'complete', hidden: false, body, activeElement: null, 
   getElementById: (id) => [header, body].flatMap((r) => r.all()).find((x) => x.id === id) || null, querySelector: (s) => (s === 'header.top' ? header : null), addEventListener() {} };
 body.contains = () => true;
 let fetched = 0;
+// a Fenceline session as /api/fences serves it: stopped at a block fence in its last turn, one earlier crossing landed
+const FS = { id: 'f-0123456789ab', repo_name: 'shop', agent: 'Claude Code·sess', updated_at: '2026-10-21T11:00:00.000Z', crossed: 1, blocked: 1, needs: 'denied',
+  fences: [{ id: 'migrations', text: 'migrations: off-limits', kind: 'deny', mode: 'block' }, { id: 'p', text: '<b>payments</b> only', kind: 'only', mode: 'warn' }],
+  latest: [{ at: '2026-10-21T11:00:00.000Z', fence: 'migrations', text: 'migrations: off-limits', file: '003_add.js', op: 'create', prevented: true, tool: 'Edit' }, { fence: 'p', text: 'payments only', file: 'money.js', op: 'edit', prevented: false }] };
 const win = { document: doc, setInterval: () => 0, clearInterval() {}, setTimeout: () => 0, clearTimeout() {}, AbortController: undefined, JSON, Date, Number, String, Array, Math, isFinite,
-  fetch: () => { fetched++; return Promise.resolve({ ok: true, json: () => Promise.resolve({ verdicts: [V, { ...V, id: 'v-20261021-120000-cccccc', verdict: 'capability', kind: 'checks_failed', rejections: [] }] }) }); } };
+  fetch: (u) => { fetched++; return Promise.resolve({ ok: true, json: () => Promise.resolve(u === '/api/fences' ? { sessions: [FS] } : { verdicts: [V, { ...V, id: 'v-20261021-120000-cccccc', verdict: 'capability', kind: 'checks_failed', rejections: [] }] }) }); } };
 win.window = win; vm.createContext(win); vm.runInContext(rd('guard.js'), win);
 const A = win.AOSGuard, btn = header.children.find((x) => x.id === 'guard-btn');
 ok('GUARD button exists and is hidden before any state', !!btn && btn.hidden === true);
@@ -53,7 +57,10 @@ A.setSummary(S); ok('shown with verdicts, count + integrity dot', btn.hidden ===
 A.open('v-20261021-110000-bbbbbb');
 await new Promise((r) => setImmediate(r)); await new Promise((r) => setImmediate(r));
 const panel = body.children.find((x) => x.id === 'guard-panel'), rows = panel.all().filter((x) => x.tag === 'li' && x.attrs['data-verdict']);
-ok('panel opens and fetches /api/verdicts', panel.hidden === false && fetched === 1);
+ok('panel opens and fetches /api/verdicts and /api/fences', panel.hidden === false && fetched === 2);
+const frs = panel.all().filter((x) => x.tag === 'li' && x.attrs['data-fence']);
+ok('fence session row: stopped chip, crossings (denied + landed), fences with their mode, as text only', frs.length === 1 && frs[0].attrs['data-fence'] === 'stopped' && /fence: stopped/.test(frs[0].textContent) && /denied: created 003_add\.js/.test(frs[0].textContent) && /edited money\.js/.test(frs[0].textContent) && /block migrations: off-limits/.test(frs[0].textContent) && frs[0].textContent.includes('<b>payments</b> only') && !frs[0].all().some((x) => x.tag === 'b' && x.textContent === 'payments'));
+ok('fences section comes before verdicts', panel.textContent.indexOf('Fences') < panel.textContent.indexOf('Verdicts'));
 ok('rows: integrity (red) + capability (amber), focused row highlighted', rows.length === 2 && rows[0].attrs['data-verdict'] === 'integrity' && rows[1].attrs['data-verdict'] === 'capability' && rows[0].classList.contains('focus'));
 ok('row shows repo, reasons, failing tests, checks', /shop/.test(rows[0].textContent) && /adds 20% VAT/.test(rows[0].textContent) && /npm test/.test(rows[0].textContent) && /rejected: tests edited/.test(rows[0].textContent));
 ok('hostile detail stays text (no element created from it)', rows[0].textContent.includes('<img src=x onerror=alert(1)>') && !rows[0].all().some((x) => x.tag === 'img'));
@@ -67,11 +74,22 @@ ok('drawer badge: none on a session only when verdicts exist', A.badgeEl({ ...se
 // static wiring
 const g = rd('guard.js'), app = rd('app.js'), orch = rd('orch.js'), css = rd('orch.css'), theme = rd('theme.css'), html = rd('index.html');
 ok('guard.js never uses innerHTML', !/\.(innerHTML|outerHTML|insertAdjacentHTML)\b|document\.write/.test(g));
-ok('guard.js is read-only: GET /api/verdicts only', (g.match(/fetch\(/g) || []).length === 1 && /fetch\('\/api\/verdicts'/.test(g) && !/method:|POST/.test(g));
+ok('guard.js is read-only: GETs /api/verdicts and /api/fences only', (g.match(/fetch\(/g) || []).length === 1 && /get\('\/api\/verdicts'\), get\('\/api\/fences'\)/.test(g) && !/method:|POST/.test(g));
 ok('script loaded after needs-you and orch', html.indexOf('guard.js') > html.indexOf('orch.js') && html.indexOf('orch.js') > html.indexOf('needs-you.js'));
 ok('session node mark + tooltip + drawer badge wired in app.js', /'guardmark'/.test(app) && /' g-' \+ guardSt\(a\)/.test(app) && /'GUARD: '/.test(app) && /AOSGuard\.badgeEl\(a, state\)/.test(app));
-ok('Needs you counts verdicts and opens the guard panel', /AOSNeeds\.compute\(on \? goalList\(\) : \[\], verdictSum\)/.test(orch) && /it\.kind === 'integrity'[\s\S]{0,80}AOSGuard\.open\(it\.id\)/.test(orch));
+ok('Needs you counts verdicts and fence stops and opens the guard panel', /AOSNeeds\.compute\(on \? goalList\(\) : \[\], verdictSum, fenceSum\)/.test(orch) && /it\.kind === 'integrity' \|\| it\.kind === 'fence'[\s\S]{0,80}AOSGuard\.open\(it\.id\)/.test(orch));
+ok('drawer fence badge wired in app.js', /AOSGuard\.fenceBadgeEl\(a\)/.test(app));
 ok('node mark colours from theme tokens (red/amber/accent)', /g-integrity \.guardmark\{fill:var\(--errored\)\}/.test(theme) && /g-capability \.guardmark\{fill:var\(--stalled\)\}/.test(theme) && /g-verified \.guardmark\{fill:var\(--running\)\}/.test(theme));
 ok('panel CSS uses tokens only (no hex colours)', !/#[0-9a-f]{3,6}\b/i.test(css.slice(css.indexOf('GUARD view'))));
 ok('mobile: 36px targets for the button and badge, panel is the shared bottom sheet', /@media \(max-width:720px\)\{\.guard-hbtn\{order:2;min-height:36px\}button\.guard-badge\{min-height:36px/.test(css) && /orch-panel guard-panel/.test(g));
+// fences: badge states, Needs you, the guard button
+const fb = (f) => G.fenceBadge(f);
+ok('fence badge: stopped after a denial, crossed with a count, denied-only, clean, none', fb({ needs: 'denied', crossed: 0, blocked: 1 }).state === 'stopped' && fb({ crossed: 2 }).text === 'fence: 2 crossed' && fb({ crossed: 0, blocked: 3 }).text === 'fence: 3 denied' && fb({ crossed: 0, blocked: 0 }).text === 'fences: clean' && fb(null) === null);
+const nf = compute([], null, { needs: [{ id: 'f-1', repo_name: 'shop', needs: 'denied', agent: 'Claude Code·sess' }, { id: 'f-2', repo_name: 'api', needs: 'unmentioned' }, { id: 'f-3', needs: 'bogus' }] });
+ok('Needs you: one item per fence stop or unmentioned crossing; unknown kinds ignored', nf.total === 2 && nf.items[0].kind === 'fence' && nf.items[0].id === 'f-1' && /waiting on you/.test(nf.items[0].text) && nf.items[0].title === 'shop · Claude Code·sess' && /without saying so/.test(nf.items[1].text));
+A.setSummary({ total: 0, latest: [] }, { sessions: 3, crossed: 2, blocked: 1, needs: [{ id: 'f-1', needs: 'denied' }] });
+ok('guard button shows for fence events alone, with the waiting-on-you dot', btn.hidden === false && btn.textContent.includes('3') && /3 fence events/.test(btn.attrs['aria-label']) && /1 waiting on you/.test(btn.attrs['aria-label']));
+A.setSummary({ total: 0, latest: [] }, { sessions: 3, crossed: 0, blocked: 0, needs: [] }); ok('hidden when no fence was crossed and there are no verdicts', btn.hidden === true);
+const fbe = A.fenceBadgeEl({ id: 'Claude Code·sess', fence: { id: 'f-0123456789ab', crossed: 1, blocked: 0 } });
+ok('drawer fence badge', fbe && fbe.textContent === 'fence: 1 crossed' && fbe.attrs['data-fence'] === 'crossed' && A.fenceBadgeEl({ id: 'x' }) === null);
 console.log(fails ? fails + ' FAILED' : 'guard: all ok'); process.exit(fails ? 1 : 0);

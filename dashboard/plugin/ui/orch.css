@@ -183,4 +183,13 @@ button.guard-badge:focus-visible{outline:1px solid var(--accent-hi);outline-offs
 .guard-warn li::before{content:"!  ";color:var(--stalled)}
 .guard-checks li.ok .guard-res{color:var(--running)}.guard-checks li.bad .guard-res{color:rgb(var(--errored-rgb))}
 .guard-cmd{font:inherit;color:var(--text)}
+/* fences (Fenceline): stopped by a block fence in the last turn = errored (red, waiting on the human); a crossing landed =
+   stalled (amber); denied only or nothing crossed = neutral */
+.g-f-stopped.guard-chip,.f-stopped.guard-badge{color:var(--bg);background:rgb(var(--errored-rgb));border-color:rgb(var(--errored-rgb))}
+.g-f-crossed.guard-chip,.f-crossed.guard-badge{color:var(--stalled);border-color:rgb(var(--stalled-rgb)/.6)}
+.guard-v.f-stopped{border-left-color:rgb(var(--errored-rgb))}.guard-v.f-crossed{border-left-color:rgb(var(--stalled-rgb))}
+.guard-sec{margin:14px 0 4px 8px;font:700 10px/1.6 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--text-2)}
+.guard-sec:first-child{margin-top:4px}
+.guard-reasons li.ok::before{content:"\2298  ";color:var(--muted)}
+.guard-fences li .guard-k{font:700 9.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 @media (max-width:720px){.guard-hbtn{order:2;min-height:36px}button.guard-badge{min-height:36px;padding:0 10px}.guard-v{padding:12px 4px 12px 8px}}

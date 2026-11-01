@@ -1515,6 +1515,7 @@
       if (a.model_mismatch) { var mb = el('span', 'tag mm-badge', 'asked ' + a.requested_tier + ', got ' + (a.model_label || a.model || '?')); mb.title = 'The orchestrator requested the ' + a.requested_tier + ' tier for this task but a different model was served'; p.appendChild(mb); }
       if (a.out_of_scope) { var sb = el('span', 'tag oos-badge', 'out of scope'); sb.title = 'An attempt at this task changed files outside its declared path_scope and was rejected by the orchestrator'; p.appendChild(sb); }
       if (window.AOSGuard && AOSGuard.badgeEl) { var gb = AOSGuard.badgeEl(a, state); if (gb) p.appendChild(gb); }
+      if (window.AOSGuard && AOSGuard.fenceBadgeEl) { var fb = AOSGuard.fenceBadgeEl(a); if (fb) p.appendChild(fb); }
       body.appendChild(p);
       if (a.role) { var rp = el('p', null, a.role); rp.style.overflowWrap = 'anywhere'; body.appendChild(rp); }
       kv(body, [['Full id', a.id]].concat(a.machine ? [['Machine', a.machine]] : []).concat(a.model_label ? [['Model', a.model_label + (a.model && a.model !== a.model_label ? ' (' + a.model + ')' : '')]] : [], a.effort ? [['Effort', a.effort]] : [], [['Current task', a.current_task || 'none'], ['Can delegate', a.can_delegate ? 'yes' : 'no'], ['Last event', fmtTs(a.last_event_at) || 'n/a']]));

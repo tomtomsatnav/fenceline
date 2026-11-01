@@ -633,6 +633,104 @@ function verdictSummary(agentOf) {
   return { total: list.length, verified: c.verified, integrity: c.integrity, capability: c.capability, latest };
 }
 
+// ---------- Fenceline fences (READ-ONLY view of Fenceline's sessions: <FENCELINE_HOME or ~/.fenceline>/sessions/<session id>/) ----------
+// Each session folder holds meta.json (the repo and the fences in force) and a hash-chained events.jsonl written by Fenceline's
+// hook: touches, crossings (a fence crossed, after the fact), blocked (a block fence denied the edit) and stop (end of a turn).
+// Bounded like the verdicts: the newest FENCE_SCAN_MAX folders by events.jsonl mtime, the last FENCE_TAIL_MAX bytes of the log,
+// meta.json only if <= FENCE_META_MAX, cached by mtime+size, rescanned at most once a second. Exposed: the repo's basename, the
+// fences (id, plain-English text, kind, mode), counts, the newest crossings with the file's BASENAME only, and what the turn left
+// waiting on the human. Never exposed: paths, Bash command text, the full session id (only its first 8 chars link it to a session).
+const FL_SESSIONS = path.join(process.env.FENCELINE_HOME || path.join(os.homedir(), '.fenceline'), 'sessions');
+const FENCE_SCAN_MAX = 100, FENCE_TAIL_MAX = 1024 * 1024, FENCE_META_MAX = 4 * 1024 * 1024, FENCE_LATEST_MAX = 20, FENCES_API_MAX = 50;
+const FSID_RE = /^[A-Za-z0-9_-]{1,128}$/, FMODES = new Set(['warn', 'block']), FKINDS = new Set(['deny', 'only']), FOPS = new Set(['create', 'edit', 'delete', 'read']);
+const fenceEntries = new Map(); // dir -> { sig, v | null }
+let fencesView = { list: [], sig: '' }, fencesScanAt = 0;
+const fenceList = (x) => (Array.isArray(x) ? x : []).filter((f) => f && typeof f === 'object').slice(0, 30)
+  .map((f) => ({ id: ctl(f.id, 64), text: scrub(f.text, 160), kind: FKINDS.has(f.kind) ? f.kind : 'deny', mode: FMODES.has(f.mode) ? f.mode : 'warn' }));
+function tailLines(file, max) {
+  const st = fs.statSync(file), fd = fs.openSync(file, 'r');
+  try {
+    const n = Math.min(st.size, max), buf = Buffer.alloc(n); fs.readSync(fd, buf, 0, n, st.size - n);
+    const lines = buf.toString('utf8').split('\n'); if (n < st.size) lines.shift(); // a cut first line is dropped, never parsed
+    return lines.filter(Boolean);
+  } finally { fs.closeSync(fd); }
+}
+function fenceSessionOf(dir, sid) { // -> internal record {view, sid8} or null
+  let meta = null; try { const mf = path.join(dir, 'meta.json'), st = fs.lstatSync(mf); if (st.isFile() && st.size <= FENCE_META_MAX) meta = JSON.parse(fs.readFileSync(mf, 'utf8')); } catch { meta = null; }
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null;
+  const evs = []; for (const l of tailLines(path.join(dir, 'events.jsonl'), FENCE_TAIL_MAX)) { try { const e = JSON.parse(l); if (e && typeof e === 'object' && typeof e.kind === 'string') evs.push(e); } catch { /* skip */ } }
+  let fences = fenceList(meta.fences); for (const e of evs) if (e.kind === 'fences') fences = fenceList(e.fences);
+  const landed = new Set(), items = []; let blocked = 0;
+  for (const e of evs) {
+    if (e.kind === 'blocked') blocked++;
+    if (e.kind !== 'crossing' && e.kind !== 'blocked') continue;
+    for (const c of (Array.isArray(e.crossings) ? e.crossings : []).slice(0, 20)) {
+      if (!c || typeof c !== 'object') continue;
+      // a blocked event is a denied edit: nothing in it landed, whatever its entries say
+      const file = typeof c.file === 'string' ? ctl(path.basename(c.file), 80) : '', op = FOPS.has(c.op) ? c.op : 'edit', prevented = e.kind === 'blocked' || c.prevented === true;
+      if (!prevented && op !== 'read') landed.add(ctl(c.fence, 64) + '\0' + String(c.file));
+      items.push({ at: isoOrNull(e.t), fence: ctl(c.fence, 64), text: scrub(c.text, 160), file, op, prevented, tool: ctl(e.tool, 40) || null });
+    }
+  }
+  // what the last turn left for the human: the turn ended (stop is the newest event) after a denial (the agent was stopped and is
+  // probably asking), or with a crossing its final message never mentioned
+  let needs = null;
+  const last = evs[evs.length - 1];
+  if (last && last.kind === 'stop') {
+    let i = evs.length - 2; while (i >= 0 && evs[i].kind !== 'stop') i--;
+    const turn = evs.slice(i + 1, -1);
+    if (turn.some((e) => e.kind === 'blocked')) needs = 'denied';
+    else if (Array.isArray(last.unmentioned) && last.unmentioned.length) needs = 'unmentioned';
+  }
+  const repo = typeof meta.repo === 'string' ? meta.repo : '';
+  const view = { id: 'f-' + createHash('sha256').update(String(sid)).digest('hex').slice(0, 12), repo_name: ctl(path.basename(repo) || String(meta.repo_name || 'repo'), 60),
+    started_at: isoOrNull(meta.started_at), updated_at: isoOrNull(last && last.t) || isoOrNull(meta.started_at), fences, crossed: landed.size, blocked,
+    needs, latest: items.slice(-FENCE_LATEST_MAX).reverse() };
+  return { view, sid8: sid.slice(0, 8) };
+}
+function fencesIndex() {
+  const now = Date.now();
+  if (now - fencesScanAt < 1000) return fencesView;
+  fencesScanAt = now;
+  try {
+    let names = []; try { names = fs.readdirSync(FL_SESSIONS).filter((n) => FSID_RE.test(n)).slice(0, 5000); } catch { names = []; }
+    const cand = [];
+    for (const n of names) { const d = path.join(FL_SESSIONS, n); let st = null; try { const ds = fs.lstatSync(d); st = ds.isDirectory() ? fs.lstatSync(path.join(d, 'events.jsonl')) : null; } catch { st = null; } if (st && st.isFile()) cand.push({ n, d, st }); }
+    cand.sort((a, b) => b.st.mtimeMs - a.st.mtimeMs);
+    const keep = new Set(), list = []; let sig = '';
+    for (const { n, d, st } of cand.slice(0, FENCE_SCAN_MAX)) {
+      const s = sigOf(st); let e = fenceEntries.get(d);
+      if (!e || e.sig !== s) { let v = null; try { v = fenceSessionOf(d, n); } catch { v = null; } e = { sig: s, v }; fenceEntries.set(d, e); }
+      keep.add(d); sig += d + '=' + s + ';';
+      if (e.v) list.push(e.v);
+    }
+    for (const k of [...fenceEntries.keys()]) if (!keep.has(k)) fenceEntries.delete(k);
+    list.sort((a, b) => (b.view.updated_at || '').localeCompare(a.view.updated_at || '')); // newest activity first
+    fencesView = { list, sig };
+  } catch { /* keep the previous view */ }
+  return fencesView;
+}
+// live session agents (label -> sid) get their Fenceline session's counts; a fence session gets the agent label back
+function fenceLinks(sidOf) {
+  const bySid = new Map(), agentOf = new Map(), fenceOf = new Map();
+  for (const [label, sid] of sidOf) if (sid && sid !== 'unknown') bySid.set(sid.slice(0, 8), label);
+  for (const f of fencesIndex().list) {
+    const label = bySid.get(f.sid8); if (!label) continue; agentOf.set(f.view.id, label);
+    if (!fenceOf.has(label)) fenceOf.set(label, { id: f.view.id, crossed: f.view.crossed, blocked: f.view.blocked, needs: f.view.needs, fences: f.view.fences.length });
+  }
+  return { agentOf, fenceOf };
+}
+function fenceSessions(sidOf, limit) { const { agentOf } = fenceLinks(sidOf); return fencesIndex().list.slice(0, limit).map((f) => withAgent(f.view, agentOf)); }
+// /api/state summary: sessions with fences, totals, and one Needs-you item per session whose last turn needs the human
+function fenceSummary(agentOf) {
+  const list = fencesIndex().list; let crossed = 0, blocked = 0; const needs = [];
+  for (const f of list) {
+    crossed += f.view.crossed; blocked += f.view.blocked;
+    if (f.view.needs) needs.push(withAgent({ id: f.view.id, repo_name: f.view.repo_name, needs: f.view.needs, updated_at: f.view.updated_at }, agentOf));
+  }
+  return { sessions: list.length, crossed, blocked, needs: needs.slice(0, 20) };
+}
+
 // ---------- fold ----------
 const FOLD_N = 5000, WIN_MS = 5 * 60 * 1000, OPEN_MAX_MS = 30 * 60 * 1000;
 const MAIN_RUN = new Set(['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PostToolUseFailure']); // main-session events that open a run segment
@@ -906,10 +1004,12 @@ function assemble(list, ref, replay) {
     cost: f.cost, collisions: f.collisions, alerts: f.alerts.slice(-20),
   };
   if (replay) out.replay = true;
-  else { // replay omits goals, guard verdicts and OTel cost (not time-sliced)
+  else { // replay omits goals, guard verdicts, fences and OTel cost (not time-sliced)
     out.goals = withWorkers(goalSummaries(STATE_GOALS_MAX), f.agents);
     liveSidOf = f.sidOf; const vl = verdictLinks(f.sidOf); out.verdicts = verdictSummary(vl.agentOf);
     if (vl.guardOf.size) out.agents = out.agents.map((a) => (vl.guardOf.has(a.id) ? { ...a, guard: vl.guardOf.get(a.id) } : a));
+    const fl = fenceLinks(f.sidOf); out.fences = fenceSummary(fl.agentOf);
+    if (fl.fenceOf.size) out.agents = out.agents.map((a) => (fl.fenceOf.has(a.id) ? { ...a, fence: fl.fenceOf.get(a.id) } : a));
     withExactCost(out, f.sidOf);
   }
   return out;
@@ -1137,6 +1237,10 @@ const server = http.createServer((req, res) => {
     if (pathname === '/api/verdicts') { // read-only guard verdicts, newest first (max 50)
       if (req.method !== 'GET' && req.method !== 'HEAD') { req.resume(); return send(res, 405, { error: 'method not allowed' }); }
       return send(res, 200, { verdicts: (build(), verdictList(liveSidOf, VERDICTS_API_MAX)) });
+    }
+    if (pathname === '/api/fences') { // read-only Fenceline sessions, newest first (max 50)
+      if (req.method !== 'GET' && req.method !== 'HEAD') { req.resume(); return send(res, 405, { error: 'method not allowed' }); }
+      return send(res, 200, { sessions: (build(), fenceSessions(liveSidOf, FENCES_API_MAX)) });
     }
     if (pathname === '/v1/metrics') return receiveMetrics(req, res);
     if (pathname === '/v1/logs' || pathname === '/v1/traces') { req.resume(); return send(res, 404, { error: 'only metrics are read: set OTEL_LOGS_EXPORTER=none' }); }

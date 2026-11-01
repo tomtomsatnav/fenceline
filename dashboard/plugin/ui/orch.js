@@ -235,11 +235,11 @@
   }
   function setNeedsOpen(on) { if (!R.needsPop) return; R.needsPop.hidden = !on; R.needs.setAttribute('aria-expanded', String(!!on)); if (on) renderNeeds(); }
   function renderNeeds() {
-    var nd = window.AOSNeeds.compute(orchOn() ? goalList() : [], verdictSum), pop = R.needsPop; clear(pop);
+    var nd = window.AOSNeeds.compute(orchOn() ? goalList() : [], verdictSum, fenceSum), pop = R.needsPop; clear(pop);
     nd.items.forEach(function (it) {
       var b = el('button', 'orch-needs-it'); b.type = 'button'; b.setAttribute('data-id', it.id); b.setAttribute('data-kind', it.kind);
       b.appendChild(el('span', 'orch-needs-t', clip(it.title, 80))); b.appendChild(el('span', 'orch-needs-w', it.text));
-      b.addEventListener('click', function () { setNeedsOpen(false); if (it.kind === 'integrity') { if (window.AOSGuard && window.AOSGuard.open) window.AOSGuard.open(it.id); return; } if (!panelOpen) openPanel(); goDetail(it.id); });
+      b.addEventListener('click', function () { setNeedsOpen(false); if (it.kind === 'integrity' || it.kind === 'fence') { if (window.AOSGuard && window.AOSGuard.open) window.AOSGuard.open(it.id); return; } if (!panelOpen) openPanel(); goDetail(it.id); });
       pop.appendChild(b);
     });
   }
@@ -256,8 +256,8 @@
   function updateHeader() {
     if (!R.hbtn) return;
     var on = orchOn(); R.hbtn.hidden = !on;
-    /* Needs you also carries guard integrity rejections, so it can show without any goal */
-    var nd = window.AOSNeeds ? window.AOSNeeds.compute(on ? goalList() : [], verdictSum) : { total: 0 };
+    /* Needs you also carries guard integrity rejections and fence stops, so it can show without any goal */
+    var nd = window.AOSNeeds ? window.AOSNeeds.compute(on ? goalList() : [], verdictSum, fenceSum) : { total: 0 };
     if (!on) { if (panelOpen) closePanel(); }
     if (R.needs) { R.needs.hidden = nd.total <= 0; R.needsN.textContent = String(nd.total); R.needs.setAttribute('aria-label', 'Needs you: ' + nd.total + (nd.total === 1 ? ' item' : ' items') + ' waiting on you'); if (nd.total <= 0) setNeedsOpen(false); else if (!R.needsPop.hidden) renderNeeds(); }
     if (!on) return;
@@ -1084,7 +1084,7 @@
   }
 
   /* ---------------- state wiring ---------------- */
-  var lastGoalsSig = '', verdictSum = null;
+  var lastGoalsSig = '', verdictSum = null, fenceSum = null;
   function onState(st) {
     safe(function () {
       if (!st) return;
@@ -1094,7 +1094,8 @@
       else if (isReplay && lastLiveGoals) { goals = lastLiveGoals; }
       else if (!isReplay && st.goals === undefined && !goalsSeen) { goals = []; goalsSeen = true; }
       if (!isReplay) verdictSum = st.verdicts && typeof st.verdicts === 'object' ? st.verdicts : null; /* replay omits verdicts: keep the live ones */
-      var sig = JSON.stringify(goals) + JSON.stringify(verdictSum); if (sig === lastGoalsSig) return; lastGoalsSig = sig;
+      if (!isReplay) fenceSum = st.fences && typeof st.fences === 'object' ? st.fences : null;
+      var sig = JSON.stringify(goals) + JSON.stringify(verdictSum) + JSON.stringify(fenceSum); if (sig === lastGoalsSig) return; lastGoalsSig = sig;
       updateHeader();
       if (panelOpen) { if (view === 'list') renderListView(); else if (view === 'detail') { renderApprovals(); renderDetail(); } }
     });
