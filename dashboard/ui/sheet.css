@@ -69,8 +69,12 @@ button{background:none;border:0;cursor:pointer;padding:0}
 .body{display:grid;grid-template-columns:minmax(0,1fr) 320px}
 .drawing{min-width:0;overflow-x:auto;border-right:1px solid var(--rule)}
 svg.lanes{display:block}
-.empty{padding:60px 24px;font:italic 18px var(--note);color:var(--ink2);max-width:60ch}
-.empty code{font:13px var(--data);font-style:normal;color:var(--ink)}
+.drawing{position:relative}
+.empty{position:absolute;left:clamp(16px,18%,262px);top:72px;right:16px;max-width:52ch;display:grid;gap:8px;padding:16px 18px;background:var(--paper);border:1px solid var(--rule)}
+.empty p{margin:0;font:italic 16px/1.45 var(--note);color:var(--ink2)}
+.empty .big{font:500 22px var(--note);font-style:normal;color:var(--ink)}
+.empty .cmd{font:14px var(--label);font-style:normal}
+.empty code{font:13px var(--data);color:var(--ink);background:var(--paper2);padding:1px 5px}
 
 .margin{padding:14px 4px 10px 18px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .margin h2{font:600 13px var(--label);text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:0 0 4px;display:flex;gap:8px;align-items:center}

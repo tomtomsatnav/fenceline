@@ -86,6 +86,7 @@
   }
   function paintSurvey() {
     var box = clear($('survey')), l = allLanes().filter(function (x) { return x.id === S.sel; })[0];
+    box.hidden = !l && !allLanes().length;
     if (!l) { h('p', 'hint', 'Select a route to see what that agent is doing.', box); return; }
     h('h3', null, l.title, box);
     h('div', 'sub', [l.project, l.short, l.parent ? 'spawned by ' + R.splitId(l.parent).title + ' ' + R.splitId(l.parent).short : l.session ? 'Claude Code session' : ''].filter(Boolean).join(' · '), box);
@@ -117,11 +118,7 @@
   function layoutFor(w) { LABEL = w < 640 ? 150 : 262; RIGHT = w < 640 ? 34 : 46; }
   function drawRoutes(host) {
     var groups = S.model.groups;
-    if (!groups.length) {
-      var e = h('div', 'empty', null, host);
-      e.appendChild(document.createTextNode(S.at ? 'No sessions were running at this time.' : 'No sessions on this sheet yet. Start Claude Code in any project with the Fenceline plugin installed and its route is drawn here. '));
-      return;
-    }
+    if (!groups.length) { drawBlank(host); return; }
     var W = Math.max(340, host.clientWidth || 1000), t0 = S.model.t0, t1 = S.model.t1; layoutFor(W);
     var x = function (t) { return LABEL + (W - LABEL - RIGHT) * R.xOf(t, t0, t1); };
     var rows = [], y = TOP;
@@ -162,6 +159,24 @@
       var tw = (measure.font = '11px "DM Mono"', measure.measureText(t.file).width), left = X + 6 + tw > W - 2;
       s('text', { x: left ? X - 6 : X + 6, y: (ya + yb) / 2 + 4, 'text-anchor': left ? 'end' : 'start', 'class': 't-tie' }, svg, t.file);
     });
+  }
+  /* an empty sheet is still a sheet: the scale and its gridlines, and a note on how routes get here */
+  function drawBlank(host) {
+    var W = Math.max(340, host.clientWidth || 1000), H = Math.max(320, Math.round(window.innerHeight * 0.55)), t0 = S.model.t0, t1 = S.model.t1; layoutFor(W);
+    var x = function (t) { return LABEL + (W - LABEL - RIGHT) * R.xOf(t, t0, t1); }, rule = cssVar('--rule');
+    var svg = s('svg', { 'class': 'lanes', viewBox: '0 0 ' + W + ' ' + H, width: W, height: H, 'aria-hidden': 'true' }, host);
+    R.scaleTicks(S.span * 60e3).forEach(function (k, i, all) {
+      if (W < 640 && k.minutes && i % 2 && i !== all.length - 1) return;
+      var X = x(t1 - k.minutes * 60e3);
+      s('line', { x1: X, x2: X, y1: TOP - 8, y2: H, stroke: rule, 'stroke-width': 1, 'stroke-dasharray': k.minutes ? '1 4' : null }, svg);
+      s('text', { x: X, y: TOP - 14, 'text-anchor': k.minutes ? 'middle' : 'end', 'class': k.minutes ? 't-axis' : 't-now' }, svg, S.at && !k.minutes ? hm(t1) : k.label);
+    });
+    var e = h('div', 'empty', null, host);
+    h('p', 'big', S.at ? 'No sessions were running at this time.' : 'No routes on this sheet yet.', e);
+    if (!S.at) {
+      h('p', null, 'Open a Claude Code session in any project with the Fenceline plugin installed. Its route is drawn here after its first prompt, and every subagent it starts branches off it.', e);
+      var c = h('p', 'cmd', null, e); h('code', null, 'claude plugin list', c); c.appendChild(document.createTextNode(' should show fenceline, enabled.'));
+    }
   }
   function drawLane(svg, l, top, x, yOf, C, t0, t1) {
     var cy = top + LANE / 2, g = s('g', { 'class': 'lane' + (l.id === S.sel ? ' sel' : ''), tabindex: 0, role: 'button', 'data-id': l.id,
