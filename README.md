@@ -5,7 +5,7 @@ each one goes in the repo, with fences you write in plain English.
 
 ![A replay of a real recorded session: the agent's route crosses the map of a 63-file repo, leaves the green "scope: this task only touches src/payments" area, edits src/utils/money.js, and the callout reads "Rule broken: this task only touches src/payments · 11 s in"](docs/demo-loop-dark.gif)
 
-<sub>Replay (×3) of a real recorded Claude Code session (Haiku) from the runs in `evals/results/runs/`. Nothing on screen is mocked.</sub>
+<sub>Replay (×3) of a real recorded Claude Code session (Haiku) from the runs in `evals/results/runs/`. Nothing on screen is mocked. Re-record it with `node scripts/record-hires.mjs --run <run>`.</sub>
 
 > "I gave Claude one rule: don't touch the migrations folder. Two hours into the session, it did. I only found out in review."
 
@@ -32,6 +32,27 @@ git clone https://github.com/tomtomsatnav/fenceline && cd fenceline
 make install
 make doctor
 ```
+
+## Fences and the map
+
+- **Fences in plain English.** `/fenceline:fence` makes one LLM call to compile your sentences into globs
+  (`migrations/**`, `src/payments/**` plus `test/payments*`). It shows how many files each fence covers, and saves to
+  `.fenceline/fences.json` only after you say yes. `fenceline add` writes a fence by hand with no LLM at all.
+- **Fences are the one place Fenceline steers.** Everything else watches. A fence in warn mode only records; block mode
+  is opt-in, per fence.
+- **Two modes.**
+  - **warn** records and flags the crossing after it happens (PostToolUse).
+  - **block** denies the edit before it happens (PreToolUse). The deny hands your own sentence back to the agent, so it
+    never has to remember the rule.
+- **The map.** `/fenceline:map` opens a local page at 127.0.0.1. Folders are districts and files are buildings. The
+  agent's route is drawn as it works, through Server-Sent Events. Fences are boundaries on the map. A crossing flashes
+  with when, where and which tool call. Recorded sessions replay.
+- **A summary at Stop**, shown to you and never to the agent. It lists every crossing, and any out-of-scope change the
+  agent's final message never mentions.
+- **Edits made through Bash count.** After every shell command, the repo is diffed against a snapshot. It skips files
+  whose size and mtime are unchanged, the approach from [dfaith](https://github.com/tomtomsatnav/dfaith). So
+  `sed -i`, `cat >` and `mv` are caught the same as the Edit tool. Claude Code's built-in `Edit(path)` deny rules don't
+  cover arbitrary subprocesses.
 
 ## The dashboard
 
@@ -61,27 +82,6 @@ names, not paths. Full list: [dashboard/plugin/README.md](dashboard/plugin/READM
 
 The dashboard was the AOS dashboard ([agent-orchestration-standard](https://github.com/tomtomsatnav/agent-orchestration-standard));
 it now lives in [`dashboard/`](dashboard/) with its history. Its environment variables keep their `AOS_` names.
-
-## Fences and the map
-
-- **Fences in plain English.** `/fenceline:fence` makes one LLM call to compile your sentences into globs
-  (`migrations/**`, `src/payments/**` plus `test/payments*`). It shows how many files each fence covers, and saves to
-  `.fenceline/fences.json` only after you say yes. `fenceline add` writes a fence by hand with no LLM at all.
-- **Fences are the one place Fenceline steers.** Everything else watches. A fence in warn mode only records; block mode
-  is opt-in, per fence.
-- **Two modes.**
-  - **warn** records and flags the crossing after it happens (PostToolUse).
-  - **block** denies the edit before it happens (PreToolUse). The deny hands your own sentence back to the agent, so it
-    never has to remember the rule.
-- **The map.** `/fenceline:map` opens a local page at 127.0.0.1. Folders are districts and files are buildings. The
-  agent's route is drawn as it works, through Server-Sent Events. Fences are boundaries on the map. A crossing flashes
-  with when, where and which tool call. Recorded sessions replay.
-- **A summary at Stop**, shown to you and never to the agent. It lists every crossing, and any out-of-scope change the
-  agent's final message never mentions.
-- **Edits made through Bash count.** After every shell command, the repo is diffed against a snapshot. It skips files
-  whose size and mtime are unchanged, the approach from [dfaith](https://github.com/tomtomsatnav/dfaith). So
-  `sed -i`, `cat >` and `mv` are caught the same as the Edit tool. Claude Code's built-in `Edit(path)` deny rules don't
-  cover arbitrary subprocesses.
 
 ## What happened in real runs
 
