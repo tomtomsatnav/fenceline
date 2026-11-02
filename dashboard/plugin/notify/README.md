@@ -5,7 +5,7 @@ Branded macOS banners for the AOS monitor. A tiny AppleScript applet, `AOS Notif
 macOS shows the AOS icon instead of Script Editor. No third-party installs.
 
 - Build or rebuild: `node build-notifier.mjs` (idempotent; `--force` to rebuild). Icon: `python3 make-icon.py`.
-- Installed to `${CLAUDE_PLUGIN_DATA:-$HOME/.claude/plugins/data/aos-dashboard-aos-local}/AOS Notifier.app`.
+- Installed to `${CLAUDE_PLUGIN_DATA:-$HOME/.claude/plugins/data/fenceline-fenceline}/AOS Notifier.app`.
 - Monitor usage: `import { notify, formatNotification } from './notify/aos-notify.mjs'`;
   `notify({ ...formatNotification({ kind, agent, text, project }) })` or `notify({ kind, agent, text })`.
   Kinds: needs_input, stuck, error, session_end, finished. Falls back to `osascript` if the app is unusable.

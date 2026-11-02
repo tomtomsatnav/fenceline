@@ -30,20 +30,15 @@ Looking for orchestration (planning goals, launching and managing workers)? That
 
 ## Install the dashboard
 
-Needs Node 18+ and the Claude Code CLI (`claude` on your PATH; the installer checks and stops with a message if not). No dependencies to install. On Windows it also needs the full Git for Windows (its bash runs the recipes; MinGit has none) and GNU make (`winget install ezwinports.make`); `make` then works the same from Git Bash, cmd and PowerShell (except `make test`: the test suites still need Linux or macOS).
+Install Fenceline, which brings the dashboard with it: the two `claude plugin` commands in the [root README](../README.md), or from a clone:
 
 ```sh
-git clone https://github.com/tomtomsatnav/agent-orchestration-standard && cd agent-orchestration-standard
-make install        # ~4 s. Builds, installs the local plugin, links `aos-dash`, starts the monitor
-make doctor         # checks the whole setup and tells you what to fix
-make                # lists every target
+git clone https://github.com/tomtomsatnav/fenceline && cd fenceline
+make install        # installs the plugin from this checkout and starts the dashboard
+make doctor         # checks the setup and says what to fix
 ```
 
-`make install` changes only: the Claude Code plugin (user scope, via `claude plugin install`), a symlink `~/.local/bin/aos-dash` (on Windows, two launcher scripts there instead: `aos-dash` for Git Bash and `aos-dash.cmd` for cmd and PowerShell; add that folder to your PATH if `aos-dash` is not found), a small notifier app under `~/.claude/plugins/data/`, and a monitor process on port 4318 (`make install PORT=4328` uses another port). `make uninstall` reverses it. `make stop` and `make uninstall` stop only the monitor on PORT (4318 unless you pass `PORT=`). `make doctor` shows "no hook log yet" until you start a Claude Code session; that is normal.
-
-Then start a new Claude Code session and open http://127.0.0.1:4318 (the page is empty until a session sends events; `aos-dash` is the same view in the terminal). Local-only, read-only; hooks never log prompts, file contents or tool output, but do log event and tool names, working-folder and edited-file paths, transcript paths and a redacted short task description (full list: [plugin/README.md](plugin/README.md#privacy)). Status: personal project, macOS-first. [MIT License](LICENSE).
-
-**Lowest overhead:** run `aos-dash` for the terminal view (no browser tab). The browser sheet polls every 2 seconds and runs no animation loop.
+Then start a new Claude Code session and open http://127.0.0.1:4318 (it is empty until a session sends events). `aos-dash` (`node dashboard/plugin/cli/dash.mjs`) is the terminal view of the same sessions, and `/fenceline:dash` shows a snapshot inside a session. In this folder, `make test`, `make build` and `make validate` are for working on the dashboard itself.
 
 <p align="center"><a href="docs/screenshots.md"><img src="docs/screenshots/08-terminal.png" alt="Terminal dashboard (aos-dash)" width="620"></a></p>
 

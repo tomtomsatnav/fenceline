@@ -12,7 +12,7 @@ laptop (you look here)                      laptop2 (remote)
 
 1. **SSH key auth** from this machine to each remote, working non-interactively: `ssh -o BatchMode=yes user@host true` must succeed (keys in your agent or `~/.ssh/config`; passwords and prompts are not supported). An `~/.ssh/config` alias works as the target.
 2. **The remote must have the dashboard installed and running** (`make install` or the plugin; the monitor listens on its own `127.0.0.1:4318`) and `curl` available.
-3. Add the remotes to the monitor config, `config.json` in the monitor's data dir (`~/.claude/plugins/data/aos-dashboard-aos-local/live/config.json` for the plugin; `live/config.json` in a repo checkout):
+3. Add the remotes to the monitor config, `config.json` in the monitor's data dir (`~/.claude/plugins/data/fenceline-fenceline/live/config.json` for the plugin; `live/config.json` in a repo checkout):
 
 ```json
 { "remotes": [ { "name": "laptop2", "ssh": "user@host", "port": 4318 } ] }

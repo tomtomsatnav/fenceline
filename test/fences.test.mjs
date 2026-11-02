@@ -60,3 +60,12 @@ test('bash: a ; or | inside quotes does not hide the redirect after it (five blo
   assert.deepEqual(t("echo 'a|b && c' > m/1 | tee m/2"), ['edit:m/1', 'edit:m/2']);
   assert.deepEqual(t('echo a\;b > m/3'), ['edit:m/3']);
 });
+test('bash: comments and heredoc bodies are not commands; an unbalanced quote cannot hide a later command', () => {
+  assert.deepEqual(t("# don't do this\necho x > migrations/001.sql"), ['edit:migrations/001.sql']);
+  assert.deepEqual(t("cat > README.md <<'EOF'\nit's fine\nEOF\necho x > migrations/001.sql"), ['edit:README.md', 'edit:migrations/001.sql']);
+  assert.deepEqual(t("cat <<-EOF > m/a\n\tit's > m/b\n\tEOF\necho y > m/c"), ['edit:m/a', 'edit:m/c']);
+  assert.deepEqual(t('echo "# not a comment" > m/d'), ['edit:m/d']);
+  assert.deepEqual(t('echo a#b > m/e'), ['edit:m/e']);
+  assert.deepEqual(t("echo 'unclosed > m/f\necho x > m/g"), ['edit:m/g']);
+});
+

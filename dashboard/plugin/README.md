@@ -1,32 +1,14 @@
-# aos-dashboard (Claude Code plugin)
+# Fenceline dashboard (built plugin folder)
 
-A local, read-only live dashboard for Claude Code sessions. Hooks log one compact line per event to a local file; a monitor folds them into a survey sheet (agents as routes over time, subagents branching from their session) served at http://127.0.0.1:4318. The plugin also ships a terminal view, an `aos` MCP server (read-only tools), a `dash` skill and a branded macOS notifier.
+A local, read-only live dashboard for Claude Code sessions. Hooks log one compact line per event to a local file; a monitor folds them into a survey sheet (agents as routes over time, subagents branching from their session) served at http://127.0.0.1:4318. It also has a terminal view, a read-only MCP server and a branded macOS notifier.
 
-## Install
-
-From the repo root (needs Node 18+ and the Claude Code CLI):
-
-```sh
-make install     # build, register + install the plugin, link `aos-dash`, build the notifier, start the monitor
-make doctor      # check the whole setup
-```
-
-Then start a **new** Claude Code session (existing sessions keep the hooks they started with; or run `/reload-plugins` in them). Manual equivalent:
-
-```sh
-claude plugin marketplace add "$(pwd)"
-claude plugin install aos-dashboard@aos-local
-```
-
-Dev test without installing: `claude --plugin-dir ./plugin`. Remove everything with `make uninstall` (your history stays in the data folder).
-
-If you previously added AOS hooks to `~/.claude/settings.json` by hand, remove them: the plugin registers the same events and both would log every event twice.
+This folder is built from `dashboard/` (`node dashboard/plugin/build.mjs`) and is loaded by the Fenceline plugin; it is not installed on its own. Install Fenceline from the repo root: the two `claude plugin` commands in the [root README](../../README.md), or `make install` from a clone. Remove it with `make uninstall` there (your history stays in the data folder).
 
 ## Use
 
 - **Web:** http://127.0.0.1:4318 (`make open`). The monitor starts automatically at session start.
 - **Terminal:** `aos-dash` (live full-screen; `q` quit, space pause, `l` cycles auto/list/ring, `d` shows done subagents from the last 10 minutes). `aos-dash --once` prints one frame.
-- **In a session:** `/aos-dashboard:dash` shows a snapshot; the `aos_*` MCP tools let Claude query the monitor (`aos_status` first).
+- **In a session:** `/fenceline:dash` shows a snapshot; the `aos_*` MCP tools let Claude query the monitor (`aos_status` first).
 - **Status line (optional):** `make statusline` (edits `~/.claude/settings.json` with a backup; `make statusline-off` removes it).
 - **Notifications:** alerts for "needs your input" and "stuck" use a small branded notifier app on macOS (`make notifier`).
 
@@ -36,7 +18,7 @@ SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, Per
 
 ## Configuration
 
-`${CLAUDE_PLUGIN_DATA}/live/config.json` (usually `~/.claude/plugins/data/aos-dashboard-aos-local/live/config.json`; seeded on first run, never overwritten):
+`${CLAUDE_PLUGIN_DATA}/live/config.json` (usually `~/.claude/plugins/data/fenceline-fenceline/live/config.json`; seeded on first run, never overwritten):
 
 ```json
 {
@@ -62,7 +44,7 @@ Environment: `AOS_NO_AUTOSTART=1` disables the monitor autostart, `AOS_PORT` cha
 - The API, web UI, terminal view and MCP output show names and counts only, never full paths (a file conflict shows `parent-folder/file`).
 - **Guard verdicts (read, not stored):** the monitor reads `aos-orch verify` records from `<orch dir>/verdicts/` and shows the repo's folder name, time, verdict, rejection kinds and details, warnings, failing test names, check commands with exit codes and durations, short commit ids, source and tool version. Absolute paths in that text are reduced to their last component; the full repo path and the session id are never shown (the session id is only matched, by its first 8 characters, to a live session).
 - **Guard auto-verify (opt-in, off by default):** when `guard` is set in `config.json`, the Stop hook writes `guard/guard.log` (time, repo folder name, exit code, duration per run), `guard/last-<hash>.log` (the newest run's CLI output, max 256 KB) and a short-lived lock file into the data folder. Nothing is written into the repo.
-- Data lives in `${CLAUDE_PLUGIN_DATA}/live` (or `AOS_LIVE_DIR`). New files there are created owner-only (0600). The hook keeps one rotated copy (`hook-events.1.ndjson`, at 5 MB). Delete that folder to erase it.
+- Data lives in `${CLAUDE_PLUGIN_DATA}/live` (or `AOS_LIVE_DIR`). The hook log is created owner-only (0600); the seeded `config.json` and `prices.json` keep normal permissions. The hook keeps one rotated copy (`hook-events.1.ndjson`, at 5 MB). Delete that folder to erase it.
 
 ## Layout
 

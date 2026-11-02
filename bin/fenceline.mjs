@@ -2,7 +2,7 @@
 // fenceline: set fences, look at sessions, open the map.
 //   fenceline fence "migrations: off-limits" "this task only touches src/payments" [--block] [--yes]
 //                                                  compile plain English to globs (one LLM call), confirm, save
-//   fenceline accept                               save the last proposal exactly as shown
+//   fenceline accept [--replace]                    save the last proposal as shown (adds only; --replace overwrites)
 //   fenceline add <id> --deny|--only <glob>... [--except <glob>...] [--reads] [--block] [--text "..."]
 //                                                  write a fence by hand (no LLM)
 //   fenceline list | rm <id> | mode <id> warn|block
@@ -61,7 +61,12 @@ if (cmd === 'fence') {
 } else if (cmd === 'accept') {
   const r = root(); const file = path.join(r, PROPOSED);
   if (!fs.existsSync(file)) { console.error(`nothing to accept: run fenceline fence "<rule>" first`); process.exit(1); }
-  const { fences } = JSON.parse(fs.readFileSync(file, 'utf8')); merge(r, fences); fs.rmSync(file);
+  const { fences } = JSON.parse(fs.readFileSync(file, 'utf8'));
+  // accept only adds: replacing a fence that already exists could loosen it, so that takes --replace (which the hook keeps
+  // for the user: an agent running it is denied)
+  const clash = fences.filter((f) => loadFences(r).fences.some((x) => x.id === f.id));
+  if (clash.length && !flag('replace')) { console.error(`Not saved: this would replace existing fence${clash.length > 1 ? 's' : ''} ${clash.map((f) => f.id).join(', ')}. To replace ${clash.length > 1 ? 'them' : 'it'}, run in your own terminal: fenceline accept --replace`); process.exit(1); }
+  merge(r, fences); fs.rmSync(file);
   show(loadFences(r).fences.filter((f) => fences.some((x) => x.id === f.id)), listFiles(r)); console.log(`\nSaved to ${FENCES_FILE}. Applies from the agent's next tool call.`);
 } else if (cmd === 'add') {
   const r = root(); const [id] = positional();
@@ -92,7 +97,7 @@ if (cmd === 'fence') {
 } else if (cmd === 'record') {
   // copy a session into recordings/<name> for replay, with the machine's repo path replaced by <repo>
   const [id, name] = positional();
-  if (!id || !/^[A-Za-z0-9_.-]{1,100}$/.test(name || '')) { console.error('usage: fenceline record <session> <name>'); process.exit(2); }
+  if (!id || !/^[A-Za-z0-9_.-]{1,100}$/.test(name || '') || name === '.' || name === '..') { console.error('usage: fenceline record <session> <name>'); process.exit(2); }
   const m = readMeta(id); const dest = path.resolve(opt('recordings', path.join(here, '..', 'recordings')), name);
   fs.mkdirSync(dest, { recursive: true });
   for (const f of ['meta.json', 'events.jsonl', 'summary.json']) {
