@@ -76,9 +76,12 @@ every rule and every time an agent met one, plus the verdicts of
 
 ![The Fences view: a session stopped by a block fence (a denied create of 0042_orders.sql) and a session that crossed a warn fence (an edit of money.js), each with its two rules](docs/dashboard-fences.png)
 
-**Privacy.** The dashboard's hooks store event and tool names, short labels, counts and the paths it needs to group
-projects and spot conflicts: never prompts, command text beyond a command's first word, file contents, tool output or error messages. It shows file
-names, not paths. Full list: [dashboard/plugin/README.md](dashboard/plugin/README.md#privacy).
+**Privacy.** Everything stays on your machine. The dashboard's hooks store event and tool names, short labels, counts
+and the paths it needs to group projects and spot conflicts: never prompts, command text beyond a command's first word,
+file contents, tool output or error messages, and it shows file names, not paths. Full list:
+[dashboard/plugin/README.md](dashboard/plugin/README.md#privacy). Fenceline's own trail, in `~/.fenceline/sessions/`,
+keeps more, so the map and the Stop summary can show it: the repo path, the repo's file list, each Bash command line
+(its first 160 characters) and the agent's final message at Stop. Delete that folder to erase it.
 
 The dashboard was the AOS dashboard ([agent-orchestration-standard](https://github.com/tomtomsatnav/agent-orchestration-standard));
 it now lives in [`dashboard/`](dashboard/) with its history. Its environment variables keep their `AOS_` names.
@@ -107,15 +110,17 @@ Those runs used small repos and sessions of about a minute, so they can't speak 
 
 ## For the engineers
 
-- `hooks/fenceline-hook.mjs` handles SessionStart, PreToolUse (Bash, Edit, Write, MultiEdit, NotebookEdit),
+- `hooks/fenceline-hook.mjs` handles SessionStart, PreToolUse (Bash, Edit, Write, MultiEdit, NotebookEdit, Read),
   PostToolUse and PostToolUseFailure (all tools), and Stop. Each event goes to a hash-chained `events.jsonl` in
   `~/.fenceline/sessions/<id>/`. The hook always exits 0, so a Fenceline bug never stops your agent.
 - Fences come in two kinds:
   - `deny`: a write inside the zone crosses it. With `reads: true`, a read does too.
   - `only`: a write outside the area crosses it.
   - `except` carves files out.
-  - The agent can't edit `.fenceline/fences.json` with its edit tools, or loosen fences through the CLI. Any other change
-    to the fences (including `fenceline accept` after you say yes) is listed in the Stop summary.
+  - The agent can't edit `.fenceline/fences.json` with its edit tools. The hook also denies the CLI commands that change
+    fences without you (`fenceline rm`, `mode`, `add`, `fence --yes`, `accept --replace`); that check reads the command
+    line, so it is best-effort like the rest of block mode. `fenceline accept` only adds fences: replacing an existing
+    one takes `accept --replace`, which is yours to run. Every change to the fences is listed in the Stop summary.
 - Hook latency ([docs/bench.json](docs/bench.json), `node scripts/bench-hook.mjs`, median of 10 calls on one Mac): 77 ms
   per Bash call on this 335-file repo and 101 ms on a 5,000-file repo. Most of that is Node startup.
 - Tests (`npm test` for Fenceline, `npm run test:dashboard` for the dashboard's suites; zero dependencies):
@@ -132,8 +137,9 @@ Those runs used small repos and sessions of about a minute, so they can't speak 
 
 - Path fences see where a change lands, not what it means.
 - Block mode can only prevent the Bash writes it can read off the command line (redirections, `sed -i`, `rm`, `mv`,
-  `cp`, `tee`, `touch`, `git checkout`/`restore`). A script, `node -e` or `python -c` is caught after the fact, not
-  prevented.
+  `cp`, `tee`, `touch`, `git checkout <file>`/`restore`). Anything else that writes is caught after the fact, not
+  prevented: a script, `node -e`, `python -c`, `sh -c '…'`, `eval`, `find -delete`, `xargs rm`, `dd of=`,
+  `git apply`/`patch`, and git commands that rewrite the tree (switching branches, `stash pop`, `merge`, `pull`).
 - Reads through Bash are inferred from the words in the command, so `npm test` marks `test/` as searched.
 - Changes made by background processes or non-Bash tools are attributed to the next Bash call. Gitignored folders are
   not expanded (a gitignored file a deny fence names, like `.env`, is watched). Repos over 20,000 files are watched only

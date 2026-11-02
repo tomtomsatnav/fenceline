@@ -172,6 +172,11 @@ test('review 9: the agent cannot loosen fences through the CLI; accept is a list
   assert.ok(s.hook(pre('Bash', { command: 'node /x/bin/fenceline.mjs mode migrations warn' })) !== '');
   assert.ok(s.hook(pre('Bash', { command: 'node /x/bin/fenceline.mjs fence "anything" --yes' })) !== '');
   assert.equal(s.hook(pre('Bash', { command: 'node /x/bin/fenceline.mjs accept' })), '');
+  // a quoted subcommand, a second command after &&, and accept --replace are all the user's
+  assert.ok(s.hook(pre('Bash', { command: 'node bin/fenceline.mjs "rm" migrations' })) !== '');
+  assert.ok(s.hook(pre('Bash', { command: "cd /x && fenceline 'mode' migrations warn" })) !== '');
+  assert.ok(s.hook(pre('Bash', { command: 'node bin/fenceline.mjs accept --replace' })) !== '');
+  assert.equal(s.hook(pre('Bash', { command: 'echo "fenceline rm is a command" > notes.txt' })), '');
   const f = path.join(s.repo, '.fenceline/fences.json'); const doc = JSON.parse(fs.readFileSync(f, 'utf8'));
   doc.fences = doc.fences.filter((x) => x.id !== 'env'); fs.writeFileSync(f, JSON.stringify(doc));
   s.hook(post('Bash', { command: 'node /x/bin/fenceline.mjs accept' }));
@@ -210,3 +215,12 @@ test('an agent reading its fences file is still on the trail', () => {
   s.hook(post('Bash', { command: 'cat .fenceline/fences.json' }));
   assert.ok(s.last().touches.some((t) => t.file === '.fenceline/fences.json' && t.op === 'read'));
 });
+
+test('block mode: an apostrophe in a # comment or a heredoc body does not hide the write after it', () => {
+  const s = setup();
+  const deny = (command) => { const o = s.hook(pre('Bash', { command })); return o && JSON.parse(o).hookSpecificOutput?.permissionDecision === 'deny'; };
+  assert.ok(deny("# don't do this\necho x > migrations/001.sql"));
+  assert.ok(deny("cat > README.md <<'EOF'\nit's fine\nEOF\necho x > migrations/001.sql"));
+  assert.ok(!deny("cat > README.md <<'EOF'\nnot > migrations/001.sql, just text\nEOF"));
+});
+

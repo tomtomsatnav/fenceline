@@ -3,7 +3,7 @@
 // so the golden tests can replay recorded sessions through exactly this code.
 import fs from 'node:fs';
 import path from 'node:path';
-import { crossingsFor, bashWriteTargets, words } from './fences.mjs';
+import { crossingsFor, bashWriteTargets, words, splitCommand } from './fences.mjs';
 import { matchGlob } from './glob.mjs';
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
@@ -51,6 +51,19 @@ function expand(rel, files) {
   return under.length ? under : [rel];
 }
 
+const FENCE_CMDS = new Set(['rm', 'mode', 'add']);
+/** Does any command in this Bash line run the fenceline CLI with a subcommand that changes fences without the user? */
+export function changesFencesFromShell(command) {
+  for (const part of splitCommand(String(command))) {
+    const w = words(part.trim());
+    for (let i = 0; i < w.length - 1; i++) {
+      if (!/(^|\/)fenceline(\.mjs)?$/.test(w[i])) continue;
+      const sub = w[i + 1], rest = w.slice(i + 2);
+      if (FENCE_CMDS.has(sub) || (sub === 'fence' && rest.includes('--yes')) || (sub === 'accept' && rest.includes('--replace'))) return true;
+    }
+  }
+  return false;
+}
 /**
  * PreToolUse: should this call be denied? Only block-mode fences are enforced here, and only for what can be seen before
  * it happens: the target of an edit tool, a Read of a fence with reads: true, and what bashWriteTargets / bashReads can
@@ -59,9 +72,10 @@ function expand(rel, files) {
 export function preDecision(p, ctx) {
   const ti = p.tool_input || {}; const tool = p.tool_name; const cwd = p.cwd || ctx.cwd;
   const block = ctx.fences.filter((f) => f.mode === 'block');
-  // the fences are the user's: the agent may not loosen them through the CLI (`fenceline accept` stays allowed, it is the
-  // documented step after the user says yes, and the change is listed at Stop)
-  if (tool === 'Bash' && /fenceline(?:\.mjs)?["']?\s+(?:rm|mode|add)\b|fenceline(?:\.mjs)?["']?\s+fence\b[^\n]*--yes/.test(ti.command || '')) {
+  // the fences are the user's: the agent may not change them through the CLI. `fenceline accept` stays allowed (it is the
+  // documented step after the user says yes, it only adds fences, and the change is listed at Stop); `accept --replace`,
+  // `rm`, `mode`, `add` and `fence --yes` are the user's own commands.
+  if (tool === 'Bash' && changesFencesFromShell(ti.command || '')) {
     return { deny: true, reason: 'Fenceline: changing fences is your user\'s call. Use /fenceline:fence so they can confirm; do not change fences from the shell.', crossings: [{ fence: 'fenceline-config', text: 'Fenceline\'s fences file: only you change it', mode: 'block', file: '.fenceline/fences.json', op: 'edit' }] };
   }
   const touches = [];

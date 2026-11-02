@@ -82,8 +82,48 @@ export function preview(fences, files) {
 // ---- Bash: what a command will write, guessed BEFORE it runs (block mode only; every change is still caught after the
 // fact by the snapshot diff). Deliberately simple: it reads redirections and the common file commands. It cannot see into
 // scripts, interpreters (node -e, python -c) or variables, which is why block mode for Bash is best-effort.
-/** Split a command line on ; && || | and newlines that are outside quotes (a quoted ";" must not hide the redirect after it). */
-export function splitCommand(s) {
+/**
+ * Drop what the shell never runs as a command: `#` comments (a `#` that starts a word, outside quotes, to the end of the
+ * line) and heredoc bodies (the lines after `<<WORD`, `<<-WORD`, `<<'WORD'` or `<<"WORD"`, up to the line that is WORD).
+ * An apostrophe in either ("# don't", "it's fine") would otherwise open a quote and hide the rest of the command.
+ */
+export function stripNonCommands(s) {
+  let out = ''; let q = null; const docs = [];
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (q) { out += c; if (c === q) q = null; else if (c === '\\' && q === '"' && i + 1 < s.length) out += s[++i]; continue; }
+    if (c === '\\' && i + 1 < s.length) { out += c + s[++i]; continue; }
+    if (c === '"' || c === "'") { q = c; out += c; continue; }
+    if (c === '#' && (i === 0 || /[\s;&|()]/.test(s[i - 1]))) { while (i + 1 < s.length && s[i + 1] !== '\n') i++; continue; }
+    if (c === '<' && s[i + 1] === '<' && s[i + 2] !== '<') {
+      const m = /^<<(-?)[ \t]*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\2/.exec(s.slice(i));
+      if (m) { docs.push({ word: m[3], tabs: !!m[1] }); out += m[0]; i += m[0].length - 1; continue; }
+    }
+    if (c === '\n' && docs.length) {
+      out += c;
+      // skip each pending heredoc body, in order, up to and including its delimiter line
+      while (docs.length) {
+        const d = docs.shift();
+        let j = i + 1;
+        for (;;) {
+          const k = s.indexOf('\n', j), line = s.slice(j, k < 0 ? s.length : k);
+          j = k < 0 ? s.length : k + 1;
+          if ((d.tabs ? line.replace(/^\t+/, '') : line) === d.word || k < 0) break;
+        }
+        i = j - 1;
+      }
+      if (i < s.length - 1 && s[i] !== '\n') out += '\n';
+      continue;
+    }
+    out += c;
+  }
+  return out;
+}
+/** Split a command line on ; && || | and newlines that are outside quotes (a quoted ";" must not hide the redirect after it).
+ *  If a quote is still open at the end, the quoting is not what the shell will see: split on every separator instead, so an
+ *  unbalanced quote can never hide a later command. */
+export function splitCommand(raw) {
+  const s = stripNonCommands(raw);
   const parts = []; let cur = ''; let q = null;
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
@@ -94,6 +134,7 @@ export function splitCommand(s) {
     cur += c;
   }
   parts.push(cur);
+  if (q) return s.split(/\s*(?:&&|\|\||;|\|(?!\|)|\n)\s*/);
   return parts;
 }
 export function words(s) {

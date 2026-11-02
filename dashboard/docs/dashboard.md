@@ -46,7 +46,7 @@ Data: `<orch dir>/verdicts/<id>.json` (`id` matching `v-YYYYMMDD-HHMMSS-<6 hex>`
 
 ### Auto-verify on Stop (opt-in, off by default)
 
-The plugin ships a SessionStart + Stop hook (`hooks/aos-guard.mjs`) that does nothing until you list repos in the monitor's `config.json` (`~/.claude/plugins/data/aos-dashboard-aos-local/live/config.json`, or `live/config.json` in a checkout):
+The plugin ships a SessionStart + Stop hook (`hooks/aos-guard.mjs`) that does nothing until you list repos in the monitor's `config.json` (`~/.claude/plugins/data/fenceline-fenceline/live/config.json`, or `live/config.json` in a checkout):
 
 ```json
 {
@@ -80,5 +80,5 @@ Remove the `guard` key (or the repo from `repos`) to turn it off.
 - **Threat model.** The monitor is a local, read-only observer. It binds `127.0.0.1` only, rejects requests whose `Host` or `Origin` is not `localhost`/`127.0.0.1` (DNS-rebinding and cross-site protection), sends no CORS headers, has no write endpoints except the optional in-memory OpenTelemetry receiver at `/v1/metrics` (any local process can post figures to it; see [otel.md](otel.md)), and serves only the files under `ui/` (dotfiles, traversal and symlinks out of `ui/` are refused). Anyone who can run code as your user can read the log anyway; the design goal is that nothing leaves the machine and no other site or user can reach it.
 - **Guard auto-verify (opt-in).** With `guard` configured, every finished turn in a listed repo runs that repo's tests through `aos-orch verify` (the orchestrator's sandbox) in the background, as your user. That executes the repo's own test code, which an agent may just have edited, so it is opt-in per repo: list only repos whose tests you would run yourself. The base it verifies against is the `HEAD` recorded at session start (or an explicit sha in config), never a branch the agent could move; without one no run happens. An agent that can write the data folder as your user could still forge the record, as it could the verdict files. The monitor itself stays read-only; only the guard hook starts processes, and nothing reaches it over HTTP.
 - **What is stored.** See the exact field list under Privacy in [plugin/README.md](../plugin/README.md). Agent names and task labels come from Claude Code tool calls, so the UI and terminal view treat them as untrusted text (never rendered as HTML or terminal escape codes). New log files are created owner-only (`0600`, directory `0700`).
-- **How to erase.** Delete the data folder: `~/.claude/plugins/data/aos-dashboard-aos-local/live` (or your `AOS_LIVE_DIR`); `make uninstall` removes the plugin but keeps the data.
+- **How to erase.** Delete the data folder: `~/.claude/plugins/data/fenceline-fenceline/live` (or your `AOS_LIVE_DIR`); `make uninstall` removes the plugin but keeps the data.
 - **Reporting.** Please open a GitHub issue. For anything sensitive, open an issue asking for a private contact rather than posting details.
