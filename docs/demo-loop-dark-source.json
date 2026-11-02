@@ -4,8 +4,9 @@
   ],
   "speed": 3,
   "theme": "dark",
-  "format": "16:9",
+  "format": "1280x720 @2x",
+  "fps": 15,
   "duration_s": 9.3,
-  "recorded_at": "2026-10-22T15:37:53.293Z",
-  "note": "replay of real recorded runs (evals/results/runs/<run>) at a constant speed; nothing on screen is mocked"
+  "recorded_at": "2026-11-02T11:41:19.838Z",
+  "note": "replay of a real recorded run (evals/results/runs/<run>) at a constant speed, captured frame by frame; nothing on screen is mocked"
 }
