@@ -1,0 +1,8 @@
+{"i":0,"kind":"session"}
+{"i":1,"t":"2026-01-01T00:00:01.000Z","kind":"touch","tool":"Read","elapsed_ms":1000,"touches":[{"file":"src/utils/money.js","op":"read"}],"crossings":[]}
+{"i":2,"t":"2026-01-01T00:00:02.000Z","kind":"touch","tool":"Bash","elapsed_ms":2000,"touches":[{"file":"src","op":"search","dir":true}],"crossings":[]}
+{"i":3,"t":"2026-01-01T00:00:03.000Z","kind":"blocked","tool":"Edit","elapsed_ms":3000,"touches":[],"crossings":[{"fence":"payments-only","text":"this task only touches src/payments","mode":"block","file":"src/utils/money.js","op":"edit","elapsed_ms":3000,"prevented":true}]}
+{"i":4,"t":"2026-01-01T00:00:04.000Z","kind":"touch","tool":"Edit","elapsed_ms":4000,"touches":[{"file":"src/payments/receipt.js","op":"edit"}],"crossings":[]}
+{"i":5,"t":"2026-01-01T00:00:05.000Z","kind":"touch","tool":"Read","elapsed_ms":5000,"touches":[{"file":"src/payments/receipt.js","op":"read"}],"crossings":[]}
+{"i":6,"t":"2026-01-01T00:00:06.000Z","kind":"touch","tool":"Read","elapsed_ms":6000,"touches":[{"file":"src/x/</script><img src=x onerror=alert(1)>.js","op":"read"}],"crossings":[]}
+{"kind":"stop","elapsed_ms":99000}

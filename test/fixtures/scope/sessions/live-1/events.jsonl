@@ -1,0 +1,4 @@
+{"i":0,"kind":"session"}
+{"i":1,"t":"2026-01-01T00:00:00.800Z","kind":"touch","tool":"Grep","elapsed_ms":800,"touches":[{"file":"src","op":"search","dir":true}],"crossings":[]}
+{"i":2,"t":"2026-01-01T00:00:01.600Z","kind":"touch","tool":"Read","elapsed_ms":1600,"touches":[{"file":"README.md","op":"read"}],"crossings":[]}
+{"kind":"stop","elapsed_ms":99000}

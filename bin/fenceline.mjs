@@ -8,6 +8,7 @@
 //   fenceline list | rm <id> | mode <id> warn|block
 //   fenceline sessions | summary [<session>] | record <session> <name>
 //   fenceline view [--port N] [--detach]           the map (live sessions and recordings), 127.0.0.1 only
+//   fenceline scope <run|folder|session>... [-o scope-map.html]   one HTML file comparing what runs touched vs the fence
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline/promises';
@@ -116,6 +117,18 @@ if (cmd === 'fence') {
     for (let i = 0; i < 40 && !(await fetch(`${url}api/recordings`).then((x) => x.ok).catch(() => false)); i++) await new Promise((res) => setTimeout(res, 100));
   }
   console.log(`Fenceline map: ${url}`);
+} else if (cmd === 'scope') {
+  // a self-contained scope map: what each run read, wrote or tried, drawn against its fences; two runs side by side
+  const outAt = argv.findIndex((a) => a === '-o' || a === '--out');
+  const out = path.resolve(outAt > 0 && argv[outAt + 1] ? argv[outAt + 1] : 'scope-map.html');
+  const args = argv.slice(1).filter((a, i) => i + 1 !== outAt && i !== outAt);
+  if (!args.length) { console.error('usage: fenceline scope <run folder | results folder | session id>... [-o scope-map.html]'); process.exit(2); }
+  const { findRuns, loadRun, buildModel, renderPage } = await import('../src/scope.mjs');
+  let dirs; try { dirs = findRuns(args); } catch (e) { console.error(`fenceline scope: ${e.message}`); process.exit(2); }
+  if (!dirs.length) { console.error('fenceline scope: no runs found (a run folder holds meta.json and events.jsonl)'); process.exit(1); }
+  const runs = []; for (const d of dirs) { try { runs.push(loadRun(d)); } catch (e) { console.error(`  skipped ${d}: ${e.message}`); } }
+  fs.writeFileSync(out, renderPage(buildModel(runs)));
+  console.log(`Wrote ${out} (${runs.length} run${runs.length === 1 ? '' : 's'}, ${(fs.statSync(out).size / 1024).toFixed(0)} KB). Open it in any browser; it needs no server.`);
 } else if (cmd === 'view') {
   const { createServer } = await import('../viewer/server.mjs');
   const server = createServer({ recordingsDir: opt('recordings') });

@@ -1,0 +1,78 @@
+/* Fenceline scope map: two runs side by side on the repo's treemap, the fence drawn over it, every file the agent touched
+   a node coloured by what happened to it. Dark only: it is made for screenshots and screen recordings as much as reading. */
+:root{
+  --paper:#0d1215; --paper2:#121a1e; --paper3:#161f25; --ink:#dcd7c8; --ink2:#a0a8a3; --ink3:#6f7974; --rule:#26313a;
+  --gold:#d9a441; --ok:#5fcf86; --bad:#f0625a; --warn:#e3a33a;
+  --scope:#34404a; --outside:#12181c;
+  --label:"Barlow Semi Condensed","Arial Narrow",ui-sans-serif,system-ui,sans-serif;
+  --note:"Newsreader","Iowan Old Style",Georgia,serif;
+  --data:"DM Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--paper)}
+body{margin:0;color:var(--ink);font:15px/1.4 var(--label);font-variant-numeric:tabular-nums;padding:18px max(16px,env(safe-area-inset-right,0px)) 84px max(16px,env(safe-area-inset-left,0px))}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.head{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px 22px;padding:0 4px 14px;border-bottom:1px solid var(--rule);max-width:2200px;margin:0 auto}
+.mark{display:flex;align-items:center;gap:9px;margin:0;font:500 26px var(--note)}
+.mark svg{color:var(--gold);flex:none} .mark span{font:italic 400 22px var(--note);color:var(--ink2)}
+.task{margin:0;flex:1;min-width:240px;font:italic 16px var(--note);color:var(--ink2)}
+.key{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13.5px;color:var(--ink2)}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.key svg{flex:none}
+
+.panels{display:grid;grid-template-columns:repeat(var(--cols,2),minmax(0,1fr));gap:18px;max-width:2200px;margin:14px auto 0}
+.panel{min-width:0;display:flex;flex-direction:column;gap:10px}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bar select{background:var(--paper2);border:1px solid var(--rule);padding:4px 8px;font:500 15px var(--label);max-width:100%}
+.outcome{font:600 13px var(--label);text-transform:uppercase;letter-spacing:.07em;padding:2px 9px;border:1px solid currentColor}
+.outcome.crossed{color:var(--warn)} .outcome.worked_round{color:var(--ok)} .outcome.in_scope{color:var(--ok)}
+.outcome.asked{color:var(--gold)} .outcome.stopped{color:var(--ink2)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--rule);background:var(--paper2)}
+.stats div{padding:6px 10px;border-right:1px solid var(--rule);min-width:0}
+.stats div:last-child{border-right:0}
+.stats span{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3)}
+.stats b{font:500 22px var(--data)} .stats b.bad{color:var(--bad)} .stats b.warn{color:var(--warn)}
+.map{width:100%;height:auto;display:block;background:var(--paper);border:1px solid var(--rule)}
+.now{margin:0;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:baseline;font:13px var(--data);color:var(--ink2);min-height:1.4em}
+.now .n{color:var(--ink3)} .now .what{color:var(--ink);overflow-wrap:anywhere} .now .v{font-weight:500}
+.now .v.allowed{color:var(--ok)} .now .v.blocked{color:var(--bad)} .now .v.crossed{color:var(--warn)}
+.out{font:12.5px var(--data);color:var(--ink2);margin:0;overflow-wrap:anywhere}
+.out b{font-weight:400;color:var(--bad)}
+.lower{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px}
+.steps{list-style:none;margin:0;padding:0;max-height:210px;overflow:auto;border:1px solid var(--rule);background:var(--paper2);font:12.5px var(--data)}
+.steps li{display:grid;grid-template-columns:28px 46px 52px minmax(0,1fr);gap:6px;padding:3px 8px;border-bottom:1px dashed var(--rule);cursor:pointer;color:var(--ink3)}
+.steps li.seen{color:var(--ink2)} .steps li.now{background:rgba(217,164,65,.12);color:var(--ink)}
+.steps li .f{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.steps li.blocked .f{color:var(--bad)} .steps li.crossed .f{color:var(--warn)}
+.steps li:hover{background:rgba(255,255,255,.04)}
+.msg{border:1px solid var(--rule);background:var(--paper2);padding:8px 12px;max-height:210px;overflow:auto}
+.msg summary{cursor:pointer;font:600 12px var(--label);text-transform:uppercase;letter-spacing:.08em;color:var(--ink3)}
+.msg p{margin:6px 0 0;font:italic 14.5px/1.45 var(--note);color:var(--ink2);white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* svg */
+.d-box{fill:none;stroke:var(--rule);stroke-width:1}
+.d-lab{font:600 10px var(--label);letter-spacing:.12em;text-transform:uppercase;fill:var(--ink3)}
+.b-scope{fill:var(--scope)} .b-out{fill:var(--outside)}
+.b-allowed{fill:rgba(95,207,134,.18)} .b-blocked{fill:rgba(240,98,90,.22)} .b-crossed{fill:rgba(227,163,58,.22)}
+.b-name{font:9.5px var(--data);fill:var(--ink3)}
+.z-only{fill:none;stroke:var(--ok);stroke-width:2;stroke-dasharray:6 4}
+.z-deny{fill:url(#hatch);stroke:var(--bad);stroke-width:2;stroke-dasharray:6 4}
+.z-tag rect{fill:var(--paper)} .z-tag text{font:italic 12px var(--note)}
+.z-tag.only text{fill:var(--ok)} .z-tag.deny text{fill:var(--bad)}
+.edge{fill:none;stroke:var(--ink);stroke-opacity:.38;stroke-linecap:round}
+.node{stroke:var(--paper);stroke-width:1.5}
+.node.allowed{fill:var(--ok)} .node.blocked{fill:var(--bad)} .node.crossed{fill:var(--warn)}
+.ping{fill:none;stroke:var(--gold);stroke-width:2}
+
+.timeline{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;gap:14px;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:var(--paper2);border-top:1px solid var(--rule)}
+.play{background:var(--gold);color:var(--paper);border:0;padding:5px 14px;font-weight:600;cursor:pointer}
+.timeline input{flex:1;min-width:120px;accent-color:var(--gold)}
+.clock{font:500 14px var(--data);min-width:56px;text-align:right}
+.hint{font-size:13px;color:var(--ink3)}
+@media (max-width:1100px){ .panels{--cols:1 !important} .lower{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:600px){ .stats{grid-template-columns:repeat(2,minmax(0,1fr))} .stats div:nth-child(2){border-right:0} .hint{display:none} }
+@media (prefers-reduced-motion:reduce){ .ping{display:none} }

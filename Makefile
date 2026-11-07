@@ -16,7 +16,7 @@ STOP    := PORT=$(PORT) node dashboard/scripts/aos.mjs stop
 OPEN     = $(if $(filter Darwin,$(shell uname -s)),open,xdg-open)
 
 .DEFAULT_GOAL := help
-.PHONY: help install uninstall update doctor start stop restart open map test screenshots check
+.PHONY: help install uninstall update doctor start stop restart open map scope test screenshots check
 
 help: ## Show this list
 	@echo "Fenceline"; echo
@@ -72,6 +72,9 @@ open: ## Open the dashboard in your browser
 
 map: ## Start the repo map in the background on MAP_PORT
 	@node bin/fenceline.mjs view --detach --port $(MAP_PORT)
+
+scope: ## Rebuild docs/scope-map.html, the scope map of every eval run
+	@node bin/fenceline.mjs scope evals/results -o docs/scope-map.html
 
 test: ## Run every test suite
 	@echo "==> fences, map and plugin wiring"; out="$$(npm test --silent 2>&1)" || { echo "$$out" | grep -E "^not ok|error:" | head -20; exit 1; }; echo "$$out" | grep -E '^# (pass|fail)' | tr '\n' ' '; echo
