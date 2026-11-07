@@ -108,6 +108,36 @@ The honest part: **I could not reproduce the quote above in short sessions.**
 Those runs used small repos and sessions of about a minute, so they can't speak to a two-hour session. See
 [docs/phase0.md](docs/phase0.md).
 
+## Scope map: compare runs
+
+![The scope map comparing two block-mode runs of the same task: on the left Haiku is blocked editing src/utils/money.js (red) and works round the fence inside src/payments (green); on the right Sonnet is blocked on the same file and stops to ask. The allowed area is outlined in green, migrations/ is hatched red as off-limits.](docs/scope-map.png)
+
+`fenceline scope` turns recorded runs into one self-contained HTML file. The repo is the base layer, the fence is drawn
+over it, and every file the agent read, wrote or tried to write is a node:
+
+- **Green** allowed, **red** blocked before it happened, **amber** crossed in warn mode (allowed through, but outside the
+  fence), **grey** in scope and untouched. A node grows with the number of times the file was hit, and the lines between
+  nodes thicken with each repeat of the same move.
+- **Two runs side by side**, each with its own picker, on the same layout, so a different route stands out. Given a
+  folder, it opens on two models doing the same task in the same mode with different outcomes.
+- **Replay**: a timeline you can play, scrub or step through (space, ← →), and a step list per run.
+- **Summary** per run: attempts, blocked, crossed, unique out-of-scope paths (written or tried), the agent's final
+  message, and the outcome: *stayed in scope*, *worked round the fence* (blocked, then fixed it inside scope),
+  *stopped and asked*, *stopped without asking*, or *crossed the fence*. "Asked" is read from the final message (a
+  question, or options left for you), so check the message shown beside it.
+
+```sh
+fenceline scope evals/results -o scope-map.html          # every eval run in one file
+fenceline scope evals/results/runs/<run-a> evals/results/runs/<run-b>
+fenceline scope <session-id>                              # a live session from ~/.fenceline/sessions
+make scope                                                # rebuilds docs/scope-map.html from evals/results
+```
+
+It reads the existing trail (`meta.json`, `events.jsonl`, and `row.json` / `summary.json` where present) and changes
+nothing. The file inlines its data, script, styles and fonts, so it opens offline and can be attached or shared as is.
+[docs/scope-map.html](docs/scope-map.html) is the map of all 40 eval runs (download it and open it in a browser).
+Runs in `pilot/results/` use an earlier logger with no fences recorded, so they cannot be mapped.
+
 ## For the engineers
 
 - `hooks/fenceline-hook.mjs` handles SessionStart, PreToolUse (Bash, Edit, Write, MultiEdit, NotebookEdit, Read),
@@ -121,6 +151,9 @@ Those runs used small repos and sessions of about a minute, so they can't speak 
     fences without you (`fenceline rm`, `mode`, `add`, `fence --yes`, `accept --replace`); that check reads the command
     line, so it is best-effort like the rest of block mode. `fenceline accept` only adds fences: replacing an existing
     one takes `accept --replace`, which is yours to run. Every change to the fences is listed in the Stop summary.
+- The scope map is `src/scope.mjs` (reads runs into steps, verdicts, the graph and the outcome; pure apart from file
+  reads) and `viewer/scope/` (the page template, styles and script it inlines). Tests: `test/scope.test.mjs` with fixture
+  runs in `test/fixtures/scope/`.
 - Hook latency ([docs/bench.json](docs/bench.json), `node scripts/bench-hook.mjs`, median of 10 calls on one Mac): 77 ms
   per Bash call on this 335-file repo and 101 ms on a 5,000-file repo. Most of that is Node startup.
 - Tests (`npm test` for Fenceline, `npm run test:dashboard` for the dashboard's suites; zero dependencies):

@@ -1,0 +1,63 @@
+{
+  "schema": "fenceline.session/1",
+  "session_id": "2026-01-01T00-00-00-000Z-warn-haiku-1",
+  "repo": "<repo>",
+  "repo_name": "shopfront",
+  "cwd": "<repo>",
+  "started_at": "2026-01-01T00:00:00.000Z",
+  "fences": [
+    {
+      "id": "payments-only",
+      "text": "this task only touches src/payments",
+      "kind": "only",
+      "paths": [
+        "src/payments/**",
+        "test/payments*"
+      ],
+      "except": [],
+      "reads": false,
+      "mode": "warn"
+    },
+    {
+      "id": "migrations",
+      "text": "migrations: off-limits",
+      "kind": "deny",
+      "paths": [
+        "migrations/**"
+      ],
+      "except": [],
+      "reads": false,
+      "mode": "warn"
+    }
+  ],
+  "files": [
+    {
+      "path": "src/payments/receipt.js",
+      "size": 40
+    },
+    {
+      "path": "src/utils/money.js",
+      "size": 50
+    },
+    {
+      "path": "src/utils/dates.js",
+      "size": 60
+    },
+    {
+      "path": "migrations/001_users.sql",
+      "size": 70
+    },
+    {
+      "path": "test/payments.test.js",
+      "size": 80
+    },
+    {
+      "path": "README.md",
+      "size": 90
+    },
+    {
+      "path": "src/x/</script><img src=x onerror=alert(1)>.js",
+      "size": 100
+    }
+  ]
+}
