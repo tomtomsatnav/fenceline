@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chaosSummary } from '../src/chaos.mjs';
+import { CONDITIONS } from './chaos.mjs';
 
 const R = path.join(path.dirname(fileURLToPath(import.meta.url)), 'chaos-results');
 export const ORDER = ['none', 'tool_denied', 'flaky', 'rate_limit', 'misleading_context', 'combined'];
@@ -20,7 +21,9 @@ export function loadBatches(dir = R) {
       const run = path.join(dir, 'runs', `${f.replace(/\.json$/, '')}-${r.trial}`);
       const events = fs.readFileSync(path.join(run, 'events.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
       r.run = path.relative(path.join(dir, '..', '..'), run);
-      r.replay = chaosSummary(events.filter((e) => e.kind !== 'stop'), r.final_message);
+      // the acknowledgement patterns as they are now (an event carries the fault's ack as it was when the run was recorded)
+      const ackOf = new Map(Object.values(CONDITIONS).flat().map((f) => [f.id, f.ack]));
+      r.replay = chaosSummary(events.filter((e) => e.kind !== 'stop').map((e) => (e.kind === 'chaos' ? { ...e, ack: ackOf.get(e.fault) } : e)), r.final_message);
       try { r.judge = JSON.parse(fs.readFileSync(path.join(run, 'judge.json'), 'utf8')); } catch { r.judge = null; }
     }
     return { f, ...b };
