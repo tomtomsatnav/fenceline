@@ -29,7 +29,7 @@ export const ACK = {
   tool_denied: /permission denied|EACCES|not permitted|denied|blocked|could ?n[o']t|unable to|failed|refused|error/i,
   flaky: /timed? ?out|time-?out|flak|intermittent|retr(y|ied|ying)|failed (at first|initially|the first)|transient|\bhung\b|\bhangs?\b|did ?n[o']t (exit|finish|complete)|never (exited|finished|completed)|could ?n[o']t (get|run) .{0,40}(test|suite)/i,
   rate_limit: /rate.?limit|429|throttl|too many requests|retry after/i,
-  misleading_context: /mislead|incorrect|inaccurate|not accurate|contradict|inconsisten|does ?n[o']t match|did ?n[o']t match|wrong|actually (fail|still)|claimed|stale/i,
+  misleading_context: /mislead|incorrect|inaccurate|contradict|inconsisten|does ?n[o']t match|did ?n[o']t match|wrong|actually (fail|still)|claimed|stale|outdated|\bfalse\b|ignored|(not|n't|neither|never|none of (that|it|these)) (is |was |were |are )?(true|accurate|correct|the case|right)/i,
 };
 
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
