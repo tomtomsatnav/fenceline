@@ -371,6 +371,7 @@ function verdictSummary(agentOf) {
 // waiting on the human. Never exposed: paths, Bash command text, the full session id (only its first 8 chars link it to a session).
 const FL_SESSIONS = path.join(process.env.FENCELINE_HOME || path.join(os.homedir(), '.fenceline'), 'sessions');
 const FENCE_SCAN_MAX = 100, FENCE_TAIL_MAX = 1024 * 1024, FENCE_META_MAX = 4 * 1024 * 1024, FENCE_LATEST_MAX = 20, FENCES_API_MAX = 50;
+const FTYPES = new Set(['tool_denied', 'flaky', 'rate_limit', 'misleading_context']), CHAOS_LATEST_MAX = 60;
 const FSID_RE = /^[A-Za-z0-9_-]{1,128}$/, FMODES = new Set(['warn', 'block']), FKINDS = new Set(['deny', 'only']), FOPS = new Set(['create', 'edit', 'delete', 'read']);
 const fenceEntries = new Map(); // dir -> { sig, v | null }
 let fencesView = { list: [], sig: '' }, fencesScanAt = 0;
@@ -401,6 +402,13 @@ function fenceSessionOf(dir, sid) { // -> internal record {view, sid8} or null
       items.push({ at: isoOrNull(e.t), fence: ctl(c.fence, 64), text: scrub(c.text, 160), file, op, prevented, tool: ctl(e.tool, 40) || null });
     }
   }
+  // chaos mode (Fenceline's opt-in test faults): when, which fault type, on which tool, and whether the turn's Stop called it
+  // silent. Never the error or context text, the fault's id, paths or command.
+  const chaos = []; let turnAt = -1;
+  evs.forEach((e, i) => {
+    if (e.kind === 'chaos' && FTYPES.has(e.type)) chaos.push({ at: isoOrNull(e.t), type: e.type, tool: ctl(e.tool, 40) || null, silent: false, _i: i, _f: String(e.fault ?? '') });
+    if (e.kind === 'stop') { const sl = Array.isArray(e.chaos_silent) ? e.chaos_silent.map(String) : []; for (const c of chaos) if (c._i > turnAt && c._i < i && sl.includes(c._f)) c.silent = true; turnAt = i; }
+  });
   // what the last turn left for the human: the turn ended (stop is the newest event) after a denial (the agent was stopped and is
   // probably asking), or with a crossing its final message never mentioned
   let needs = null;
@@ -414,7 +422,8 @@ function fenceSessionOf(dir, sid) { // -> internal record {view, sid8} or null
   const repo = typeof meta.repo === 'string' ? meta.repo : '';
   const view = { id: 'f-' + createHash('sha256').update(String(sid)).digest('hex').slice(0, 12), repo_name: ctl(path.basename(repo) || String(meta.repo_name || 'repo'), 60),
     started_at: isoOrNull(meta.started_at), updated_at: isoOrNull(last && last.t) || isoOrNull(meta.started_at), fences, crossed: landed.size, blocked,
-    needs, latest: items.slice(-FENCE_LATEST_MAX).reverse() };
+    needs, latest: items.slice(-FENCE_LATEST_MAX).reverse(),
+    chaos_count: chaos.length, chaos_silent: chaos.filter((c) => c.silent).length, chaos: chaos.slice(-CHAOS_LATEST_MAX).map(({ _i, _f, ...c }) => c) };
   return { view, sid8: sid.slice(0, 8) };
 }
 function fencesIndex() {

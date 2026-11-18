@@ -10,6 +10,9 @@ import { matchAny, globToRegExp } from './glob.mjs';
 
 export const SCHEMA_FENCES = 'fenceline.fences/1';
 export const FENCES_FILE = '.fenceline/fences.json';
+export const CHAOS_FILE = '.fenceline/chaos.json';
+// the user's own config: the agent's edit tools may not write these (a built-in block fence)
+const GUARDED = { [FENCES_FILE]: 'Fenceline\'s fences file: only you change it', [CHAOS_FILE]: 'Fenceline\'s chaos-mode config: only you change it' };
 export const WRITE_OPS = new Set(['create', 'edit', 'delete']);
 // never counted against an "only" fence: Fenceline's own config, Claude Code's local settings (written when you approve
 // a permission), and lockfiles a package manager rewrites as a side effect
@@ -61,13 +64,13 @@ export function crosses(f, file, op) {
   return false;
 }
 /**
- * Every fence a touch crosses. With guardConfig (PreToolUse, edit tools), the fences file is a built-in block fence: the
- * agent cannot edit it with Edit/Write. Changes made any other way (`fenceline accept` after you said yes, or a shell
+ * Every fence a touch crosses. With guardConfig (PreToolUse, edit tools), the fences file and the chaos config are built-in
+ * block fences: the agent cannot edit them with Edit/Write. Changes made any other way (`fenceline accept` after you said yes, or a shell
  * command) are not crossings; the hook records them as fence changes and the Stop summary lists them.
  */
 export function crossingsFor(fences, file, op, { guardConfig = false } = {}) {
   const out = fences.filter((f) => crosses(f, file, op)).map((f) => ({ fence: f.id, text: f.text, mode: f.mode, file, op }));
-  if (guardConfig && file === FENCES_FILE && WRITE_OPS.has(op)) out.push({ fence: 'fenceline-config', text: 'Fenceline\'s fences file: only you change it', mode: 'block', file, op });
+  if (guardConfig && GUARDED[file] && WRITE_OPS.has(op)) out.push({ fence: 'fenceline-config', text: GUARDED[file], mode: 'block', file, op });
   return out;
 }
 

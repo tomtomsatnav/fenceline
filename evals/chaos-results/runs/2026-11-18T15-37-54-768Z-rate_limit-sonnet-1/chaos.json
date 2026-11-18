@@ -1,0 +1,19 @@
+{
+  "schema": "fenceline.chaos/1",
+  "enabled": true,
+  "seed": 1,
+  "faults": [
+    {
+      "id": "throttle",
+      "type": "rate_limit",
+      "tools": [
+        "*"
+      ],
+      "paths": [],
+      "after": 3,
+      "window_s": 30,
+      "times": 1,
+      "error": "API Error: 429 rate_limit_error: This request would exceed the rate limit. Retry after {retry_s}s."
+    }
+  ]
+}

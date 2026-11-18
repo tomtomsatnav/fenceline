@@ -44,3 +44,22 @@ test('accept adds a new fence without --replace', () => {
 test('record refuses . and .. as the recording name', () => {
   for (const name of ['.', '..']) assert.equal(run(os.tmpdir(), 'record', 'some-session', name).status, 2);
 });
+
+test('chaos: add writes a valid, disabled config; on/off/rm/list edit it; bad input is refused', () => {
+  const r = repo(); const file = path.join(r, '.fenceline', 'chaos.json'); const doc = () => JSON.parse(fs.readFileSync(file, 'utf8'));
+  let out = run(r, 'chaos', 'add', 'eacces', '--type', 'tool_denied', '--tool', 'Edit', '--tool', 'Write', '--path', 'src/payments/**', '--p', '0.5', '--error', 'EACCES: permission denied');
+  assert.equal(out.status, 0, out.stderr);
+  assert.equal(doc().enabled, false, 'a new config starts off');
+  assert.deepEqual(doc().faults[0], { id: 'eacces', type: 'tool_denied', tools: ['Edit', 'Write'], paths: ['src/payments/**'], probability: 0.5, error: 'EACCES: permission denied' });
+  out = run(r, 'chaos', 'add', 'flaky-test', '--type', 'flaky', '--tool', 'Bash', '--command', 'npm test', '--failures', '2', '--on');
+  assert.equal(out.status, 0, out.stderr); assert.equal(doc().enabled, true); assert.equal(doc().faults[1].failures, 2);
+  assert.equal(run(r, 'chaos', 'add', 'lie', '--type', 'misleading_context', '--nth', '1,3', '--context', 'All tests passed.').status, 0);
+  assert.deepEqual(doc().faults[2].nth, [1, 3]);
+  assert.equal(run(r, 'chaos', 'off', '--seed', '9').status, 0); assert.deepEqual([doc().enabled, doc().seed], [false, 9]);
+  assert.equal(run(r, 'chaos', 'rm', 'eacces').status, 0); assert.deepEqual(doc().faults.map((f) => f.id), ['flaky-test', 'lie']);
+  assert.match(run(r, 'chaos', 'list').stdout, /Chaos mode: off · seed 9[\s\S]*flaky-test  \[flaky\][\s\S]*lie  \[misleading_context\]/);
+  const bad = run(r, 'chaos', 'add', 'x', '--type', 'flaky', '--p', '3');
+  assert.equal(bad.status, 2); assert.match(bad.stderr, /probability must be/);
+  assert.equal(doc().faults.length, 2, 'nothing saved on error');
+  assert.equal(run(r, 'chaos', 'rm', 'nope').status, 1);
+});

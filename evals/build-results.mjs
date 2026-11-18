@@ -14,4 +14,10 @@ for (const [k, v] of Object.entries(tables)) doc = doc.replace(new RegExp(`(<!--
 fs.writeFileSync(file, doc);
 fs.writeFileSync(path.join(root, 'docs', 'results-table.md'), `${tables.evals}\n`);
 fs.writeFileSync(path.join(root, 'docs', 'phase0-pilot-table.md'), `${tables.pilot}\n`);
-console.log('docs/results.md tables rebuilt');
+// chaos mode: docs/chaos-results.md, between <!-- TABLE:chaos --> markers
+const chaosFile = path.join(root, 'docs', 'chaos-results.md');
+if (fs.existsSync(chaosFile)) {
+  const t = execFileSync('node', [path.join(root, 'evals', 'chaos-summarize.mjs')], { encoding: 'utf8' }).trim();
+  fs.writeFileSync(chaosFile, fs.readFileSync(chaosFile, 'utf8').replace(/(<!-- TABLE:chaos -->)[\s\S]*?(<!-- \/TABLE:chaos -->)/, `$1\n${t}\n$2`));
+}
+console.log('docs/results.md and docs/chaos-results.md tables rebuilt');

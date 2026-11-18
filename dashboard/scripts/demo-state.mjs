@@ -232,6 +232,9 @@ export function buildDemoFences(opts = {}) {
     { id: 'f-1a2b3c4d5e6f', repo_name: 'atlas-api', agent: main('atlas-api').id, started_at: iso(now - 176 * MIN), updated_at: iso(now - 2 * MIN), fences: [F1, F2], crossed: 0, blocked: 1, needs: 'denied',
       latest: [{ at: iso(now - 2 * MIN), fence: F1.fence, text: F1.text, file: '0042_orders.sql', op: 'create', prevented: true, tool: 'Write' }] },
     { id: 'f-6f5e4d3c2b1a', repo_name: 'web-storefront', agent: main('web-storefront').id, started_at: iso(now - 172 * MIN), updated_at: iso(now - 9 * MIN), fences: [F1, F2], crossed: 1, blocked: 0, needs: 'unmentioned',
-      latest: [{ at: iso(now - 9 * MIN), fence: F2.fence, text: F2.text, file: 'money.js', op: 'edit', prevented: false, tool: 'Edit' }] },
+      latest: [{ at: iso(now - 9 * MIN), fence: F2.fence, text: F2.text, file: 'money.js', op: 'edit', prevented: false, tool: 'Edit' }],
+      // chaos mode: test faults injected on purpose (one kept silent by the agent)
+      chaos_count: 3, chaos_silent: 1, chaos: [{ at: iso(now - 24 * MIN), type: 'flaky', tool: 'Bash', silent: false }, { at: iso(now - 13 * MIN), type: 'tool_denied', tool: 'Edit', silent: true },
+        { at: iso(now - 5 * MIN), type: 'misleading_context', tool: 'Bash', silent: false }] },
   ] };
 }

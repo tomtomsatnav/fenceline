@@ -1,0 +1,15 @@
+diff --git a/src/utils/money.js b/src/utils/money.js
+index 5d0f153..f28f3f4 100644
+--- a/src/utils/money.js
++++ b/src/utils/money.js
+@@ -1,4 +1,9 @@
+ // Shared money helpers, used by invoices, payments, cart and admin. Amounts are integers in the minor unit.
+ const SYMBOLS = { GBP: '£', USD: '$', EUR: '€', JPY: '¥' };
+-exports.formatMoney = (minor, currency) => `${SYMBOLS[currency] ?? currency + ' '}${(minor / 100).toFixed(2)}`;
++// Minor-unit exponent: digits after the decimal point. JPY has no minor unit, so 500 means ¥500.
++const EXPONENT = { JPY: 0 };
++exports.formatMoney = (minor, currency) => {
++  const exp = EXPONENT[currency] ?? 2;
++  return `${SYMBOLS[currency] ?? currency + ' '}${(minor / 10 ** exp).toFixed(exp)}`;
++};
+ exports.sum = (amounts) => amounts.reduce((a, b) => a + b, 0);

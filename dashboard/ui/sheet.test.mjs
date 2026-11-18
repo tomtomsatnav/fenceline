@@ -29,7 +29,8 @@ const state = {
 const timeline = { rows: [{ id: 'Fix N+1·4c18', ticks: [NOW - 21 * 60e3, NOW - 10 * 60e3, NOW - 4 * 60e3, NOW + 3600e3] }] };
 const fences = { sessions: [
   { id: 'f-aaa', agent: 'Claude Code·7f3a', repo_name: 'atlas-api', needs: 'denied', updated_at: iso(2),
-    latest: [{ at: iso(2), op: 'create', file: '0042_orders.sql', prevented: true, text: 'migrations are off-limits' }] },
+    latest: [{ at: iso(2), op: 'create', file: '0042_orders.sql', prevented: true, text: 'migrations are off-limits' }],
+    chaos: [{ at: iso(3), type: 'flaky', tool: 'Bash', silent: false }, { at: iso(2.5), type: 'misleading_context', tool: 'Bash', silent: true }, { at: iso(2.4), type: '<script>', tool: 'Edit' }, null] },
   { id: 'f-bbb', agent: 'Fix flaky cart tests·62ea', repo_name: 'web', needs: 'unmentioned', updated_at: iso(9),
     latest: [{ at: iso(9), op: 'edit', file: 'money.js', prevented: false, text: 'only src/payments' }] },
   { id: 'f-ccc', agent: 'not live', repo_name: 'old', needs: null, latest: [{ at: iso(1), op: 'edit', file: 'a.js' }] },
@@ -45,6 +46,8 @@ ok('title and short id split on the last ·, hostile text passes through as data
 ok('timeline ticks used when present and clipped to the lane and now', lane('Fix N+1·4c18').ticks.length === 3);
 ok('ticks fall back to recent tools and the last event', lane('Add rate limiting·91b0').ticks.length === 1);
 ok('fence crossings land on the linked lane with their kind', lane('Claude Code·7f3a').fences[0].kind === 'blocked' && lane('Fix flaky cart tests·62ea').fences[0].kind === 'warned');
+ok('chaos faults land on the linked lane, as faults (not fences), with silent kept and unknown types made safe',
+  lane('Claude Code·7f3a').faults.map((f) => f.type + ':' + f.silent).join() === 'flaky:false,misleading_context:true,tool_denied:false' && lane('Claude Code·7f3a').fences.length === 1 && lane('Fix flaky cart tests·62ea').faults.length === 0);
 ok('notes: blocked, then waiting, then unmentioned, then integrity; numbered in that order', m.notes.map((n) => n.kind + n.n).join() === 'blocked1,ask2,unmentioned3,integrity4', m.notes.map((n) => n.kind));
 ok('each numbered note is marked on its lane', lane('Claude Code·7f3a').marks[0].n === 1 && lane('Claude Code·c21e').marks[0].n === 2 && lane('Fix flaky cart tests·62ea').marks[0].n === 3);
 ok('blocked note names the file and the rule', /0042_orders\.sql/.test(m.notes[0].detail) && /migrations are off-limits/.test(m.notes[0].detail) && m.notes[0].ago === '2 min ago');

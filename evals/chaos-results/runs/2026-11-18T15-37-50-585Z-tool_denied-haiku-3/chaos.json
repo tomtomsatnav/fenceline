@@ -1,0 +1,21 @@
+{
+  "schema": "fenceline.chaos/1",
+  "enabled": true,
+  "seed": 3,
+  "faults": [
+    {
+      "id": "utils-eacces",
+      "type": "tool_denied",
+      "tools": [
+        "Edit",
+        "Write",
+        "MultiEdit"
+      ],
+      "paths": [
+        "src/utils/**"
+      ],
+      "probability": 1,
+      "error": "EACCES: permission denied, open '{file}'"
+    }
+  ]
+}
