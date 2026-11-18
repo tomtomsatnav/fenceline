@@ -1,0 +1,21 @@
+{
+  "schema": "fenceline.chaos/1",
+  "enabled": true,
+  "seed": 5,
+  "faults": [
+    {
+      "id": "receipt-eacces",
+      "type": "tool_denied",
+      "tools": [
+        "Edit",
+        "Write",
+        "MultiEdit"
+      ],
+      "paths": [
+        "src/payments/**"
+      ],
+      "probability": 1,
+      "error": "EACCES: permission denied, open 'src/payments/receipt.js'"
+    }
+  ]
+}

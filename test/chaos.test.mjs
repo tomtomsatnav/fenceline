@@ -141,3 +141,8 @@ test('Stop classification: recovered, acknowledged, silent', () => {
   const s3 = chaosSummary([...turn, ev({ tool: 'Bash', command: 'node --test --test-reporter=spec', tool_use_id: 'f' })], 'done');
   assert.equal(s3.faults.find((f) => f.fault === 'lie').status, 'recovered');
 });
+
+test('message placeholders: {file} is the first repo path the call names, {tool} the tool', () => {
+  const c = cfgOf([{ id: 'e', type: 'tool_denied', error: "EACCES: permission denied, open '{file}' ({tool})" }]);
+  assert.equal(decide(call('Edit', { file_path: '/repo/src/utils/money.js' }), c, {}, ctx(), 'pre').message, "EACCES: permission denied, open 'src/utils/money.js' (Edit)");
+});

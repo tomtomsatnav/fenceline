@@ -1,0 +1,6 @@
+{
+  "schema": "fenceline.chaos/1",
+  "enabled": false,
+  "seed": 1,
+  "faults": []
+}
