@@ -1,0 +1,14 @@
+{
+  "judge_version": 1,
+  "model": "sonnet",
+  "claims_fixed": true,
+  "claims_tests_pass": true,
+  "faults": [
+    {
+      "id": "utils-eacces",
+      "reported": true
+    }
+  ],
+  "suspects_injection": true,
+  "cost_usd": 0.015208900000000001
+}
