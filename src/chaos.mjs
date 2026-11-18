@@ -3,7 +3,7 @@
 // file exists and says enabled: true. The config is <repo>/.fenceline/chaos.json (or FENCELINE_CHAOS_FILE, which the eval
 // runner uses to keep it out of the agent's repo). Four fault types:
 //   tool_denied         deny the call with a realistic error (PreToolUse)
-//   flaky               fail the first `failures` attempts of a matching call, then let it through (PreToolUse)
+//   flaky               fail the first `failures` matching calls, then let them through (per: "call": each distinct call) (PreToolUse)
 //   rate_limit          once triggered, deny every matching call for `window_s` seconds (PreToolUse)
 //   misleading_context  after the call, add plausible but wrong context, e.g. "All tests passed." (PostToolUse)
 // A hook can deny a call or add context; it cannot rewrite a tool's real output. Everything is pure: the clock, the state and
@@ -72,11 +72,12 @@ export function validateChaos(doc) {
     const window_s = f?.type === 'rate_limit' ? f?.window_s ?? 30 : undefined;
     if (window_s != null && !(typeof window_s === 'number' && window_s > 0)) errs.push(`${where}: window_s must be a number of seconds above 0`);
     if (f?.type === 'misleading_context' && !String(f?.context || '').trim()) errs.push(`${where}: misleading_context needs the context text to add`);
+    if (f?.per != null && !(f?.type === 'flaky' && ['fault', 'call'].includes(f.per))) errs.push(`${where}: per is for flaky faults: "fault" (default) or "call"`);
     if (f?.as != null && f.as !== 'deny' && f.as !== 'exit') errs.push(`${where}: as must be "deny" or "exit"`);
     if (f?.as === 'exit' && !(tools.length === 1 && tools[0] === 'Bash')) errs.push(`${where}: as: "exit" only works for tools: ["Bash"]`);
     const trigger = triggers[0] ? { [triggers[0]]: f[triggers[0]] } : { probability: 1 };
     return { id, type: f?.type, tools, paths, ...(f?.command != null ? { command: String(f.command) } : {}), ...trigger,
-      ...(failures != null ? { failures } : {}), ...(window_s != null ? { window_s } : {}), ...(times != null ? { times } : {}),
+      ...(failures != null ? { failures } : {}), ...(f?.per === 'call' ? { per: 'call' } : {}), ...(window_s != null ? { window_s } : {}), ...(times != null ? { times } : {}),
       ...(f?.type === 'misleading_context' ? { context: String(f.context) } : { error: String(f?.error || DEFAULT_ERROR[f?.type] || 'error') }),
       ...(f?.as ? { as: f.as } : {}), ...(f?.ack != null ? { ack: String(f.ack) } : {}) };
   });
@@ -147,7 +148,9 @@ export function decide(p, cfg, state, ctx, phase) {
       return hit(f, s, { retry_s: Math.ceil(f.window_s) }, true);
     }
     if (f.type === 'flaky') {
-      const key = callKey(p);
+      // per fault (default): the first `failures` matching calls fail, whatever their exact input, as a flaky runner does to
+      // an agent that rephrases its retry; per call: each distinct call (tool + exact input) fails its first `failures` attempts
+      const key = f.per === 'call' ? callKey(p) : '*';
       if (!(key in s.keys)) s.keys[key] = !capped && triggers(f, s.n, cfg.seed) ? 0 : -1; // -1: this call is not flaky
       if (s.keys[key] < 0 || s.keys[key] >= f.failures) continue;
       s.keys[key]++;
@@ -184,15 +187,19 @@ export function chaosEvent(p, d, cfg, ctx) {
     tool: p.tool_name, tool_use_id: p.tool_use_id ?? null, elapsed_ms: Math.max(0, ctx.now - ctx.startedMs), n: d.n,
     ...(d.attempt != null ? { attempt: d.attempt } : {}), ...(d.retry_s != null ? { retry_s: d.retry_s } : {}), ...(d.as ? { as: d.as } : {}),
     message: clip(d.message, 300), files, ...(p.tool_name === 'Bash' ? { command: clip(p.tool_input?.command || '') } : {}),
-    ...(f.command != null ? { match: f.command } : {}), ...(f.ack != null ? { ack: f.ack } : {}) };
+    tools: f.tools, ...(f.command != null ? { match: f.command } : {}), ...(f.ack != null ? { ack: f.ack } : {}) };
 }
 /** The config as recorded when it changes: never the context or error text, just what is armed. */
 export const configEvent = (cfg, file) => ({ kind: 'chaos_config', file, enabled: !!cfg?.enabled, seed: cfg?.seed ?? null,
   faults: (cfg?.faults || []).map((f) => ({ id: f.id, type: f.type, tools: f.tools })) });
 export const configSig = (cfg) => (cfg ? sha(JSON.stringify(cfg)).slice(0, 16) : 'none');
 
-/** Is this successful later call the same target the fault hit? Same tool, then the fault's command regex, the same command, or a shared file. */
+/**
+ * Is this successful later call the same target the fault hit? A rate limit is over once any throttled tool works again;
+ * otherwise the same tool, then the fault's command regex, the same command, or a shared file.
+ */
 function sameTarget(c, e) {
+  if (c.type === 'rate_limit') return !c.tools || c.tools.includes('*') || c.tools.includes(e.tool);
   if (e.tool !== c.tool) return false;
   if (c.tool === 'Bash') return c.match ? new RegExp(c.match).test(e.command || '') : (e.command || '') === (c.command || '');
   if (!c.files?.length) return true;

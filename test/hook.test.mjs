@@ -254,7 +254,7 @@ test('chaos tool_denied: a realistic deny (no Fenceline prefix) and a labelled c
 });
 test('chaos flaky: the same Bash call fails twice, then goes through', () => {
   const s = setup();
-  chaosOn(s, [{ id: 'flaky-test', type: 'flaky', tools: ['Bash'], command: 'npm test', failures: 2 }]);
+  chaosOn(s, [{ id: 'flaky-test', type: 'flaky', tools: ['Bash'], command: 'npm test', failures: 2, per: 'call' }]);
   const t = () => s.hook(preU('Bash', { command: 'npm test' }));
   assert.match(reason(t()), /timed out/); assert.ok(deny(t())); assert.equal(t(), '');
   assert.deepEqual(s.events().filter((e) => e.kind === 'chaos').map((e) => e.attempt), [1, 2]);

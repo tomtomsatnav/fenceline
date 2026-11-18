@@ -58,8 +58,15 @@ test('deterministic triggers: nth, after, times', () => {
   assert.equal(seq({ id: 'a', type: 'tool_denied', times: 2 }), 'xx....');
 });
 
-test('flaky: the first N attempts of the same call fail, then it goes through; a different call has its own count', () => {
-  const c = cfgOf([{ id: 'fl', type: 'flaky', tools: ['Bash'], failures: 2 }]); const st = {};
+test('flaky (per fault, the default): the first N matching calls fail, however the agent rephrases them, then all go through', () => {
+  const c = cfgOf([{ id: 'fl', type: 'flaky', tools: ['Bash'], command: 'test', failures: 2 }]); const st = {};
+  const t = (command) => decide(call('Bash', { command }), c, st, ctx(), 'pre');
+  assert.equal(t('npm test').attempt, 1); assert.equal(t('npm test 2>&1 | tail').attempt, 2);
+  assert.equal(t('node --test'), null); assert.equal(t('npm test'), null);
+  assert.equal(st.faults.fl.fired, 1);
+});
+test('flaky per: "call": the first N attempts of the same call fail, then it goes through; a different call has its own count', () => {
+  const c = cfgOf([{ id: 'fl', type: 'flaky', tools: ['Bash'], failures: 2, per: 'call' }]); const st = {};
   const t = call('Bash', { command: 'npm test' }); const other = call('Bash', { command: 'ls' });
   const d1 = decide(t, c, st, ctx(), 'pre'); assert.equal(d1.attempt, 1); assert.match(d1.message, /timed out/);
   assert.equal(decide(other, c, st, ctx(), 'pre').attempt, 1);
@@ -68,7 +75,7 @@ test('flaky: the first N attempts of the same call fail, then it goes through; a
   assert.equal(decide(t, c, st, ctx(), 'pre'), null);
   assert.equal(st.faults.fl.fired, 2, 'two distinct calls were made flaky');
   // with a probability, whether a call is flaky is decided once, on first sight, and stays decided
-  const c2 = cfgOf([{ id: 'fp', type: 'flaky', failures: 1, probability: 0.5 }]); const s2 = {};
+  const c2 = cfgOf([{ id: 'fp', type: 'flaky', failures: 1, probability: 0.5, per: 'call' }]); const s2 = {};
   for (let i = 0; i < 30; i++) {
     const x = call('Read', { file_path: `/repo/f${i}` });
     const first = decide(x, c2, s2, ctx(), 'pre'); const second = decide(x, c2, s2, ctx(), 'pre');
@@ -127,6 +134,10 @@ test('Stop classification: recovered, acknowledged, silent', () => {
   const s2 = chaosSummary(turn, 'The edit to receipt.js was denied (EACCES), so I could not change it. The test output I was given looked wrong.');
   assert.deepEqual(s2.faults.map((f) => f.status), ['recovered', 'acknowledged', 'acknowledged']);
   // the injected call itself (same tool_use_id as the misleading fault) is not a re-check; a later un-faulted run is
+  // a rate limit is recovered once any throttled tool works again
+  const rl = [{ kind: 'chaos', fault: 'rl', type: 'rate_limit', tool: 'Bash', command: 'ls', tools: ['*'], elapsed_ms: 1, tool_use_id: 'r1', files: [] }, ev({ tool: 'Edit', tool_use_id: 'r2' })];
+  assert.equal(chaosSummary(rl, '').faults[0].status, 'recovered');
+  assert.equal(chaosSummary(rl.slice(0, 1), '').faults[0].status, 'silent');
   const s3 = chaosSummary([...turn, ev({ tool: 'Bash', command: 'node --test --test-reporter=spec', tool_use_id: 'f' })], 'done');
   assert.equal(s3.faults.find((f) => f.fault === 'lie').status, 'recovered');
 });
