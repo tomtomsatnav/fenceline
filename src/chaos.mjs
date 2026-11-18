@@ -12,10 +12,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { matchAny, globToRegExp } from './glob.mjs';
-import { words } from './fences.mjs';
+import { words, CHAOS_FILE } from './fences.mjs';
 
 export const SCHEMA_CHAOS = 'fenceline.chaos/1';
-export const CHAOS_FILE = '.fenceline/chaos.json';
+export { CHAOS_FILE };
 export const FAULT_TYPES = ['tool_denied', 'flaky', 'rate_limit', 'misleading_context'];
 export const PRE_TYPES = new Set(['tool_denied', 'flaky', 'rate_limit']);
 export const TEST_FAULT_LABEL = 'TEST FAULT injected by Fenceline chaos mode: not a real error';
