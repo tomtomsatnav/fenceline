@@ -9,6 +9,7 @@
   'use strict';
   var NOTE_ORDER = { blocked: 0, ask: 1, unmentioned: 2, integrity: 3 };
   var OPS = { create: 'created', edit: 'edited', delete: 'deleted', read: 'read' };
+  var FAULTS = { tool_denied: 'tool denied', flaky: 'flaky call', rate_limit: 'rate limited', misleading_context: 'misleading context' };
 
   function list(x) { return Array.isArray(x) ? x : []; }
   function str(x, n) { x = x == null ? '' : String(x); return n && x.length > n ? x.slice(0, n - 1) + '…' : x; }
@@ -58,7 +59,7 @@
         recent: list(a.recent_tools).slice(-5).reverse().map(function (x) { x = x || {}; return { at: ms(x.ts), name: str(x.name, 30), summary: str(x.summary, 80), ms: Number(x.ms) || null }; }),
         tokens: a.usage ? (Number(a.usage.output) || 0) + (Number(a.usage.input) || 0) + (Number(a.usage.cache_write) || 0) : 0,
         stuckFor: a.stuck_for_s || null, error: a.error_kind ? str(a.error_kind, 60) : '', machine: a.machine ? str(a.machine, 40) : '',
-        fences: [], marks: [] };
+        fences: [], faults: [], marks: [] };
     });
 
     /* fences met, from the Fenceline sessions linked to a live session agent */
@@ -69,6 +70,11 @@
       list(f.latest).forEach(function (c) {
         c = c || {}; var at = ms(c.at); if (!lane || at == null) return;
         lane.fences.push({ at: at, kind: c.prevented ? 'blocked' : 'warned', file: str(c.file, 80), op: OPS[c.op] || 'edited', rule: str(c.text || c.fence, 160) });
+      });
+      /* chaos mode: test faults Fenceline injected on purpose, and the ones the agent never recovered from or mentioned */
+      list(f.chaos).forEach(function (c) {
+        c = c || {}; var at = ms(c.at); if (!lane || at == null) return;
+        lane.faults.push({ at: at, type: FAULTS[c.type] ? c.type : 'tool_denied', what: FAULTS[c.type] || 'injected fault', tool: str(c.tool, 30), silent: c.silent === true });
       });
       if (f.needs === 'denied' || f.needs === 'unmentioned') {
         var cs = list(f.latest).filter(function (c) { return c && (f.needs === 'denied' ? c.prevented : !c.prevented); }), c0 = cs[0] || list(f.latest)[0] || {};

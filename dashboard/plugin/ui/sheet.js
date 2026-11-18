@@ -103,6 +103,12 @@
       h('h4', null, 'Fences met', box);
       l.fences.slice().reverse().slice(0, 6).forEach(function (f) { h('p', 'met ' + f.kind, hm(f.at) + '  ' + (f.kind === 'blocked' ? 'blocked: ' : '') + f.op + ' ' + f.file + (f.rule ? ' · ' + f.rule : ''), box); });
     }
+    if (l.faults.length) {
+      var silent = l.faults.filter(function (f) { return f.silent; }).length;
+      h('h4', null, 'Injected faults (chaos mode, deliberate)', box);
+      h('p', null, l.faults.length + (l.faults.length === 1 ? ' test fault' : ' test faults') + (silent ? ', ' + silent + ' kept silent: never recovered or mentioned in the final message' : ''), box);
+      l.faults.slice().reverse().slice(0, 6).forEach(function (f) { h('p', 'met fault' + (f.silent ? ' silent' : ''), hm(f.at) + '  ' + f.what + (f.tool ? ' · ' + f.tool : '') + (f.silent ? ' · silent' : ''), box); });
+    }
     if (l.recent.length) {
       h('h4', null, 'Recent tools', box);
       var tb = h('table', null, null, box);
@@ -218,6 +224,13 @@
       if (f.kind === 'blocked') s('rect', { x: X - 2.5, y: cy - 11, width: 5, height: 22, fill: C.bad }, g);
       else s('line', { x1: X, x2: X, y1: cy - 11, y2: cy + 11, stroke: C.warn, 'stroke-width': 3, 'stroke-dasharray': '3.5 2.5' }, g);
     });
+    // chaos mode: an injected test fault is a small diamond on the line (hollow; filled gold if the agent kept it silent)
+    var lastF = -9;
+    l.faults.forEach(function (f) {
+      if (f.at < t0) return; var X = Math.round(x(f.at)); if (X - lastF < 4 && !f.silent) return; lastF = X;
+      s('path', { d: 'M' + X + ' ' + (cy - 5.5) + 'L' + (X + 5.5) + ' ' + cy + 'L' + X + ' ' + (cy + 5.5) + 'L' + (X - 5.5) + ' ' + cy + 'Z',
+        fill: f.silent ? C.cont : C.paper, stroke: f.silent ? C.cont : C.ink2, 'stroke-width': 1.4, 'class': 'fault' }, g);
+    });
     l.marks.forEach(function (m) {
       var X = x(Math.max(t0, m.at)), c = m.kind === 'blocked' || m.kind === 'integrity' ? C.bad : m.kind === 'unmentioned' ? C.warn : C.cont;
       if (m.kind === 'ask') { s('circle', { cx: X, cy: cy, r: 8, fill: 'none', stroke: c, 'stroke-width': 1.6 }, g); s('circle', { 'class': 'ping', cx: X, cy: cy, r: 6, fill: 'none', stroke: c, 'stroke-width': 1.5 }, g); }
@@ -314,6 +327,8 @@
     item('Finished', function (g) { s('line', { x1: 2, x2: 26, y1: 8, y2: 8, stroke: ink2, 'stroke-width': 1.2 }, g); s('path', { d: 'M26 2V14M30 2V14', stroke: ink2, 'stroke-width': 1.4 }, g); });
     item('Fence, blocked', function (g) { s('line', { x1: 2, x2: 32, y1: 8, y2: 8, stroke: ink, 'stroke-width': 1.6 }, g); s('rect', { x: 14.5, y: 0, width: 5, height: 16, fill: 'var(--bad)' }, g); });
     item('Fence, warned', function (g) { s('line', { x1: 2, x2: 32, y1: 8, y2: 8, stroke: ink, 'stroke-width': 1.6 }, g); s('line', { x1: 17, x2: 17, y1: 0, y2: 16, stroke: 'var(--warn)', 'stroke-width': 3, 'stroke-dasharray': '3.5 2.5' }, g); });
+    item('Injected fault', function (g) { s('line', { x1: 2, x2: 32, y1: 8, y2: 8, stroke: ink, 'stroke-width': 1.6 }, g); s('path', { d: 'M17 2.5L22.5 8L17 13.5L11.5 8Z', fill: 'var(--paper)', stroke: ink2, 'stroke-width': 1.4 }, g); });
+    item('Fault kept silent', function (g) { s('line', { x1: 2, x2: 32, y1: 8, y2: 8, stroke: ink, 'stroke-width': 1.6 }, g); s('path', { d: 'M17 2.5L22.5 8L17 13.5L11.5 8Z', fill: 'var(--contour)', stroke: 'var(--contour)', 'stroke-width': 1.4 }, g); });
     item('Same file', function (g) { s('line', { x1: 17, x2: 17, y1: 1, y2: 15, stroke: 'var(--warn)', 'stroke-width': 1.3, 'stroke-dasharray': '3 3' }, g); });
     item('Waiting for you', function (g) { s('circle', { cx: 17, cy: 8, r: 6, fill: 'none', stroke: 'var(--contour)', 'stroke-width': 1.5 }, g); });
   }

@@ -91,3 +91,23 @@ test('bad folders, bad JSON, oversized meta and symlinks are ignored, never fata
   assert.deepEqual([j.latest[0].file, j.latest[0].op], ['', 'edit']);
   assert.equal((await M.get('/api/state')).status, 200);
 });
+
+test('chaos mode: injected faults are exposed as time, type, tool and silent only; never the error, context, paths or command', async () => {
+  const SID3 = 'chaosCCC-1111-2222-3333-444455556666';
+  session(SID3, [
+    { t: t(9), kind: 'session' },
+    { t: t(8), kind: 'chaos', test_fault: true, fault: 'secret-fault-id', type: 'tool_denied', tool: 'Edit', message: "EACCES: open '/Users/someone/secret-work/shop/src/pay.js'", files: ['src/utils/money.js'] },
+    { t: t(7), kind: 'chaos', test_fault: true, fault: 'lie', type: 'misleading_context', tool: 'Bash', message: 'All tests passed TOKEN', command: 'sed -i x', files: [] },
+    { t: t(6), kind: 'stop', chaos_count: 2, chaos_silent: ['secret-fault-id'] },
+    { t: t(5), kind: 'chaos', fault: 'secret-fault-id', type: 'tool_denied', tool: 'Edit', message: 'x' },
+    { t: t(4), kind: 'chaos', fault: 'odd', type: 'not-a-type', tool: 'Edit' },
+  ]);
+  await sleep(1150);
+  const r = await M.get('/api/fences');
+  const c = r.json.sessions.find((x) => x.chaos_count);
+  assert.deepEqual(c.chaos.map((x) => [x.type, x.tool, x.silent]), [['tool_denied', 'Edit', true], ['misleading_context', 'Bash', false], ['tool_denied', 'Edit', false]]);
+  assert.deepEqual([c.chaos_count, c.chaos_silent], [3, 1]);
+  assert.deepEqual(Object.keys(c.chaos[0]).sort(), ['at', 'silent', 'tool', 'type']);
+  assert.ok(!r.text.includes('secret-fault-id') && !r.text.includes('EACCES') && !r.text.includes('All tests passed'), 'fault text or id leaked');
+  noLeaks(r.text, 'api');
+});
