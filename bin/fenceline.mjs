@@ -9,6 +9,9 @@
 //   fenceline sessions | summary [<session>] | record <session> <name>
 //   fenceline view [--port N] [--detach]           the map (live sessions and recordings), 127.0.0.1 only
 //   fenceline scope <run|folder|session>... [-o scope-map.html]   one HTML file comparing what runs touched vs the fence
+//   fenceline chaos add <id> --type tool_denied|flaky|rate_limit|misleading_context [--tool T]... [--path G]... [--command RE]
+//                  [--p 0.3 | --nth 1,3 | --after N] [--failures N] [--window S] [--times N] [--error "..."] [--context "..."] [--as exit] [--on]
+//   fenceline chaos list | rm <id> | on [--seed N] | off      test faults for measuring agents (opt-in; off by default)
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline/promises';
@@ -25,7 +28,7 @@ const cmd = argv[0];
 const flag = (n) => argv.includes(`--${n}`);
 const opt = (n, d) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : d; };
 const multi = (n) => argv.flatMap((a, i) => (argv[i - 1] === `--${n}` ? [a] : []));
-const positional = () => argv.slice(1).filter((a, i, xs) => !a.startsWith('--') && !(xs[i - 1] || '').match(/^--(deny|only|except|text|port|recordings)$/));
+const positional = () => argv.slice(1).filter((a, i, xs) => !a.startsWith('--') && !(xs[i - 1] || '').match(/^--(deny|only|except|text|port|recordings|type|tool|path|command|p|nth|after|failures|window|times|error|context|seed|as|ack)$/));
 const root = () => { const r = repoRoot(process.cwd()); if (!r) { console.error('fenceline: run this inside a git repository'); process.exit(2); } return r; };
 
 function show(fences, files) {
@@ -129,11 +132,46 @@ if (cmd === 'fence') {
   const runs = []; for (const d of dirs) { try { runs.push(loadRun(d)); } catch (e) { console.error(`  skipped ${d}: ${e.message}`); } }
   fs.writeFileSync(out, renderPage(buildModel(runs)));
   console.log(`Wrote ${out} (${runs.length} run${runs.length === 1 ? '' : 's'}, ${(fs.statSync(out).size / 1024).toFixed(0)} KB). Open it in any browser; it needs no server.`);
+} else if (cmd === 'chaos') {
+  // the chaos-mode config, by hand (no LLM). Writes .fenceline/chaos.json; a new file starts disabled unless --on.
+  const { loadChaos, saveChaos, CHAOS_FILE } = await import('../src/chaos.mjs');
+  const r = root(); const [sub, id] = positional();
+  let cur; try { cur = loadChaos(r, {}) || { enabled: false, seed: 0, faults: [] }; } catch (e) { console.error(`fenceline chaos: ${CHAOS_FILE} is invalid: ${e.message}`); process.exit(1); }
+  const num = (n) => (opt(n) == null ? undefined : Number(opt(n)));
+  const save = (doc) => { try { return saveChaos(r, doc); } catch (e) { console.error(e.message); process.exit(2); } };
+  const showChaos = (c) => {
+    console.log(`Chaos mode: ${c.enabled ? 'ON' : 'off'} · seed ${JSON.stringify(c.seed)} · ${CHAOS_FILE}`);
+    if (!c.faults.length) console.log('  no faults. Add one: fenceline chaos add <id> --type tool_denied --tool Edit');
+    for (const f of c.faults) {
+      const when = f.nth ? `calls ${f.nth.join(', ')}` : f.after != null ? `every call after ${f.after}` : f.probability >= 1 ? 'every call' : `p=${f.probability}`;
+      console.log(`  ${f.id}  [${f.type}${f.as ? `, as ${f.as}` : ''}]  tools ${f.tools.join(',')}${f.paths.length ? ` · paths ${f.paths.join(' ')}` : ''}${f.command ? ` · command /${f.command}/` : ''} · ${when}`
+        + `${f.failures ? ` · ${f.failures} failure(s) per call` : ''}${f.window_s ? ` · ${f.window_s}s window` : ''}${f.times ? ` · at most ${f.times}×` : ''}`);
+      console.log(`      ${f.type === 'misleading_context' ? 'adds' : 'error'}: ${JSON.stringify(f.context ?? f.error)}`);
+    }
+  };
+  if (sub === 'add') {
+    const type = opt('type');
+    if (!id || !type) { console.error('usage: fenceline chaos add <id> --type tool_denied|flaky|rate_limit|misleading_context [--tool T]... [--path G]... [--command RE] [--p P | --nth 1,3 | --after N] ...'); process.exit(2); }
+    const f = { id, type, ...(multi('tool').length ? { tools: multi('tool') } : {}), ...(multi('path').length ? { paths: multi('path') } : {}),
+      ...(opt('command') != null ? { command: opt('command') } : {}), ...(opt('p') != null ? { probability: num('p') } : {}),
+      ...(opt('nth') != null ? { nth: opt('nth').split(',').map(Number) } : {}), ...(opt('after') != null ? { after: num('after') } : {}),
+      ...(opt('failures') != null ? { failures: num('failures') } : {}), ...(opt('window') != null ? { window_s: num('window') } : {}),
+      ...(opt('times') != null ? { times: num('times') } : {}), ...(opt('error') != null ? { error: opt('error') } : {}),
+      ...(opt('context') != null ? { context: opt('context') } : {}), ...(opt('as') != null ? { as: opt('as') } : {}), ...(opt('ack') != null ? { ack: opt('ack') } : {}) };
+    showChaos(save({ ...cur, enabled: flag('on') ? true : cur.enabled, faults: [...cur.faults.filter((x) => x.id !== id), f] }));
+  } else if (sub === 'rm') {
+    if (!cur.faults.some((f) => f.id === id)) { console.error(`no fault ${id}`); process.exit(1); }
+    showChaos(save({ ...cur, faults: cur.faults.filter((f) => f.id !== id) }));
+  } else if (sub === 'on' || sub === 'off') {
+    showChaos(save({ ...cur, enabled: sub === 'on', ...(opt('seed') != null ? { seed: Number.isFinite(num('seed')) ? num('seed') : opt('seed') } : {}) }));
+    if (sub === 'on') console.log('Applies from the agent\'s next tool call. Every injected fault is logged and listed at Stop.');
+  } else if (sub === 'list' || !sub) showChaos(cur);
+  else { console.error('usage: fenceline chaos add|rm|list|on|off'); process.exit(2); }
 } else if (cmd === 'view') {
   const { createServer } = await import('../viewer/server.mjs');
   const server = createServer({ recordingsDir: opt('recordings') });
   server.listen(Number(opt('port', '0')), '127.0.0.1', () => console.log(`Fenceline map: http://127.0.0.1:${server.address().port}/`));
 } else {
-  console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 11).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+  console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 14).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
   process.exit(cmd ? 2 : 0);
 }
